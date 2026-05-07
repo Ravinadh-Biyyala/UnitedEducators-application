@@ -1,0 +1,1 @@
+export { SubmissionDocumentsSection } from './SubmissionDocumentsSection';

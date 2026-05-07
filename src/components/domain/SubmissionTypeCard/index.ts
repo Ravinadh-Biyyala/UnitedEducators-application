@@ -1,0 +1,1 @@
+export { SubmissionTypeCard } from './SubmissionTypeCard';
