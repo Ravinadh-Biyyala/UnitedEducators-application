@@ -1,7 +1,9 @@
 import { Controller, useFormContext } from 'react-hook-form';
 import { SectionPanel } from '@/components/common/SectionPanel';
 import { AccountIdentitySection } from '@/components/domain/AccountIdentitySection';
+import { AiAutoFillSection } from '@/components/domain/AiAutoFillSection';
 import { BrokerContactsSection } from '@/components/domain/BrokerContactsSection';
+import { NotesSection } from '@/components/domain/NotesSection';
 import { PolicyDatesSection } from '@/components/domain/PolicyDatesSection';
 import { SubmissionDocumentsSection } from '@/components/domain/SubmissionDocumentsSection';
 import { SubmissionTypeCard } from '@/components/domain/SubmissionTypeCard';
@@ -17,7 +19,7 @@ export function NewSubmissionForm() {
 
   return (
     <div className="flex flex-col" style={{ gap: 24 }}>
-      <SectionPanel title="Submission Type">
+      <SectionPanel title="New Submission Type">
         <Controller
           control={control}
           name="type"
@@ -39,6 +41,8 @@ export function NewSubmissionForm() {
         />
       </SectionPanel>
 
+      <AiAutoFillSection />
+
       <AccountIdentitySection />
       <PolicyDatesSection />
       <BrokerContactsSection />
@@ -55,6 +59,8 @@ export function NewSubmissionForm() {
       />
 
       <UnderwritingTeamSection />
+
+      <NotesSection />
     </div>
   );
 }

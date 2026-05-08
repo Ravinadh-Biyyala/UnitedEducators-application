@@ -12,14 +12,12 @@ import { portfolioApi }   from '@/services/portfolio/portfolioApi';
 import { pipelineApi }         from '@/services/pipeline/pipelineApi';
 import { teamPerformanceApi }  from '@/services/teamPerformance/teamPerformanceApi';
 import { alertsApi }           from '@/services/alerts/alertsApi';
-import { authReducer }             from '@/store/slices/authSlice';
-import { dashboardFiltersReducer } from '@/store/slices/dashboardFiltersSlice';
-import { uiReducer }               from '@/store/ui/uiSlice';
+import { authReducer } from '@/store/slices/authSlice';
+import { uiReducer }   from '@/store/ui/uiSlice';
 
 const rootReducer = combineReducers({
-  auth:             authReducer,
-  ui:               uiReducer,
-  dashboardFilters: dashboardFiltersReducer,
+  auth: authReducer,
+  ui:   uiReducer,
   [dashboardApi.reducerPath]:   dashboardApi.reducer,
   [submissionsApi.reducerPath]: submissionsApi.reducer,
   [tasksApi.reducerPath]:       tasksApi.reducer,

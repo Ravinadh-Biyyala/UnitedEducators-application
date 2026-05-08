@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import AiIcon from '@/assets/icons/ai-assistant.svg?react';
 import ChevronLeftIcon from '@/assets/icons/chevron-left.svg?react';
@@ -66,14 +67,26 @@ function AiAssistantPanel() {
 
 // ── AppShell ──────────────────────────────────────────────────────────────────
 export function AppShell() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left: nav sidebar — 220 px */}
-      <Sidebar />
+      {/* Mobile backdrop — shown when sidebar slides in on small screens */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ background: 'rgba(15,23,42,0.45)' }}
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Left: nav sidebar */}
+      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Center: header + scrollable content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar />
+        <TopBar onMobileMenu={() => setMobileOpen(true)} />
         {/* bg neutral-100 (#EEF1F6), padding: top 28px · left/right 32px · bottom 0 */}
         <main className="flex-1 overflow-y-auto bg-neutral-100 pt-7 px-8 pb-0">
           <Outlet />

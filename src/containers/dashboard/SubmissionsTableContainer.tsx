@@ -21,9 +21,9 @@ export function SubmissionsTableContainer() {
   const scopeFiltered = SCOPE_STATUSES[scope]
     ? all.filter((s) => (SCOPE_STATUSES[scope] as SubmissionStatus[]).includes(s.status))
     : all;
-  const rows = filterStatus === 'All'
+  const rows = (filterStatus === 'All'
     ? scopeFiltered
-    : scopeFiltered.filter((s) => s.status === filterStatus);
+    : scopeFiltered.filter((s) => s.status === filterStatus)).slice(0, 5);
 
   return (
     <SubmissionsTable

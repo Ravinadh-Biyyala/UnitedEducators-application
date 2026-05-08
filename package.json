@@ -13,7 +13,8 @@
     "type-check": "tsc --noEmit",
     "index": "node scripts/generate-index.mjs",
     "index:check": "node scripts/generate-index.mjs --check",
-    "prebuild": "npm run index:check"
+    "prebuild": "npm run index:check",
+    "watch:design": "node watch-design.mjs"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.19",

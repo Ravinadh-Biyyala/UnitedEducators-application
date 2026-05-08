@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { newSubmissionSchema } from '@/features/submissions-new/schema/newSubmissionSchema';
+import type { newSubmissionSchema } from '@/features/submissions/schema/newSubmissionSchema';
 import type { ProductLine } from './submission';
 
 export type NewSubmissionFormValues = z.infer<typeof newSubmissionSchema>;
@@ -67,6 +67,7 @@ export interface CreateSubmissionPayload {
   underwriterId?:            string;
   underwritingSpecialistId?: string;
   documents:                 UploadedDocument[];
+  notes?:                    string;
 }
 
 export interface CreateSubmissionResponse {

@@ -1570,7 +1570,7 @@ export const sidebarStyles = {
   logoGap:             '0.625rem',  // gap between tile and brand text
   logoTileSize:        '2.5rem',    // 40×40 blue square
   logoTileBg:          colors.brandBlue,
-  logoTileIconColor:   colors.white,
+  logoTileIconColor:   colors.accentGold,
   logoTileBorderRadius:'0.375rem',
   logoTextColor:       colors.brandBlue,
   logoTextSize:        '0.875rem',  // 14px
@@ -1585,6 +1585,8 @@ export const sidebarStyles = {
   navItemHeight:       '2.75rem',   // 44px
   navIconSize:         16,
   navLabelFontSize:    '0.875rem',  // 14px
+  navActiveBorderColor: colors.accentGold,  // gold left border on active nav item
+  navActiveBorderWidth: 3,
   roleBadgeBg:         colors.brandBlueAlpha08,
   roleBadgeTextColor:  colors.brandBlue,
   roleBadgeIconColor:  colors.brandBlue,

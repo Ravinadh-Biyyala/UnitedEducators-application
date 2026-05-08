@@ -14,7 +14,6 @@ export function PortfolioSnapshotPanel({ stats, onStatClick }: PortfolioSnapshot
     <CardShell
       title="PORTFOLIO SNAPSHOT"
       icon={<Activity size={13} color={colors.brandBlue} />}
-      width={dims.rightColWidth}
     >
       <div style={{ padding: statRowDims.bodyPadding, fontFamily: fonts.sans }}>
         {stats.length === 0 ? (

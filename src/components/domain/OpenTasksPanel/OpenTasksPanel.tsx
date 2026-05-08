@@ -16,8 +16,6 @@ interface Props {
   onViewAll?: () => void;
 }
 
-const CARD_WIDTH = 380;
-
 export function OpenTasksPanel({
   tasks,
   totalCount,
@@ -30,7 +28,6 @@ export function OpenTasksPanel({
   return (
     <CardShell
       title="OPEN TASKS"
-      width={CARD_WIDTH}
       icon={<CheckCircle2 size={13} style={{ color: colors.brandBlue }} aria-hidden />}
       headerRight={
         <SegmentedTabs<TaskFilter>

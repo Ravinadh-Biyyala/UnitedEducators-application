@@ -1,20 +1,11 @@
-import { useState } from 'react';
-
-const STORAGE_KEY = 'sidebar:collapsed';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { setSidebarCollapsed } from '@/store/ui/uiSlice';
 
 export function useSidebarCollapsed(): [boolean, () => void] {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === 'true'; }
-    catch { return false; }
-  });
+  const dispatch  = useAppDispatch();
+  const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
 
-  const toggle = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
-      return next;
-    });
-  };
+  const toggle = () => dispatch(setSidebarCollapsed(!collapsed));
 
   return [collapsed, toggle];
 }

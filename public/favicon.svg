@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Blue background -->
+  <rect width="32" height="32" fill="#0123D4"/>
+  <!-- Mortarboard hat (gold) — centered at 16,16 -->
+  <!-- Cap brim: diamond/rhombus shape -->
+  <polygon points="16,7 26,12 16,17 6,12" fill="#C9A227"/>
+  <!-- Cap crown: rectangle below center -->
+  <rect x="11" y="17" width="10" height="6" rx="0.5" fill="#C9A227"/>
+  <!-- Tassel cord from right point down -->
+  <line x1="26" y1="12" x2="26" y2="19" stroke="#C9A227" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="26" cy="20" r="1.5" fill="#C9A227"/>
+</svg>

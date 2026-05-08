@@ -6,3 +6,5 @@ export * from './pipeline';
 export * from './teamPerformance';
 export * from './alerts';
 export * from './newSubmission';
+export * from './submissionDetail';
+export * from './memberBroker';

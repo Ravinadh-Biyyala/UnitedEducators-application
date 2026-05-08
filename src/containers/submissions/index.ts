@@ -2,3 +2,8 @@ export * from './SubmissionsHeaderContainer';
 export * from './SubmissionsScopeTabsContainer';
 export * from './SubmissionsFiltersContainer';
 export * from './SubmissionsListContainer';
+export * from './MemberBrokerTabContainer';
+export * from './NewSubmissionHeaderContainer';
+export * from './NewSubmissionFormContainer';
+export * from './NewSubmissionSidebarContainer';
+export * from './NewSubmissionActionsContainer';

@@ -4,7 +4,7 @@ import { colors, cardDims, fonts } from '@/theme/tokens';
 interface CardShellProps {
   title: string;
   icon: ReactNode;
-  width: number;
+  width?: number;
   iconColor?: string;
   headerRight?: ReactNode;
   footer?: ReactNode;

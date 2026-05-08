@@ -12,7 +12,10 @@ const SubmissionsPage = lazy(() =>
   import('@/features/submissions').then((m) => ({ default: m.SubmissionsPage })),
 );
 const SubmissionsNewPage = lazy(() =>
-  import('@/features/submissions-new').then((m) => ({ default: m.SubmissionsNewPage })),
+  import('@/features/submissions').then((m) => ({ default: m.SubmissionsNewPage })),
+);
+const SubmissionDetailPage = lazy(() =>
+  import('@/features/submissions').then((m) => ({ default: m.SubmissionDetailPage })),
 );
 
 export function AppRoutes() {
@@ -26,7 +29,8 @@ export function AppRoutes() {
           <Route path="/submissions/UE-submission-list-my-queue" element={<SubmissionsPage scope="mine" />} />
           <Route path="/submissions/UE-submission-list-my-team"  element={<SubmissionsPage scope="team" />} />
           <Route path="/submissions/UE-submission-list-all"      element={<SubmissionsPage scope="all" />} />
-          <Route path="/submissions/new" element={<SubmissionsNewPage />} />
+          <Route path="/submissions/new"  element={<SubmissionsNewPage />} />
+          <Route path="/submissions/:id"  element={<SubmissionDetailPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

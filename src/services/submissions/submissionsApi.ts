@@ -2,10 +2,16 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQuery } from '@/services/baseQuery';
 import type {
   AccountLookup,
+  BrokerageDetail,
   BrokerageLookup,
+  BrokerContact,
+  CoverageLine,
   CreateSubmissionPayload,
   CreateSubmissionResponse,
+  LossHistoryRow,
+  MemberDetail,
   Submission,
+  SubmissionDetail,
   SubmissionsHeaderStats,
   SubmissionsListQuery,
   SubmissionsListResponse,
@@ -19,6 +25,12 @@ import { MOCK_SUBMISSIONS_LIST } from '@/services/submissions/mocks/submissionsL
 import { MOCK_ACCOUNTS } from '@/services/submissions/mocks/accountsMock';
 import { MOCK_BROKERAGES } from '@/services/submissions/mocks/brokeragesMock';
 import { MOCK_UNDERWRITERS } from '@/services/submissions/mocks/underwritersMock';
+import { getMockSubmissionDetail } from '@/services/submissions/mocks/submissionDetailMock';
+import { MOCK_COVERAGE_LINES, DEFAULT_COVERAGE_LINES } from '@/services/submissions/mocks/coverageLinesMock';
+import { MOCK_LOSS_HISTORY, DEFAULT_LOSS_HISTORY } from '@/services/submissions/mocks/lossHistoryMock';
+import { getMockMemberDetail } from '@/services/submissions/mocks/memberDetailMock';
+import { getMockBrokerageDetail } from '@/services/submissions/mocks/brokerageDetailMock';
+import { MOCK_BROKER_CONTACTS, DEFAULT_BROKER_CONTACTS } from '@/services/submissions/mocks/brokerContactsMock';
 
 // Dashboard panel mock — separate from MOCK_SUBMISSIONS_LIST. The dashboard
 // query (`useGetSubmissionsQuery`) is left untouched per Phase S1 hard rule.
@@ -109,12 +121,9 @@ function applyFilters(
 
 function sortKey(row: Submission, field: SubmissionsSortField): string | number {
   switch (field) {
-    case 'memberInstitution': return row.member;
-    case 'status':            return row.status;
-    case 'estPremium':        return row.premium;
-    case 'appetite':          return row.appetite ?? 0;
-    case 'days':              return row.daysOpen ?? 0;
-    case 'submitted':         return row.submittedDate ?? '';
+    case 'age':       return row.daysOpen ?? 0;
+    case 'needBy':    return row.needByDate ?? '';
+    case 'effective': return row.effDate;
   }
 }
 
@@ -254,6 +263,56 @@ export const submissionsApi = createApi({
         return { data: MOCK_UNDERWRITERS };
       },
     }),
+
+    // ─── Submission detail (Phase D1) ─────────────────────────────────────
+    getSubmissionDetail: builder.query<SubmissionDetail, string>({
+      queryFn: async (id) => {
+        await delay(80);
+        return { data: getMockSubmissionDetail(id) };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
+
+    getCoverageLines: builder.query<CoverageLine[], string>({
+      queryFn: async (id) => {
+        await delay(60);
+        return { data: MOCK_COVERAGE_LINES[id] ?? DEFAULT_COVERAGE_LINES };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
+
+    getLossHistory: builder.query<LossHistoryRow[], string>({
+      queryFn: async (id) => {
+        await delay(60);
+        return { data: MOCK_LOSS_HISTORY[id] ?? DEFAULT_LOSS_HISTORY };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
+
+    // ─── Member & Brokerage tab (Phase D2) ────────────────────────────────
+    getMemberDetail: builder.query<MemberDetail, string>({
+      queryFn: async (id) => {
+        await delay(70);
+        return { data: getMockMemberDetail(id) };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
+
+    getBrokerageDetail: builder.query<BrokerageDetail, string>({
+      queryFn: async (id) => {
+        await delay(70);
+        return { data: getMockBrokerageDetail(id) };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
+
+    getBrokerContacts: builder.query<BrokerContact[], string>({
+      queryFn: async (id) => {
+        await delay(60);
+        return { data: MOCK_BROKER_CONTACTS[id] ?? DEFAULT_BROKER_CONTACTS };
+      },
+      providesTags: (_result, _err, id) => [{ type: 'Submission', id }],
+    }),
   }),
 });
 
@@ -266,4 +325,10 @@ export const {
   useSearchAccountsQuery,
   useGetBrokeragesQuery,
   useGetUnderwritersQuery,
+  useGetSubmissionDetailQuery,
+  useGetCoverageLinesQuery,
+  useGetLossHistoryQuery,
+  useGetMemberDetailQuery,
+  useGetBrokerageDetailQuery,
+  useGetBrokerContactsQuery,
 } = submissionsApi;

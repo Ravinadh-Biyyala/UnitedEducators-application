@@ -13,7 +13,7 @@ import {
   productLineLabels,
   submissionTypeLabels,
 } from '@/theme/tokens';
-import { generateSubmissionName } from '@/features/submissions-new/utils/generateSubmissionName';
+import { generateSubmissionName } from '@/features/submissions/utils/generateSubmissionName';
 import type { NewSubmissionFormValues, ProductLine } from '@/shared/types';
 
 const TOTAL_REQUIRED_FIELDS = 4;

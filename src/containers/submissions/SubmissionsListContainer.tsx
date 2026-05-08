@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { SubmissionsListTable } from '@/components/domain';
 import { useGetSubmissionsListQuery } from '@/services/submissions/submissionsApi';
 import { useSubmissionsUrlState } from '@/features/submissions/hooks/useSubmissionsUrlState';
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function SubmissionsListContainer({ scope }: Props) {
+  const navigate = useNavigate();
   const { filters, sort, page, pageSize, setSort, setPage } = useSubmissionsUrlState();
 
   const { data, isLoading, isError } = useGetSubmissionsListQuery({
@@ -29,6 +31,7 @@ export function SubmissionsListContainer({ scope }: Props) {
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
+      onRowClick={(id) => navigate(`/submissions/${id}`)}
     />
   );
 }

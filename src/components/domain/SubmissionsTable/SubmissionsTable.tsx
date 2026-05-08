@@ -68,7 +68,6 @@ export function SubmissionsTable({
     <CardShell
       title="SUBMISSIONS"
       icon={<Inbox size={14} />}
-      width={dims.submissionsCardWidth}
       headerRight={
         <span
           style={{
@@ -238,15 +237,15 @@ export function SubmissionsTable({
         }}
       >
         <colgroup>
-          <col style={{ width: COL.id }} />
-          <col style={{ width: COL.member }} />
-          <col style={{ width: COL.type }} />
-          <col style={{ width: COL.assignee }} />
-          <col style={{ width: COL.premium }} />
-          <col style={{ width: COL.status }} />
-          <col style={{ width: COL.priority }} />
-          <col style={{ width: COL.effDate }} />
-          <col style={{ width: COL.chevron }} />
+          <col style={{ width: '7.41%' }} />
+          <col style={{ width: '18.65%' }} />
+          <col style={{ width: '9.58%' }} />
+          <col style={{ width: '11.62%' }} />
+          <col style={{ width: '10.47%' }} />
+          <col style={{ width: '14.56%' }} />
+          <col style={{ width: '11.11%' }} />
+          <col style={{ width: '10.86%' }} />
+          <col style={{ width: '5.74%' }} />
         </colgroup>
         <thead>
           <tr>

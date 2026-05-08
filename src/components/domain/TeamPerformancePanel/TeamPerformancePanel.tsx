@@ -16,7 +16,6 @@ export function TeamPerformancePanel({ underwriters }: TeamPerformancePanelProps
       title="TEAM PERFORMANCE"
       icon={<Users size={13} />}
       iconColor={colors.brandBlue}
-      width={dims.teamPerfCardWidth}
     >
       {/* Column-headers row */}
       <div

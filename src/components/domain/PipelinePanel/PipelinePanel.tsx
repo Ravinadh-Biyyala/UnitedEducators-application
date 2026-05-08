@@ -22,7 +22,6 @@ export function PipelinePanel({ months, onBarClick }: PipelinePanelProps) {
       title="SUBMISSION PIPELINE — LAST 6 MONTHS"
       icon={<BarChart3 size={13} />}
       iconColor={colors.accentGold}
-      width={dims.pipelineCardWidth}
     >
       <div
         style={{

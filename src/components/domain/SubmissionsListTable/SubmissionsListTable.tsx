@@ -36,6 +36,7 @@ interface SubmissionsListTableProps {
   page:         number;
   pageSize:     number;
   onPageChange: (page: number) => void;
+  onRowClick?:  (id: string) => void;
 }
 
 const COLUMN_ORDER: {
@@ -64,6 +65,7 @@ export function SubmissionsListTable({
   page,
   pageSize,
   onPageChange,
+  onRowClick,
 }: SubmissionsListTableProps) {
   const items = response?.items ?? [];
   const total = response?.total ?? 0;
@@ -85,7 +87,7 @@ export function SubmissionsListTable({
             {showSkeleton && Array.from({ length: pageSize }).map((_, i) => <SkeletonRow key={i} />)}
             {showEmpty && <EmptyMessage />}
             {!showSkeleton && !showEmpty && items.map((row) => (
-              <SubmissionListRow key={row.id} submission={row} />
+              <SubmissionListRow key={row.id} submission={row} onRowClick={onRowClick} />
             ))}
           </div>
         </div>
@@ -167,16 +169,24 @@ function HeaderRow({
 
 // ── Data row ────────────────────────────────────────────────────────────────
 
-function SubmissionListRow({ submission }: { submission: Submission }) {
+function SubmissionListRow({
+  submission,
+  onRowClick,
+}: {
+  submission: Submission;
+  onRowClick?: (id: string) => void;
+}) {
   const stripeColor = submissionsRowStatusStripes[submission.status];
   return (
     <div
       role="row"
       className="relative flex items-center"
+      onClick={() => onRowClick?.(submission.id)}
       style={{
         minHeight:       dims.rowMinHeight,
         backgroundColor: dims.rowBg,
         borderBottom:    `${dims.rowBorderWidth}px solid ${dims.rowBorderColor}`,
+        cursor:          onRowClick ? 'pointer' : 'default',
       }}
     >
       <div

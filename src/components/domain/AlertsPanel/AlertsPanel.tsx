@@ -29,7 +29,6 @@ export function AlertsPanel({
       title="ALERTS & FLAGS"
       icon={<AlertTriangle size={13} />}
       iconColor={colors.accentGold}
-      width={dims.rightColWidth}
       headerRight={
         <AlertFilterTabs activeFilter={activeFilter} onFilterChange={onFilterChange} />
       }

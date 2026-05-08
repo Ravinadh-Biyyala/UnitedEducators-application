@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Menu, Plus } from 'lucide-react';
 import { useAuthUser } from '@/hooks/auth';
 import SearchIcon    from '@/assets/icons/topbar/search.svg?react';
 import BellIcon      from '@/assets/icons/topbar/bell.svg?react';
@@ -21,8 +21,12 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+export interface TopBarProps {
+  onMobileMenu?: () => void;
+}
+
 // ── TopBar ────────────────────────────────────────────────────────────────────
-export function TopBar() {
+export function TopBar({ onMobileMenu }: TopBarProps = {}) {
   // TODO: Wire to authSlice.user when login is implemented.
   const authUser = useAuthUser();
   const user = authUser ?? DUMMY_USER;
@@ -33,6 +37,17 @@ export function TopBar() {
       className="shrink-0 flex items-center px-8 gap-4 bg-white border-b border-neutral-200"
       style={{ height: '64px' }}
     >
+      {/* Hamburger — mobile only, shows when sidebar is hidden */}
+      <button
+        type="button"
+        onClick={onMobileMenu}
+        aria-label="Open navigation"
+        className="flex lg:hidden items-center justify-center shrink-0 bg-white border border-surface-border hover:bg-neutral-50 transition-colors"
+        style={{ width: 36, height: 36 }}
+      >
+        <Menu size={18} className="text-neutral-600" aria-hidden="true" />
+      </button>
+
       {/* Search — 448 px wide, bg fill_V8PE7P, border fill_MJ50ID 0.8 px, radius 8 px (Figma 320:50545) */}
       <div className="relative shrink-0" style={{ width: '448px' }}>
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none">
