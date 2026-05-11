@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
+import { useCompanion } from "../context/CompanionContext";
 import type { RoleId } from "../components/AppShell";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -1075,6 +1076,7 @@ function InlineSelect({ value, onChange, options, placeholder }: {
 export function NewSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setSelectedProducts } = useCompanion();
   const role: RoleId = user?.roleId ?? "sr-uw";
 
   const [form, setForm]     = useState<FormState>(EMPTY);
@@ -1092,6 +1094,12 @@ export function NewSubmissionPage() {
     setAiStatus("processing");
     setTimeout(() => setAiStatus("done"), 2200);
   };
+
+  // Sync selected products to CompanionContext so ChatBot can build the checklist
+  useEffect(() => {
+    setSelectedProducts(form.productLines);
+    return () => setSelectedProducts([]);
+  }, [form.productLines]);
 
   // Auto-set expiry when effective date changes
   useEffect(() => {
@@ -1234,8 +1242,11 @@ export function NewSubmissionPage() {
               {/* ── LEFT (main form) ─────────────────────────────────────── */}
               <div className="lg:col-span-2 space-y-5">
 
+                {/* Submission Documents */}
+                <DocumentsSection docs={docs} onChange={setDocs} />
+
                 {/* Submission Type */}
-                <SectionCard title="New Submission Type" accent={N}>
+                <SectionCard title="Submission Type" accent={N}>
                   <div className="grid grid-cols-2 gap-3">
                     {SUB_TYPES.map(t => {
                       const active = form.submissionType === t.id;
@@ -1259,102 +1270,7 @@ export function NewSubmissionPage() {
                   </div>
                 </SectionCard>
 
-                {/* AI Auto-Fill */}
-                <SectionCard title="AI Auto-Fill" accent={N}>
-                  <input
-                    ref={aiInputRef}
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xlsx,.csv"
-                    style={{ display: "none" }}
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleAiFile(f); }}
-                  />
-
-                  {aiStatus === "idle" && (
-                    <div
-                      onDragOver={e => { e.preventDefault(); setAiDragOver(true); }}
-                      onDragLeave={() => setAiDragOver(false)}
-                      onDrop={e => { e.preventDefault(); setAiDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleAiFile(f); }}
-                      onClick={() => aiInputRef.current?.click()}
-                      style={{
-                        border: `2px dashed ${aiDragOver ? N : BDL}`,
-                        background: aiDragOver ? "#EEF1FF" : "#F8FAFC",
-                        padding: "28px 20px",
-                        textAlign: "center",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-                        <div style={{ width: 40, height: 40, background: `${N}12`, border: `1px solid ${N}30`, display: "flex", alignItems: "center", justifyContent: "center", color: N }}>
-                          <UploadCloud size={20} />
-                        </div>
-                      </div>
-                      <p style={{ fontSize: "0.80rem", fontWeight: 700, color: TD, marginBottom: 4 }}>
-                        Drop your submission document here
-                      </p>
-                      <p style={{ fontSize: "0.70rem", color: TT, marginBottom: 12 }}>
-                        PDF, Word, Excel or CSV — the AI will extract and fill the form fields automatically
-                      </p>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", background: N, color: "white", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
-                        <Sparkles size={12} /> Choose File
-                      </div>
-                    </div>
-                  )}
-
-                  {aiStatus === "processing" && (
-                    <div style={{ padding: "28px 20px", textAlign: "center", background: "#F8FAFC", border: `1px solid ${BDL}` }}>
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                        <div style={{ width: 40, height: 40, background: `${N}12`, border: `1px solid ${N}30`, display: "flex", alignItems: "center", justifyContent: "center", color: N, animation: "spin 1.2s linear infinite" }}>
-                          <Sparkles size={18} />
-                        </div>
-                      </div>
-                      <p style={{ fontSize: "0.80rem", fontWeight: 700, color: TD, marginBottom: 4 }}>Analysing document…</p>
-                      <p style={{ fontSize: "0.70rem", color: TT }}>{aiFile?.name}</p>
-                      <div style={{ marginTop: 14, height: 4, background: BDL, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: "60%", background: N, animation: "pulse 1.2s ease-in-out infinite" }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {aiStatus === "done" && (
-                    <div style={{ border: `1px solid ${BDL}`, background: "#F8FAFC" }}>
-                      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BDL}`, display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 28, height: 28, background: "#DCFCE7", border: "1px solid #86EFAC", display: "flex", alignItems: "center", justifyContent: "center", color: "#16A34A", flexShrink: 0 }}>
-                          <Check size={14} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: "0.78rem", fontWeight: 700, color: TD }}>Fields extracted from {aiFile?.name}</p>
-                          <p style={{ fontSize: "0.65rem", color: TT }}>Review the pre-filled values below before submitting</p>
-                        </div>
-                        <button type="button" onClick={() => { setAiFile(null); setAiStatus("idle"); }}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: TT, padding: 2 }}>
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-0" style={{ padding: "12px 16px 14px", gap: 8 }}>
-                        {[
-                          { label: "Account Name", value: "Riverside Unified School District" },
-                          { label: "Effective Date", value: "09/01/2025" },
-                          { label: "Product(s)", value: "General Liability, Property" },
-                          { label: "Need By Date", value: "08/15/2025" },
-                        ].map(row => (
-                          <div key={row.label} style={{ padding: "7px 10px", background: "white", border: `1px solid ${BDL}` }}>
-                            <p style={{ fontSize: "0.60rem", color: TT, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{row.label}</p>
-                            <p style={{ fontSize: "0.75rem", fontWeight: 600, color: TD }}>{row.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ padding: "0 16px 14px" }}>
-                        <button type="button"
-                          style={{ width: "100%", padding: "8px", background: N, color: "white", border: "none", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                          <Sparkles size={12} /> Apply to Form
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </SectionCard>
-
-                {/* Account (renamed from Account & Identity) */}
+                {/* Account */}
                 <SectionCard title="Account" accent={N}>
                   <div className="grid grid-cols-1 gap-4">
                     {/* Account Name — searchable dropdown */}
@@ -1368,23 +1284,13 @@ export function NewSubmissionPage() {
                         </p>
                       )}
                     </div>
-
-                    {/* Product(s) */}
-                    <div>
-                      <FieldLabel required>Product(s)</FieldLabel>
-                      <ProductMultiSelect value={form.productLines} onChange={v => set("productLines", v)} />
-                      {errors.productLines && <p style={{ fontSize: "0.62rem", color: "#B91C1C", marginTop: 4 }}>{errors.productLines}</p>}
-                      {form.productLines.length > 0 && (
-                        <p style={{ fontSize: "0.60rem", color: TT, marginTop: 3 }}>{form.productLines.length} product{form.productLines.length > 1 ? "s" : ""} selected</p>
-                      )}
-                    </div>
-
                   </div>
                 </SectionCard>
 
                 {/* Policy */}
                 <SectionCard title="Policy" accent={N}>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                     <div>
                       <FieldLabel required>Need By Date</FieldLabel>
                       <DatePickerInput value={form.needByDate} onChange={v => set("needByDate", v)} />
@@ -1399,6 +1305,16 @@ export function NewSubmissionPage() {
                       <FieldLabel>Expiration Date</FieldLabel>
                       <DatePickerInput value={form.expirationDate} onChange={v => set("expirationDate", v)} />
                       {form.effectiveDate && <p style={{ fontSize: "0.60rem", color: TT, marginTop: 3 }}>Auto-set to +1 year from effective</p>}
+                    </div>
+                  </div>
+                    {/* Product(s) */}
+                    <div>
+                      <FieldLabel required>Product(s)</FieldLabel>
+                      <ProductMultiSelect value={form.productLines} onChange={v => set("productLines", v)} />
+                      {errors.productLines && <p style={{ fontSize: "0.62rem", color: "#B91C1C", marginTop: 4 }}>{errors.productLines}</p>}
+                      {form.productLines.length > 0 && (
+                        <p style={{ fontSize: "0.60rem", color: TT, marginTop: 3 }}>{form.productLines.length} product{form.productLines.length > 1 ? "s" : ""} selected</p>
+                      )}
                     </div>
                   </div>
 
@@ -1510,8 +1426,6 @@ export function NewSubmissionPage() {
                   </div>
                 </SectionCard>
 
-                {/* Submission Documents */}
-                <DocumentsSection docs={docs} onChange={setDocs} />
 
               </div>
 
