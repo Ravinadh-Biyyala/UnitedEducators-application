@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCompanion } from "../context/CompanionContext";
+import { useSubmissionWorkspaceOptional } from "../context/SubmissionWorkspaceContext";
+import { TabAwareSuggestions } from "./TabAwareSuggestions";
 
 // ── Tokens ─────────────────────────────────────────────────────────────────────
 const NAVY   = "#0C1D3B";
@@ -558,7 +560,7 @@ function FlagCard({ flag, onClick, index = 0 }: { flag: Flag; onClick: () => voi
   const cfg = SEV[flag.severity];
   return (
     <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ width:"100%", textAlign:"left", fontFamily:font, cursor:"pointer", background: hov ? cfg.bg : "white", border:`1px solid ${hov?cfg.color+"60":BDL}`, borderLeft:`4px solid ${cfg.color}`, borderRadius:R, padding:"11px 13px", display:"flex", alignItems:"flex-start", gap:10, boxShadow: hov ? `${SH_MD},0 0 0 1px ${cfg.color}18` : SH_SM, transform: hov ? "translateY(-2px)" : "none", transition:"all 0.2s ease", animation:`slideUp 0.35s ease ${index*0.08}s both` }}>
+      style={{ width:"100%", textAlign:"left", fontFamily:font, cursor:"pointer", background: hov ? cfg.bg : "white", border:`1px solid ${hov?cfg.color+"60":BDL}`, borderLeft:`4px solid ${cfg.color}`, borderRadius:6, padding:"11px 13px", display:"flex", alignItems:"flex-start", gap:10, boxShadow: hov ? `${SH_MD},0 0 0 1px ${cfg.color}18` : SH_SM, transform: hov ? "translateY(-2px)" : "none", transition:"all 0.2s ease", animation:`slideUp 0.35s ease ${index*0.08}s both` }}>
       <div style={{ width:28,height:28,borderRadius:7,background:`${cfg.color}18`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:`1px solid ${cfg.color}25` }}>
         <span style={{ color:cfg.color }}>{cfg.icon}</span>
       </div>
@@ -629,135 +631,33 @@ function ScanningView({ ctxId }: { ctxId: string }) {
 }
 
 // ── Dashboard briefing view ────────────────────────────────────────────────────
+// Empty by design — the DAILY BRIEFING header, Smart Insights flag list, and
+// "What would you like to do next?" suggested-actions block were removed.
+// All dashboard chatbot interactions now flow through TabAwareSuggestions
+// ("Helping with: Dashboard" pill with 4 suggestions).
 function DashboardBriefingView({ content, onFlagClick, onActionClick }: { content: ProactiveContent; onFlagClick: (f: Flag) => void; onActionClick: (p: string) => void }) {
-  return (
-    <div style={{ padding:"14px", display:"flex", flexDirection:"column", gap:12 }}>
-      <div style={{ animation:"slideUp 0.3s ease" }}>
-        <span style={{ fontSize:"0.57rem", fontWeight:800, color:TT, textTransform:"uppercase", letterSpacing:"0.11em" }}>{content.contextLabel}</span>
-        <p style={{ fontSize:"0.90rem", fontWeight:800, color:NAVY, lineHeight:1.3, marginTop:4 }}>{content.headline}</p>
-        {content.subline && <p style={{ fontSize:"0.63rem", color:TT, marginTop:4 }}>{content.subline}</p>}
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-        <KPICard label="IN QUEUE" value="47" trendLabel="+3 vs yesterday" trendPos accentColor={BLUE} sparkData={[38,42,40,44,43,45,47]} index={0}/>
-        <KPICard label="OVERDUE"  value="3"  trendLabel="+1 vs yesterday" trendPos={false} accentColor={RED} sparkData={[1,2,2,3,2,3,3]} index={1}/>
-        <KPICard label="READY TO QUOTE" value="7" trendLabel="+2 vs yesterday" trendPos accentColor={GREEN} sparkData={[4,5,5,6,6,7,7]} index={2}/>
-        <KPICard label="PIPELINE" value="$8.4M" trendLabel="+7% this week" trendPos accentColor={GOLD} sparkData={[7.6,7.8,7.9,8.0,8.1,8.2,8.4]} index={3}/>
-      </div>
-      <SectionWidget label="Pipeline Trend · 7 Days" icon={<Activity size={12}/>} color={BLUE} badge="Live">
-        <PipelineChart/>
-      </SectionWidget>
-      <SectionWidget label="Workload Split" icon={<PieChart size={12}/>} color={GOLD} badge="77 total">
-        <WorkloadDonut/>
-      </SectionWidget>
-      <div>
-        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:9, paddingBottom:6, borderBottom:`1px solid ${BDL}` }}>
-          <Sparkles size={11} color={GOLD}/>
-          <span style={{ fontSize:"0.59rem", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.09em" }}>Smart Insights</span>
-          <span style={{ marginLeft:"auto", fontSize:"0.57rem", fontWeight:700, color:TT, background:BDL, padding:"1px 8px", borderRadius:12 }}>{content.flags.length} found</span>
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-          {content.flags.map((f,i) => <FlagCard key={f.id} flag={f} onClick={() => onFlagClick(f)} index={i}/>)}
-        </div>
-      </div>
-      {content.suggestedActions && (
-        <div style={{ background:"linear-gradient(135deg,#F0F4F8,#EBF0FB)", border:`1px solid ${BDL}`, borderRadius:R, padding:13 }}>
-          <p style={{ fontSize:"0.65rem", color:TM, fontWeight:700, marginBottom:9 }}>What would you like to do next?</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {content.suggestedActions.map((a,i) => (
-              <button key={i} onClick={() => a.prompt && onActionClick(a.prompt)} style={{ padding:"9px 13px", fontFamily:font, background:a.primary?`linear-gradient(135deg,${NAVY},${BLUE})`:"white", border:`1px solid ${a.primary?BLUE:BDL}`, borderRadius:7, color:a.primary?"white":NAVY, fontSize:"0.70rem", fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7, boxShadow:a.primary?`0 4px 12px ${BLUE}30`:SH_SM, transition:"all 0.2s ease" }}>
-                {a.primary && <Zap size={12}/>}{a.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  void content; void onFlagClick; void onActionClick;
+  return null;
 }
 
 // ── Submissions queue view ─────────────────────────────────────────────────────
+// Empty by design — the SUBMISSIONS QUEUE header, Priority Flags list, and
+// "Tackle blocked first" / "Start quoting" CTAs were removed. All interactions
+// now flow through TabAwareSuggestions on the /submissions route.
 function SubmissionsQueueView({ content, onFlagClick, onActionClick }: { content: ProactiveContent; onFlagClick: (f: Flag) => void; onActionClick: (p: string) => void }) {
-  return (
-    <div style={{ padding:"14px", display:"flex", flexDirection:"column", gap:12 }}>
-      <div style={{ animation:"slideUp 0.3s ease" }}>
-        <span style={{ fontSize:"0.57rem", fontWeight:800, color:TT, textTransform:"uppercase", letterSpacing:"0.11em" }}>{content.contextLabel}</span>
-        <p style={{ fontSize:"0.88rem", fontWeight:800, color:NAVY, lineHeight:1.3, marginTop:4 }}>{content.headline}</p>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-        <KPICard label="TOTAL QUEUE" value="47" trendLabel="+4 this week" trendPos accentColor={BLUE} sparkData={[40,42,43,45,44,46,47]} index={0}/>
-        <KPICard label="CRITICAL" value="3" trendLabel="require action" trendPos={false} accentColor={RED} sparkData={[1,1,2,2,3,3,3]} index={1}/>
-      </div>
-      <SectionWidget label="Queue Status Breakdown" icon={<BarChart2 size={12}/>} color={BLUE}>
-        <QueueStatusChart/>
-      </SectionWidget>
-      <div>
-        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:9, paddingBottom:6, borderBottom:`1px solid ${BDL}` }}>
-          <AlertTriangle size={11} color={ORANGE}/>
-          <span style={{ fontSize:"0.59rem", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.09em" }}>Priority Flags</span>
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-          {content.flags.map((f,i) => <FlagCard key={f.id} flag={f} onClick={() => onFlagClick(f)} index={i}/>)}
-        </div>
-      </div>
-      {content.suggestedActions && (
-        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-          {content.suggestedActions.map((a,i) => (
-            <button key={i} onClick={() => a.prompt && onActionClick(a.prompt)} style={{ padding:"9px 13px", fontFamily:font, background:a.primary?`linear-gradient(135deg,${NAVY},${BLUE})`:"white", border:`1px solid ${a.primary?BLUE:BDL}`, borderRadius:7, color:a.primary?"white":NAVY, fontSize:"0.70rem", fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7, boxShadow:a.primary?`0 4px 12px ${BLUE}30`:SH_SM }}>
-              {a.primary && <Zap size={12}/>}{a.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  void content; void onFlagClick; void onActionClick;
+  return null;
 }
 
 // ── Submission detail view ─────────────────────────────────────────────────────
+// Default view is intentionally empty — all interaction now flows through
+// TabAwareSuggestions (the adaptive "Helping with: …" panel above).
+// Auto-Review, Dimensional Review, Review Flags, Companion Suggestions, and the
+// per-context suggested-action buttons are reached only by clicking suggestions.
 function SubmissionDetailView({ content, onFlagClick, onActionClick }: { content: ProactiveContent; onFlagClick: (f: Flag) => void; onActionClick: (p: string) => void }) {
-  return (
-    <div style={{ padding:"14px", display:"flex", flexDirection:"column", gap:12 }}>
-      <div style={{ animation:"slideUp 0.3s ease" }}>
-        <span style={{ fontSize:"0.57rem", fontWeight:800, color:TT, textTransform:"uppercase", letterSpacing:"0.11em" }}>{content.contextLabel}</span>
-        <p style={{ fontSize:"0.90rem", fontWeight:800, color:NAVY, lineHeight:1.3, marginTop:4 }}>{content.headline}</p>
-        {content.subline && (
-          <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:7 }}>
-            {["SUB-7836","Private K-12","Westport, CT"].map((t,i) => (
-              <span key={i} style={{ fontSize:"0.60rem", fontWeight:i===0?700:400, color:i===0?BLUE:TM, background:i===0?"#EBF0FB":"transparent", padding:i===0?"2px 7px":"0", borderRadius:i===0?12:0 }}>{t}</span>
-            ))}
-            <span style={{ fontSize:"0.60rem", fontWeight:700, color:ORANGE, background:"#FEF3E2", padding:"2px 7px", borderRadius:12 }}>In Review</span>
-          </div>
-        )}
-      </div>
-      <SectionWidget label="Dimensional Scores" icon={<Target size={12}/>} color={BLUE} badge="Auto-analyzed">
-        <div style={{ display:"flex", justifyContent:"space-around", paddingTop:4 }}>
-          <MiniRadial score={82} color={GREEN}  label="Appetite & Fit"/>
-          <MiniRadial score={64} color={ORANGE} label="Claims History"/>
-          <MiniRadial score={62} color={BLUE}   label="Risk Benchmark"/>
-        </div>
-      </SectionWidget>
-      <SectionWidget label="5-Year Claims History" icon={<BarChart2 size={12}/>} color={ORANGE} badge="2020–2024">
-        <ClaimsChart/>
-      </SectionWidget>
-      <div>
-        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:9, paddingBottom:6, borderBottom:`1px solid ${BDL}` }}>
-          <AlertTriangle size={11} color={ORANGE}/>
-          <span style={{ fontSize:"0.59rem", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.09em" }}>Review Flags</span>
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-          {content.flags.map((f,i) => <FlagCard key={f.id} flag={f} onClick={() => onFlagClick(f)} index={i}/>)}
-        </div>
-      </div>
-      {content.suggestedActions && (
-        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-          {content.suggestedActions.map((a,i) => (
-            <button key={i} onClick={() => a.prompt && onActionClick(a.prompt)} style={{ padding:"9px 13px", fontFamily:font, background:a.primary?`linear-gradient(135deg,${GREEN},#1F9A5A)`:"white", border:`1px solid ${a.primary?GREEN:BDL}`, borderRadius:7, color:a.primary?"white":NAVY, fontSize:"0.70rem", fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7, boxShadow:a.primary?`0 4px 12px ${GREEN}30`:SH_SM }}>
-              {a.primary && <CheckCircle2 size={12}/>}{a.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  // All three props unused now; kept to preserve the dispatcher contract.
+  void content; void onFlagClick; void onActionClick;
+  return null;
 }
 
 // ── Generic proactive + dispatcher ────────────────────────────────────────────
@@ -777,7 +677,7 @@ function GenericProactiveView({ content, onFlagClick, onActionClick }: { content
         <div style={{ background:"linear-gradient(135deg,#F0F4F8,#EBF0FB)", border:`1px solid ${BDL}`, borderRadius:R, padding:13 }}>
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {content.suggestedActions.map((a,i) => (
-              <button key={i} onClick={() => a.prompt && onActionClick(a.prompt)} style={{ padding:"9px 13px", fontFamily:font, background:a.primary?`linear-gradient(135deg,${NAVY},${BLUE})`:"white", border:`1px solid ${a.primary?BLUE:BDL}`, borderRadius:7, color:a.primary?"white":NAVY, fontSize:"0.70rem", fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7, boxShadow:a.primary?`0 4px 12px ${BLUE}30`:SH_SM }}>
+              <button key={i} onClick={() => a.prompt && onActionClick(a.prompt)} style={{ padding:"9px 13px", fontFamily:font, background:a.primary?`linear-gradient(135deg,${NAVY},${BLUE})`:"white", border:`1px solid ${a.primary?BLUE:BDL}`, borderRadius:6, color:a.primary?"white":NAVY, fontSize:"0.70rem", fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7, boxShadow:a.primary?`0 4px 12px ${BLUE}30`:SH_SM }}>
                 {a.primary && <Zap size={12}/>}{a.label}
               </button>
             ))}
@@ -812,7 +712,7 @@ function DrilldownModeView({ flag, onBack, onQuickAsk }: { flag: Flag; onBack: (
   const cfg = SEV[flag.severity];
   return (
     <div style={{ animation:"slideUp 0.3s ease" }}>
-      <button onClick={onBack} style={{ display:"flex", alignItems:"center", gap:7, padding:"10px 16px", background:"#F8FAFC", border:"none", borderBottom:`1px solid ${BDL}`, cursor:"pointer", fontFamily:font, width:"100%", color:TM, transition:"background 0.2s" }}
+      <button onClick={onBack} style={{ display:"flex", alignItems:"center", gap:7, padding:"10px 16px", background:"#F8FAFC", border:"none", borderBottom:`1px solid ${BDL}`, cursor:"pointer", fontFamily:font, width:"100%", color:TM, transition:"background 0.2s", borderRadius:6 }}
         onMouseEnter={e => (e.currentTarget.style.background="#F0F4F8")} onMouseLeave={e => (e.currentTarget.style.background="#F8FAFC")}>
         <ArrowLeft size={13}/><span style={{ fontSize:"0.68rem", fontWeight:600 }}>Back to overview</span>
       </button>
@@ -846,7 +746,7 @@ function DrilldownModeView({ flag, onBack, onQuickAsk }: { flag: Flag; onBack: (
             <p style={{ fontSize:"0.57rem", fontWeight:800, color:TT, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>ASK COMPANION</p>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
               {flag.quickAsks.map((q,i) => (
-                <button key={i} onClick={() => onQuickAsk(q)} style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 12px", background:"white", border:`1px solid ${BDL}`, borderRadius:8, fontSize:"0.69rem", color:BLUE, fontWeight:500, cursor:"pointer", textAlign:"left", fontFamily:font, boxShadow:SH_SM, transition:"all 0.2s ease" }}
+                <button key={i} onClick={() => onQuickAsk(q)} style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 12px", background:"white", border:`1px solid ${BDL}`, borderRadius:6, fontSize:"0.69rem", color:BLUE, fontWeight:500, cursor:"pointer", textAlign:"left", fontFamily:font, boxShadow:SH_SM, transition:"all 0.2s ease" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="#EBF0FB"; (e.currentTarget as HTMLElement).style.borderColor=`${BLUE}60`; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="white"; (e.currentTarget as HTMLElement).style.borderColor=BDL; }}>
                   <Sparkles size={10} color={BLUE} style={{ flexShrink:0 }}/>{q}
@@ -987,7 +887,7 @@ function DocMetricsPanel({ items, statuses, onBeginReview }: { items: DocItem[];
             {readiness>=80?"✓ Ready for underwriting review":`${req.length-reqRecv} required doc${req.length-reqRecv!==1?"s":""} still missing`}
           </p>
         </div>
-        <button disabled={!allReq} onClick={allReq?onBeginReview:undefined} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px 0", fontFamily:font, background:allReq?`linear-gradient(135deg,${GREEN},#1F9A5A)`:`linear-gradient(135deg,${BDL},#E0E7EF)`, border:"none", borderRadius:8, cursor:allReq?"pointer":"not-allowed", fontSize:"0.74rem", fontWeight:700, color:allReq?"white":TT, boxShadow:allReq?`0 4px 14px ${GREEN}40`:"none", transition:"all 0.3s ease" }}>
+        <button disabled={!allReq} onClick={allReq?onBeginReview:undefined} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px 0", fontFamily:font, background:allReq?`linear-gradient(135deg,${GREEN},#1F9A5A)`:`linear-gradient(135deg,${BDL},#E0E7EF)`, border:"none", borderRadius:6, cursor:allReq?"pointer":"not-allowed", fontSize:"0.74rem", fontWeight:700, color:allReq?"white":TT, boxShadow:allReq?`0 4px 14px ${GREEN}40`:"none", transition:"all 0.3s ease" }}>
           <Sparkles size={14}/>{allReq?"Begin Auto-Review →":`${req.length-reqRecv} required doc${req.length-reqRecv!==1?"s":""} missing`}
         </button>
       </div>
@@ -997,8 +897,6 @@ function DocMetricsPanel({ items, statuses, onBeginReview }: { items: DocItem[];
 
 // ── Review dimension card ─────────────────────────────────────────────────────
 function DimCard({ icon, label, result, index = 0 }: { icon: React.ReactNode; label: string; result: DimensionResult; index?: number }) {
-  const [barReady, setBarReady] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setBarReady(true), 200 + index * 120); return () => clearTimeout(t); }, [index]);
   const findIcon = (type: DimensionFinding["type"]) => ({ positive:<CheckCircle2 size={12} color={GREEN}/>, warning:<AlertTriangle size={12} color={ORANGE}/>, critical:<AlertTriangle size={12} color={RED}/>, info:<Info size={12} color={BLUE}/> }[type]);
   return (
     <div style={{ background:"white", borderRadius:R, border:`1px solid ${BDL}`, boxShadow:SH_SM, overflow:"hidden", animation:`slideUp 0.35s ease ${index*0.1}s both` }}>
@@ -1012,18 +910,13 @@ function DimCard({ icon, label, result, index = 0 }: { icon: React.ReactNode; la
           <span style={{ fontSize:"0.84rem", fontWeight:800, color:result.scoreColor }}>{result.score}</span>
         </div>
       </div>
-      <div style={{ padding:"6px 0 8px" }}>
-        <div style={{ height:4, background:"#EEF2F7", margin:"0 14px 10px", borderRadius:2 }}>
-          <div style={{ height:"100%", width:barReady?`${result.score}%`:"0%", background:`linear-gradient(to right,${result.scoreColor},${result.scoreColor}80)`, transition:"width 0.85s cubic-bezier(0.4,0,0.2,1)", borderRadius:2 }}/>
-        </div>
-        <div style={{ padding:"0 14px", display:"flex", flexDirection:"column", gap:6 }}>
-          {result.findings.map((f,i) => (
-            <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
-              <span style={{ flexShrink:0, marginTop:2 }}>{findIcon(f.type)}</span>
-              <p style={{ fontSize:"0.67rem", color:TM, lineHeight:1.5 }}>{f.text}</p>
-            </div>
-          ))}
-        </div>
+      <div style={{ padding:"10px 14px", display:"flex", flexDirection:"column", gap:6 }}>
+        {result.findings.map((f,i) => (
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+            <span style={{ flexShrink:0, marginTop:2 }}>{findIcon(f.type)}</span>
+            <p style={{ fontSize:"0.67rem", color:TM, lineHeight:1.5 }}>{f.text}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1074,9 +967,6 @@ function DocReviewPanel({ review, onAskAbout }: { review: DocReviewResult; onAsk
             <DimCard icon={<Info size={13}/>} label="Comparable Risk Benchmark" result={review.benchmark} index={2}/>
           </div>
         </ReviewSection>
-        <ReviewSection label="Benchmark Comparison">
-          <BenchmarkBars value={review.benchmark.score}/>
-        </ReviewSection>
         {review.recommendations.length > 0 && (
           <ReviewSection label="Companion Recommendations" badge={`${review.recommendations.length} found`}>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1087,7 +977,7 @@ function DocReviewPanel({ review, onAskAbout }: { review: DocReviewResult; onAsk
                     <span style={{ fontSize:"0.54rem", fontWeight:800, color:cfg.color, background:`${cfg.color}15`, padding:"2px 8px", borderRadius:20, textTransform:"uppercase", letterSpacing:"0.07em" }}>{rec.priority} priority</span>
                     <p style={{ fontSize:"0.72rem", fontWeight:700, color:NAVY, marginTop:6, marginBottom:6 }}>{rec.product}</p>
                     <p style={{ fontSize:"0.67rem", color:TM, lineHeight:1.55, fontStyle:"italic", borderLeft:`2px solid ${cfg.color}40`, paddingLeft:8, marginBottom:8 }}>"{rec.reason}"</p>
-                    <button onClick={() => onAskAbout(`Tell me more about adding ${rec.product} to this submission.`)} style={{ display:"flex", alignItems:"center", gap:5, fontSize:"0.62rem", color:BLUE, fontWeight:600, background:"none", border:"none", cursor:"pointer", fontFamily:font, padding:0 }}>
+                    <button onClick={() => onAskAbout(`Tell me more about adding ${rec.product} to this submission.`)} style={{ display:"flex", alignItems:"center", gap:5, fontSize:"0.62rem", color:BLUE, fontWeight:600, background:"none", border:"none", cursor:"pointer", fontFamily:font, padding:0, borderRadius:6 }}>
                       <Sparkles size={9} color={BLUE}/> Ask Companion about this
                     </button>
                   </div>
@@ -1194,7 +1084,7 @@ function NewSubmissionView({ products, items, statuses, onToggle, onAskAbout }: 
                   const isRecv = status === "received", isNA = status === "na";
                   return (
                     <div key={item.id} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"10px 12px", background:"white", borderRadius:9, border:`1px solid ${isRecv?GREEN+"60":BDL}`, borderLeft:`3px solid ${isRecv?GREEN:item.required?BLUE:TT}`, boxShadow:isRecv?`0 2px 8px ${GREEN}20`:SH_SM, opacity:isNA?0.5:1, transition:"all 0.25s ease", animation:`slideUp 0.3s ease ${(gi*3+ii)*0.04}s both` }}>
-                      <button onClick={() => onToggle(item.id)} style={{ width:20, height:20, flexShrink:0, marginTop:1, borderRadius:5, border:`2px solid ${isRecv?GREEN:BDL}`, background:isRecv?GREEN:"white", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all 0.2s ease", boxShadow:isRecv?`0 0 0 3px ${GREEN}25`:"none" }}>
+                      <button onClick={() => onToggle(item.id)} style={{ width:20, height:20, flexShrink:0, marginTop:1, borderRadius:6, border:`2px solid ${isRecv?GREEN:BDL}`, background:isRecv?GREEN:"white", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all 0.2s ease", boxShadow:isRecv?`0 0 0 3px ${GREEN}25`:"none" }}>
                         {isRecv && <Check size={11} color="white" style={{ animation:"popIn 0.2s ease" }}/>}
                       </button>
                       <div style={{ flex:1, minWidth:0 }}>
@@ -1222,7 +1112,7 @@ function NewSubmissionView({ products, items, statuses, onToggle, onAskAbout }: 
         <p style={{ fontSize:"0.57rem", fontWeight:800, color:TT, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:7 }}>ASK COMPANION</p>
         <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
           {["What is required for BLX submissions?","Explain the SIR funding mechanism requirement","What ML operational disclosures are needed?"].map((q,i) => (
-            <button key={i} onClick={() => onAskAbout(q)} style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 11px", background:"white", border:`1px solid ${BDL}`, borderRadius:8, fontSize:"0.67rem", color:BLUE, fontWeight:500, cursor:"pointer", textAlign:"left", fontFamily:font, boxShadow:SH_SM, transition:"all 0.2s ease" }}
+            <button key={i} onClick={() => onAskAbout(q)} style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 11px", background:"white", border:`1px solid ${BDL}`, borderRadius:6, fontSize:"0.67rem", color:BLUE, fontWeight:500, cursor:"pointer", textAlign:"left", fontFamily:font, boxShadow:SH_SM, transition:"all 0.2s ease" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="#EBF0FB"; (e.currentTarget as HTMLElement).style.borderColor=`${BLUE}60`; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="white"; (e.currentTarget as HTMLElement).style.borderColor=BDL; }}>
               <Sparkles size={9} color={BLUE} style={{ flexShrink:0 }}/>{q}
@@ -1254,6 +1144,9 @@ export function ChatBot() {
   const location = useLocation(), navigate = useNavigate();
   const { user } = useAuth();
   const { selectedProducts } = useCompanion();
+  // When mounted inside SubmissionDetail, this returns the workspace context;
+  // otherwise null. TabAwareSuggestions handles its own null-check too.
+  const submissionWorkspace = useSubmissionWorkspaceOptional();
 
   const [isOpen,       setIsOpen]       = useState(true);
   const [mode,         setMode]         = useState<CompanionMode>("proactive");
@@ -1332,7 +1225,7 @@ export function ChatBot() {
   if (!isOpen) return (
     <div style={{ width:44, minWidth:44, height:"100vh", background:"white", borderLeft:`1px solid ${BDL}`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:font, position:"relative" }}>
       <div style={{ position:"absolute", top:0, right:0, width:44, height:3, background:`linear-gradient(to right,${BLUE},${GOLD})` }}/>
-      <button onClick={() => setIsOpen(true)} title="Open UW Companion" style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, padding:"14px 0", cursor:"pointer", background:"transparent", border:"none", width:"100%" }}>
+      <button onClick={() => setIsOpen(true)} title="Open UW Companion" style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, padding:"14px 0", cursor:"pointer", background:"transparent", border:"none", width:"100%", borderRadius:6 }}>
         <div style={{ width:34, height:34, background:`linear-gradient(135deg,${NAVY},#162A4A)`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", boxShadow:SH_MD }}>
           <Sparkles size={16} color={GOLD}/>
           <span style={{ position:"absolute", top:3, right:3, width:8, height:8, background:dotColor, borderRadius:"50%", border:"2px solid white", animation:"pulseDot 2s infinite" }}/>
@@ -1345,51 +1238,48 @@ export function ChatBot() {
   );
 
   return (
-    <div style={{ width:"clamp(340px,26vw,440px)", minWidth:340, height:"100vh", background:"#F5F7FB", borderLeft:`1px solid ${BDL}`, display:"flex", flexDirection:"column", flexShrink:0, fontFamily:font, overflow:"hidden" }}>
-      <div style={{ background:`linear-gradient(135deg,#0A1828,#162A4A)`, flexShrink:0, padding:"14px 16px 12px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", boxShadow:"0 4px 20px rgba(0,0,0,0.25)" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:38, height:38, background:"rgba(255,255,255,0.08)", borderRadius:11, border:"1px solid rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Sparkles size={19} color={GOLD}/>
+    <div style={{ width:300, minWidth:300, maxWidth:300, height:"100vh", background:"#F5F7FB", borderLeft:`1px solid ${BDL}`, display:"flex", flexDirection:"column", flexShrink:0, fontFamily:font, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,#0A1828,#162A4A)`, flexShrink:0, padding:"10px 10px 9px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, boxShadow:"0 4px 20px rgba(0,0,0,0.25)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7, minWidth:0, flex:1 }}>
+          <div style={{ width:30, height:30, background:"rgba(255,255,255,0.08)", borderRadius:8, border:"1px solid rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Sparkles size={15} color={GOLD}/>
           </div>
-          <div>
-            <p style={{ fontSize:"0.86rem", fontWeight:800, color:"white", lineHeight:1.1 }}>UW Companion</p>
-            <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:5 }}>
-              <span style={{ width:7, height:7, borderRadius:"50%", background:dotColor, display:"inline-block", animation:"pulseDot 2s infinite", boxShadow:`0 0 0 2px ${dotColor}40` }}/>
-              <span style={{ fontSize:"0.63rem", color:"rgba(255,255,255,0.65)", fontWeight:600 }}>{statusLabel}</span>
+          <div style={{ minWidth:0 }}>
+            <p style={{ fontSize:"0.74rem", fontWeight:800, color:"white", lineHeight:1.1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>UW Companion</p>
+            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:3 }}>
+              <span style={{ width:6, height:6, borderRadius:"50%", background:dotColor, display:"inline-block", animation:"pulseDot 2s infinite", boxShadow:`0 0 0 2px ${dotColor}40` }}/>
+              <span style={{ fontSize:"0.56rem", color:"rgba(255,255,255,0.65)", fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{statusLabel}</span>
             </div>
           </div>
         </div>
-        <div style={{ display:"flex", gap:6 }}>
+        <div style={{ display:"flex", gap:4, flexShrink:0 }}>
           {(mode !== "proactive" || isNewSub) && (
-            <button onClick={() => { setMode("proactive"); setActiveFlag(null); if (!isNewSub) setMessages([]); if (isNewSub) { setNewSubPhase("checklist"); setReviewResult(null); } }} style={{ width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:7, cursor:"pointer", transition:"background 0.2s" }}
+            <button onClick={() => { setMode("proactive"); setActiveFlag(null); if (!isNewSub) setMessages([]); if (isNewSub) { setNewSubPhase("checklist"); setReviewResult(null); } }} style={{ width:24, height:24, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:5, cursor:"pointer", transition:"background 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.background="rgba(255,255,255,0.15)")} onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,0.08)")}>
-              <RotateCcw size={12} color="rgba(255,255,255,0.7)"/>
+              <RotateCcw size={11} color="rgba(255,255,255,0.7)"/>
             </button>
           )}
-          <button onClick={() => setIsOpen(false)} style={{ width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:7, cursor:"pointer", transition:"background 0.2s" }}
+          <button onClick={() => setIsOpen(false)} style={{ width:24, height:24, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:5, cursor:"pointer", transition:"background 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.background="rgba(255,255,255,0.15)")} onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,0.08)")}>
-            <ChevronRight size={12} color="rgba(255,255,255,0.7)"/>
+            <ChevronRight size={11} color="rgba(255,255,255,0.7)"/>
           </button>
         </div>
       </div>
 
-      <div style={{ background:"white", borderBottom:`1px solid ${BDL}`, padding:"7px 13px", display:"flex", gap:4, flexShrink:0 }}>
-        {isNewSub ? (
-          <>
-            {newSubPhase !== "reviewed" && <ModeTab label="Checklist" icon={<FileText size={9}/>} active={newSubPhase==="checklist"} color={BLUE} onClick={() => { setNewSubPhase("checklist"); setReviewResult(null); }}/>}
-            {showMetrics && <ModeTab label="Metrics" icon={<TrendingUp size={9}/>} active={false} color={GREEN} onClick={() => {}}/>}
-            {newSubPhase === "reviewed" && <ModeTab label="Auto-Review" icon={<Sparkles size={9}/>} active color={GREEN} onClick={() => {}}/>}
-            {mode === "conversational" && messages.length > 0 && <ModeTab label="Chat" icon={<Send size={9}/>} active={false} color={PURPLE} onClick={() => {}}/>}
-          </>
-        ) : (
-          (["proactive","drilldown","conversational"] as CompanionMode[]).map(m => {
-            const mb = MODE_BADGE[m];
-            return <ModeTab key={m} label={mb.label} icon={mb.icon} active={mode===m} color={mb.color} onClick={() => { if (m==="proactive") { setMode("proactive"); setActiveFlag(null); } else if (m==="conversational" && messages.length>0) setMode("conversational"); }}/>;
-          })
-        )}
-      </div>
+      {/* Mode tab bar removed (PROACTIVE / DRILL-DOWN / CONVERSATIONAL). */}
+      {/* Only the new-submission workflow tabs remain, since they reflect intake phase state. */}
+      {isNewSub && (
+        <div style={{ background:"white", borderBottom:`1px solid ${BDL}`, padding:"7px 13px", display:"flex", gap:4, flexShrink:0 }}>
+          {newSubPhase !== "reviewed" && <ModeTab label="Checklist" icon={<FileText size={9}/>} active={newSubPhase==="checklist"} color={BLUE} onClick={() => { setNewSubPhase("checklist"); setReviewResult(null); }}/>}
+          {showMetrics && <ModeTab label="Metrics" icon={<TrendingUp size={9}/>} active={false} color={GREEN} onClick={() => {}}/>}
+          {newSubPhase === "reviewed" && <ModeTab label="Auto-Review" icon={<Sparkles size={9}/>} active color={GREEN} onClick={() => {}}/>}
+          {mode === "conversational" && messages.length > 0 && <ModeTab label="Chat" icon={<Send size={9}/>} active={false} color={PURPLE} onClick={() => {}}/>}
+        </div>
+      )}
 
       <div style={{ flex:1, overflowY:"auto" }}>
+        {/* Adaptive suggestion panel — renders app-wide based on URL or active submission tab */}
+        <TabAwareSuggestions/>
         {isNewSub && (
           <>
             {newSubPhase === "checklist" && (scanning ? <ScanningView ctxId={ctxId}/> : (<><NewSubmissionView products={selectedProducts} items={docItems} statuses={docStatuses} onToggle={handleDocToggle} onAskAbout={sendMessage}/>{showMetrics && <DocMetricsPanel items={docItems} statuses={docStatuses} onBeginReview={handleBeginReview}/>}{mode==="conversational" && messages.length>0 && <ConversationalView messages={messages} isTyping={isTyping} scrollRef={scrollRef} userInitials={user?.initials??"U"} accentColor={BLUE}/>}</>))}
@@ -1411,7 +1301,7 @@ export function ChatBot() {
           <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={placeholder} disabled={isTyping} rows={1}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", resize:"none", fontSize:"0.75rem", color:NAVY, fontFamily:font, lineHeight:1.5, maxHeight:72, overflowY:"auto" }}
             onInput={e => { const el = e.currentTarget; el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,72)+"px"; }}/>
-          <button onClick={() => sendMessage(input)} disabled={!input.trim()||isTyping} style={{ width:32, height:32, flexShrink:0, background:input.trim()&&!isTyping?`linear-gradient(135deg,${NAVY},${BLUE})`:BDL, borderRadius:8, border:"none", cursor:input.trim()&&!isTyping?"pointer":"not-allowed", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:input.trim()&&!isTyping?`0 4px 10px ${BLUE}30`:"none", transition:"all 0.2s ease" }}>
+          <button onClick={() => sendMessage(input)} disabled={!input.trim()||isTyping} style={{ width:32, height:32, flexShrink:0, background:input.trim()&&!isTyping?`linear-gradient(135deg,${NAVY},${BLUE})`:BDL, borderRadius:6, border:"none", cursor:input.trim()&&!isTyping?"pointer":"not-allowed", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:input.trim()&&!isTyping?`0 4px 10px ${BLUE}30`:"none", transition:"all 0.2s ease" }}>
             <Send size={13} color="white"/>
           </button>
         </div>

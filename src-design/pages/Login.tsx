@@ -263,6 +263,7 @@ export function Login() {
                         background: isActive ? card.bg : "white",
                         boxShadow: isActive ? `0 4px 16px ${card.color}22` : "none",
                         transform: isActive ? "translateY(-1px)" : "none",
+                        borderRadius: 6,
                       }}
                     >
                       <div className="flex items-center justify-center"
@@ -306,6 +307,7 @@ export function Login() {
                 background: "white",
                 border: `1px solid ${activeCard ? activeCard.border : BDL}`,
                 borderTop: `3px solid ${activeCard ? activeCard.color : N}`,
+                borderRadius: 8,
                 padding: "28px 28px 24px",
                 marginBottom: 16,
                 transition: "border-color 0.2s",
@@ -345,6 +347,7 @@ export function Login() {
                     style={{
                       width: "100%", padding: "10px 14px",
                       border: `1px solid ${error ? "#E8A8A8" : BD}`,
+                      borderRadius: 6,
                       fontSize: "0.88rem", fontFamily: font, outline: "none",
                       color: TD, background: "white",
                       transition: "border-color 0.15s",
@@ -361,7 +364,7 @@ export function Login() {
                       Password
                     </label>
                     <button type="button"
-                      style={{ fontSize: "0.68rem", color: N, fontWeight: 600 }}
+                      style={{ fontSize: "0.68rem", color: N, fontWeight: 600, borderRadius: 6 }}
                       className="hover:underline">
                       Forgot password?
                     </button>
@@ -377,6 +380,7 @@ export function Login() {
                       style={{
                         width: "100%", padding: "10px 42px 10px 14px",
                         border: `1px solid ${error ? "#E8A8A8" : BD}`,
+                        borderRadius: 6,
                         fontSize: "0.88rem", fontFamily: font, outline: "none",
                         color: TD, background: "white",
                       }}
@@ -393,7 +397,7 @@ export function Login() {
                 {/* Error */}
                 {error && (
                   <div className="flex items-center gap-2.5 p-3 mb-4"
-                    style={{ background: "#FBEAEA", border: "1px solid #E8A8A8", borderLeft: "3px solid #B91C1C" }}>
+                    style={{ background: "#FBEAEA", border: "1px solid #E8A8A8", borderLeft: "3px solid #B91C1C", borderRadius: 6 }}>
                     <AlertCircle size={14} color="#B91C1C" style={{ flexShrink: 0 }} />
                     <p style={{ fontSize: "0.75rem", color: "#7A1F1F", fontWeight: 600 }}>{error}</p>
                   </div>
@@ -414,6 +418,7 @@ export function Login() {
                     boxShadow: `0 4px 16px ${(activeCard?.color ?? N)}35`,
                     transition: "all 0.2s",
                     cursor: loading || success ? "not-allowed" : "pointer",
+                    borderRadius: 6,
                   }}
                 >
                   {success ? (
@@ -428,7 +433,7 @@ export function Login() {
             </form>
 
             {/* All demo accounts */}
-            <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
+            <div style={{ border: `1px solid ${BDL}`, borderRadius: 8, background: "white", overflow: "hidden" }}>
               <div className="px-5 py-3" style={{ borderBottom: `1px solid ${BDL}`, background: "#F8FAFC" }}>
                 <p style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>
                   All Demo Accounts
@@ -441,7 +446,7 @@ export function Login() {
                     <button key={u.id}
                       onClick={() => { setEmail(u.email); setPassword(u.password); setSelectedRole(u.appRole); setError(""); }}
                       className="w-full flex items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50"
-                      style={{ borderBottom: `1px solid ${BDL}` }}>
+                      style={{ borderBottom: `1px solid ${BDL}`, borderRadius: 6 }}>
                       <div className="flex items-center justify-center shrink-0"
                         style={{ width: 30, height: 30, background: card.color, color: "white", fontSize: "0.62rem", fontWeight: 800 }}>
                         {u.initials}

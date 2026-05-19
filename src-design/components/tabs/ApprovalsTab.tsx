@@ -140,7 +140,7 @@ function SelectField<T extends string>({
       <div ref={ref} className="relative">
         <button type="button" onClick={() => setOpen(v => !v)}
           className="w-full flex items-center justify-between px-3 py-2.5"
-          style={{ border: `1px solid ${BD}`, background: "white", fontSize: "0.84rem", color: value ? TD : TT, fontFamily: font, textAlign: "left" }}>
+          style={{ border: `1px solid ${BD}`, background: "white", fontSize: "0.84rem", color: value ? TD : TT, fontFamily: font, textAlign: "left", borderRadius: 6 }}>
           <span>{value || placeholder || "Select…"}</span>
           <ChevronDown size={14} color={TT} style={{ transform: open ? "rotate(180deg)" : "none", transition: "0.15s" }} />
         </button>
@@ -151,7 +151,7 @@ function SelectField<T extends string>({
               <button key={opt} type="button"
                 onClick={() => { onChange(opt); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2"
-                style={{ fontSize: "0.84rem", fontFamily: font, background: value === opt ? N : "white", color: value === opt ? "white" : TD }}>
+                style={{ fontSize: "0.84rem", fontFamily: font, background: value === opt ? N : "white", color: value === opt ? "white" : TD, borderRadius: 6 }}>
                 {value === opt && <Check size={12} />}
                 {opt}
               </button>
@@ -214,7 +214,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BDL}` }}>
           <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD }}>New approval</h2>
           <button onClick={onClose} className="flex items-center justify-center hover:bg-slate-100 transition-colors"
-            style={{ width: 28, height: 28, color: TT }}>
+            style={{ width: 28, height: 28, color: TT, borderRadius: 6 }}>
             <X size={16} />
           </button>
         </div>
@@ -228,7 +228,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
               <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Account</label>
               <input value={account} onChange={e => setAccount(e.target.value)}
                 className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font }} />
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font }} />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -237,7 +237,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
               </div>
               <input value={submission} onChange={e => setSub(e.target.value)}
                 className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font }} />
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font }} />
             </div>
           </div>
 
@@ -274,7 +274,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
               <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Need by</label>
               <input type="date" value={needBy} onChange={e => setNeedBy(e.target.value)}
                 className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: needBy ? TD : TT, fontFamily: font }} />
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: needBy ? TD : TT, fontFamily: font }} />
             </div>
           </div>
 
@@ -284,7 +284,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
             <textarea value={context} onChange={e => setContext(e.target.value)}
               placeholder="Why this is being referred, what's been considered, and what decision you need."
               rows={4} className="w-full outline-none resize-y px-3 py-2.5"
-              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font, boxSizing: "border-box" }} />
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, boxSizing: "border-box" }} />
           </div>
         </div>
 
@@ -295,12 +295,12 @@ function NewApprovalModal({ onClose, onSubmit }: {
           </span>
           <div className="flex items-center gap-2.5">
             <button onClick={onClose} className="px-4 py-2 hover:brightness-97 transition-all"
-              style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}` }}>
+              style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
               Cancel
             </button>
             <button onClick={handleSubmit} disabled={!canSubmit}
               className="flex items-center gap-1.5 px-5 py-2 transition-all hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+              style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
               <Flag size={12} /> Send approval
             </button>
           </div>
@@ -321,7 +321,14 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
   const isPending = approval.status === "Pending";
 
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${isPending ? "#C9A227" : approval.status === "Approved" ? "#2E7D32" : "#B91C1C"}` }}>
+    <div style={{
+      background: "white",
+      border: `1px solid ${BDL}`,
+      borderTop: `3px solid ${isPending ? "#C9A227" : approval.status === "Approved" ? "#2E7D32" : "#B91C1C"}`,
+      borderRadius: 8,
+      overflow: "hidden",
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+    }}>
       <div className="px-5 py-4 flex items-start gap-4">
 
         {/* Left: all content */}
@@ -392,12 +399,12 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
           <div className="flex items-center gap-2 shrink-0 mt-1">
             <button onClick={() => onApprove(approval.id)}
               className="flex items-center gap-1.5 px-4 py-2 hover:brightness-95 transition-all"
-              style={{ background: N, color: "white", fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${N}` }}>
+              style={{ background: N, color: "white", fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${N}`, borderRadius: 6 }}>
               <Check size={12} /> Approve
             </button>
             <button onClick={() => onDecline(approval.id)}
               className="flex items-center gap-1.5 px-4 py-2 hover:bg-slate-50 transition-all"
-              style={{ background: "white", color: TM, fontSize: "0.78rem", fontWeight: 600, border: `1px solid ${BD}` }}>
+              style={{ background: "white", color: TM, fontSize: "0.78rem", fontWeight: 600, border: `1px solid ${BD}`, borderRadius: 6 }}>
               <X size={12} /> Decline
             </button>
           </div>
@@ -476,7 +483,7 @@ export function ApprovalsTab() {
           {/* Request approval button */}
           <button onClick={() => setShowModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 hover:brightness-95 transition-all"
-            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
             <Plus size={13} /> Request approval
           </button>
         </div>

@@ -163,7 +163,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
             style={{
               marginBottom: "0.75rem",
               paddingBottom: "0.5rem",
-              borderBottom: `1px solid ${isActive ? palette.border + "44" : "#E5E7EB"}`,
+              borderBottom: `1px solid ${isActive ? palette.border + "44" : "#DCE3EC"}`,
               cursor: isHighlightMode ? "crosshair" : "default",
             }}
           >
@@ -237,12 +237,12 @@ function TablePreview({ headers, rows, totalRow }: {
   const { isHighlightMode, activeColor, toggleHighlight, getHighlight } = useHighlight();
 
   return (
-    <div className="overflow-hidden rounded-lg" style={{ border: "1px solid #E5E7EB" }}>
+    <div className="overflow-hidden rounded-lg" style={{ border: "1px solid #DCE3EC" }}>
       <table className="w-full" style={{ borderCollapse: "collapse", fontSize: "0.78rem" }}>
         <thead>
           <tr style={{ background: "#F8F9FB" }}>
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2.5 text-left" style={{ fontWeight: 600, color: "#6B7280", borderBottom: "1px solid #E5E7EB" }}>{h}</th>
+              <th key={i} className="px-3 py-2.5 text-left" style={{ fontWeight: 600, color: "#6B7280", borderBottom: "1px solid #DCE3EC" }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -287,7 +287,7 @@ function TablePreview({ headers, rows, totalRow }: {
             );
           })}
           {totalRow && (
-            <tr style={{ borderTop: "2px solid #E5E7EB", background: "#F8F9FB" }}>
+            <tr style={{ borderTop: "2px solid #DCE3EC", background: "#F8F9FB" }}>
               {totalRow.map((cell, j) => (
                 <td key={j} className="px-3 py-2.5" style={{ fontWeight: 700, color: "#1A2B5F" }}>{cell}</td>
               ))}
@@ -664,7 +664,7 @@ function HighlightsPanel({
   return (
     <div
       className="shrink-0"
-      style={{ borderTop: "1px solid #E5E7EB", background: "#FAFBFC" }}
+      style={{ borderTop: "1px solid #DCE3EC", background: "#FAFBFC" }}
     >
       {/* Panel header */}
       <button
@@ -848,7 +848,7 @@ export function DocPreviewModal({
               onClick={onPrev}
               disabled={!hasPrev}
               className="flex items-center gap-1 px-2.5 py-1.5 transition-colors disabled:opacity-30"
-              style={{ fontSize: "0.72rem", color: "#4A5D6E", background: "white", border: "1px solid #C4CDD8", borderRadius: 2 }}
+              style={{ fontSize: "0.72rem", color: "#4A5D6E", background: "white", border: "1px solid #C4CDD8", borderRadius: 6 }}
             >
               <ChevronLeft size={13} /> Prev
             </button>
@@ -856,7 +856,7 @@ export function DocPreviewModal({
               onClick={onNext}
               disabled={!hasNext}
               className="flex items-center gap-1 px-2.5 py-1.5 transition-colors disabled:opacity-30"
-              style={{ fontSize: "0.72rem", color: "#4A5D6E", background: "white", border: "1px solid #C4CDD8", borderRadius: 2 }}
+              style={{ fontSize: "0.72rem", color: "#4A5D6E", background: "white", border: "1px solid #C4CDD8", borderRadius: 6 }}
             >
               Next <ChevronRight size={13} />
             </button>
@@ -876,7 +876,7 @@ export function DocPreviewModal({
               color: isHighlightMode ? HIGHLIGHT_PALETTE[activeColor].text : "#1A2530",
               border: isHighlightMode ? `1.5px solid ${HIGHLIGHT_PALETTE[activeColor].border}` : "1.5px solid #C4CDD8",
               boxShadow: isHighlightMode ? `0 0 0 3px ${HIGHLIGHT_PALETTE[activeColor].border}22` : "none",
-              borderRadius: 2,
+              borderRadius: 6,
             }}
           >
             <Highlighter size={13} />
@@ -899,7 +899,7 @@ export function DocPreviewModal({
                       background: isSelected ? p.bg : "transparent",
                       border: isSelected ? `1.5px solid ${p.border}` : "1.5px solid transparent",
                       outline: isSelected ? `2px solid ${p.border}44` : "none",
-                      borderRadius: 2,
+                      borderRadius: 6,
                     }}
                   >
                     <span
@@ -919,7 +919,7 @@ export function DocPreviewModal({
             <button
               onClick={clearAll}
               className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-red-50 transition-colors"
-              style={{ fontSize: "0.72rem", color: "#B91C1C", border: "1px solid #E8A8A8", borderRadius: 2 }}
+              style={{ fontSize: "0.72rem", color: "#B91C1C", border: "1px solid #E8A8A8", borderRadius: 6 }}
             >
               <Trash2 size={12} />
               Clear all
@@ -946,7 +946,7 @@ export function DocPreviewModal({
           {/* Download */}
           <button
             className="flex items-center gap-2 px-3.5 py-2 transition-all hover:brightness-95"
-            style={{ background: "#C9A227", color: "white", fontSize: "0.78rem", fontWeight: 700, borderRadius: 2 }}
+            style={{ background: "#C9A227", color: "white", fontSize: "0.78rem", fontWeight: 700, borderRadius: 6 }}
           >
             <Download size={13} />
             Download

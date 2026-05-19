@@ -12,6 +12,10 @@ import {
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
+import { PageRegister } from "../components/companion/PageRegister";
+import { PinnedDashboard } from "../components/companion/PinnedDashboard";
+import { newId, now } from "../components/companion/CompanionContext";
+import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
 
 const N   = "#0123D4";
 const G   = "#C9A227";
@@ -67,21 +71,112 @@ const PRODUCT_MIX = [
   { name: "Cyber / Tech",              value: 8,  color: "#7B2FBE" },
 ];
 
+function KPITile({ k, onClick, selected = false }: {
+  k: { label: string; value: string; sub: string; color: string; icon: React.ReactNode };
+  onClick?: () => void;
+  selected?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const clickable = !!onClick;
+  const active    = selected;
+  const showActive = active || hovered;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      disabled={!clickable}
+      aria-pressed={clickable ? active : undefined}
+      aria-label={`${k.label}: ${k.value}, ${k.sub}${clickable ? (active ? " (filter active)" : " (click to filter)") : ""}`}
+      style={{
+        textAlign: "left", width: "100%", fontFamily: "inherit",
+        background: active
+          ? `linear-gradient(135deg, ${k.color}12 0%, ${k.color}06 100%)`
+          : hovered
+          ? `linear-gradient(135deg, white 0%, ${k.color}08 100%)`
+          : "white",
+        border: `${active ? 1.5 : 1}px solid ${active ? k.color : hovered ? `${k.color}40` : BDL}`,
+        borderRadius: 10,
+        padding: "14px 16px",
+        boxShadow: active
+          ? `0 2px 8px ${k.color}22, 0 1px 2px rgba(15,23,42,0.04)`
+          : hovered
+          ? `0 2px 6px ${k.color}14, 0 1px 2px rgba(15,23,42,0.04)`
+          : "0 1px 2px rgba(15,23,42,0.04)",
+        transform: hovered && !active ? "translateY(-1px)" : "translateY(0)",
+        transition: "background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease",
+        position: "relative",
+        overflow: "hidden",
+        outline: "none",
+        cursor: clickable ? "pointer" : "default",
+      }}>
+      <span aria-hidden style={{
+        position: "absolute", inset: "0 0 auto 0",
+        height: showActive ? 4 : 3,
+        background: showActive
+          ? k.color
+          : `linear-gradient(90deg, ${k.color}, ${k.color}66)`,
+        transition: "height 0.2s ease, background 0.2s ease",
+      }} />
+      <div className="flex items-start justify-between gap-2">
+        <p style={{
+          fontSize: "0.6rem", fontWeight: 700, color: active ? k.color : TT,
+          textTransform: "uppercase", letterSpacing: "0.09em", lineHeight: 1.3,
+        }}>
+          {k.label}
+        </p>
+        <span className="inline-flex items-center justify-center"
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: showActive ? `${k.color}1F` : `${k.color}10`,
+            color: k.color,
+            transform: showActive ? "scale(1.08)" : "scale(1)",
+            transition: "background 0.2s ease, transform 0.2s ease",
+          }}>
+          {k.icon}
+        </span>
+      </div>
+      <p style={{
+        fontSize: "1.55rem", fontWeight: 800,
+        color: showActive ? k.color : TD,
+        lineHeight: 1.1, marginTop: 6,
+        fontVariantNumeric: "tabular-nums",
+        transition: "color 0.2s ease",
+      }}>
+        {k.value}
+      </p>
+      <div className="inline-flex items-center gap-1 mt-2"
+        style={{ fontSize: "0.66rem", color: TT, fontWeight: 600 }}>
+        <span>{k.sub}</span>
+      </div>
+    </button>
+  );
+}
+
 function SectionCard({ title, icon, accent = N, action, children, noPad = false }: {
   title: string; icon?: React.ReactNode; accent?: string;
   action?: React.ReactNode; children: React.ReactNode; noPad?: boolean;
 }) {
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}` }}>
+    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}`, borderRadius: 8, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2"
-        style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-        <div className="flex items-center gap-2">
-          {icon && <span style={{ color: accent }}>{icon}</span>}
+        style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
+        <div className="flex items-center gap-2.5">
+          {icon && (
+            <span className="inline-flex items-center justify-center"
+              style={{ width: 28, height: 28, background: `${accent}14`, color: accent, borderRadius: 6 }}>
+              {icon}
+            </span>
+          )}
           <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.08em" }}>{title}</h3>
         </div>
         {action}
       </div>
-      {noPad ? children : <div className="p-5">{children}</div>}
+      {noPad ? children : <div className="p-5" style={{ flex: 1, minHeight: 0 }}>{children}</div>}
     </div>
   );
 }
@@ -91,71 +186,164 @@ export function PortfolioPage() {
   const { user }  = useAuth();
   const role: RoleId = user?.roleId ?? "sr-uw";
   const [segTab, setSegTab] = useState<"segment" | "geo">("segment");
+  const [atRiskOnly, setAtRiskOnly] = useState(false);
 
   const kpis = [
-    { label: "Total TIV",          value: "$1.43B",  sub: "Across 39 active accounts", color: N,        icon: <Building2 size={20} color={N} />            },
-    { label: "Written Premium YTD",value: "$8.3M",   sub: "+18% vs. prior year",       color: "#2E7D32",icon: <DollarSign size={20} color="#2E7D32" />       },
-    { label: "Earned Premium YTD", value: "$7.1M",   sub: "86% earned ratio",          color: "#005B99",icon: <Activity size={20} color="#005B99" />          },
-    { label: "Portfolio Hit Ratio",value: "69%",     sub: "+2pp vs. prior year",       color: G,        icon: <Award size={20} color={G} />                  },
-    { label: "Avg. Loss Ratio",    value: "54%",     sub: "Within target (≤65%)",      color: "#2E7D32",icon: <TrendingUp size={20} color="#2E7D32" />        },
-    { label: "At-Risk Accounts",   value: "4",       sub: "Loss ratio > 70%",          color: "#B91C1C",icon: <AlertTriangle size={20} color="#B91C1C" />     },
+    { key: null,         label: "Total TIV",          value: "$1.43B",  sub: "Across 39 active accounts", color: N,        icon: <Building2 size={20} color={N} />            },
+    { key: null,         label: "Written Premium YTD",value: "$8.3M",   sub: "+18% vs. prior year",       color: "#2E7D32",icon: <DollarSign size={20} color="#2E7D32" />       },
+    { key: null,         label: "Earned Premium YTD", value: "$7.1M",   sub: "86% earned ratio",          color: "#005B99",icon: <Activity size={20} color="#005B99" />          },
+    { key: null,         label: "Portfolio Hit Ratio",value: "69%",     sub: "+2pp vs. prior year",       color: G,        icon: <Award size={20} color={G} />                  },
+    { key: null,         label: "Avg. Loss Ratio",    value: "54%",     sub: "Within target (≤65%)",      color: "#2E7D32",icon: <TrendingUp size={20} color="#2E7D32" />        },
+    { key: "atRisk" as const, label: "At-Risk Accounts",   value: "4",       sub: "Loss ratio > 70%",          color: "#B91C1C",icon: <AlertTriangle size={20} color="#B91C1C" />     },
   ];
 
   return (
     <AppShell activePage="portfolio" role={role} onRoleChange={() => {}}>
-      <div style={{ fontFamily: font, color: TD }}>
+      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+        style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
-        {/* Page header */}
-        <div style={{ background: N, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ height: 4, background: `linear-gradient(90deg,${G} 0%,#A8841C 100%)` }} />
-          <div className="px-4 sm:px-8 py-4 sm:py-5">
-            <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Portfolio Analytics</h1>
-            <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.5)", marginTop: 4 }}>
+        <PageRegister
+          routeKey="page:portfolio"
+          title="Portfolio"
+          subtitle={`Book performance · ${segTab === "segment" ? "by segment" : "by geography"}`}
+          greeting={`Book snapshot: ${SEGMENT_DATA.reduce((s, x) => s + x.accounts, 0)} accounts, $${SEGMENT_DATA.reduce((s, x) => s + x.premium, 0).toFixed(1)}M written. Ask for a chart or a segment breakdown.`}
+          suggestions={[
+            { id: "monthly", label: "Show monthly placed premium", tone: "blue", icon: "BarChart3" },
+            { id: "lr", label: "Loss ratio trend", tone: "gold", icon: "Activity" },
+            { id: "bind", label: "Bind rate by month", tone: "violet", icon: "ChartPie" },
+            { id: "by-segment", label: "Premium by segment", tone: "blue", icon: "ChartPie" },
+          ]}
+          respond={(sid) => {
+            if (sid === "by-segment") return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+              kind: "donut", title: "Written premium by segment",
+              segments: SEGMENT_DATA.map(s => ({ label: s.name, value: s.premium, color: s.color })),
+              cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+            } }];
+            if (sid === "monthly") return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+              kind: "linecard", title: "Monthly placed premium",
+              intro: "Written premium by month across the book — steady upward trend versus target.",
+              data: PREMIUM_TREND.map(p => ({ label: p.month, value: p.written })),
+              yFormat: "currency", cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+            } }];
+            if (sid === "lr") {
+              const lrTrend = PREMIUM_TREND.map((p, i) => ({ label: p.month, value: 48 + Math.round(Math.sin(i) * 6) + i }));
+              return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+                kind: "linecard", title: "Loss ratio trend",
+                intro: "Book-wide loss ratio trend — within target band.",
+                data: lrTrend, yFormat: "percent",
+                cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+              } }];
+            }
+            if (sid === "bind") {
+              const bindTrend = PREMIUM_TREND.map((p, i) => ({ label: p.month, value: 28 + Math.round(Math.cos(i) * 5) + Math.floor(i / 2) }));
+              return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+                kind: "linecard", title: "Bind rate by month",
+                intro: "Bind rate by month — tracking the book average.",
+                data: bindTrend, yFormat: "percent",
+                cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+              } }];
+            }
+          }}
+          freeText={(text) => {
+            const t = text.toLowerCase();
+            if (/\b(monthly|premium trend|written premium|placed premium|month-by-month)\b/.test(t)) {
+              return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+                kind: "linecard", title: "Monthly placed premium",
+                intro: "Written premium by month across the book — steady upward trend versus target.",
+                data: PREMIUM_TREND.map(p => ({ label: p.month, value: p.written })),
+                yFormat: "currency", cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+              } }];
+            }
+            if (/\b(loss ratio|lr)\b/.test(t)) {
+              const avg = Math.round(SEGMENT_DATA.reduce((s, x) => s + x.lossRatio, 0) / SEGMENT_DATA.length);
+              const worst = SEGMENT_DATA.reduce((a, b) => a.lossRatio > b.lossRatio ? a : b);
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `Average loss ratio across segments: ${avg}%. Highest: ${worst.name} at ${worst.lossRatio}% — that's the one to watch.` }];
+            }
+            if (/\b(largest|biggest|top segment|biggest book)\b/.test(t)) {
+              const top = SEGMENT_DATA.reduce((a, b) => a.premium > b.premium ? a : b);
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${top.name} is the largest segment at $${top.premium}M across ${top.accounts} accounts (loss ratio ${top.lossRatio}%).` }];
+            }
+            if (/\b(geo|geography|state|states|region)\b/.test(t)) {
+              return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+                kind: "bars", title: "Premium by state", unit: "$M",
+                series: GEO_DATA.map(g => ({ label: g.state, value: g.premium, tone: "blue" })),
+                cta: "add-to-dashboard", ctaLabel: "Add to Portfolio page", dashboardHref: "/portfolio",
+              } }];
+            }
+          }}
+          facts={() => [
+            `Portfolio · ${SEGMENT_DATA.reduce((s, x) => s + x.accounts, 0)} accounts · $${SEGMENT_DATA.reduce((s, x) => s + x.premium, 0).toFixed(1)}M written premium`,
+            `Segments: ${SEGMENT_DATA.map(s => `${s.name} ($${s.premium}M, LR ${s.lossRatio}%)`).join("; ")}`,
+            `Current cut: ${segTab}`,
+          ].join("\n")}
+        />
+
+        <PinnedDashboard />
+
+        {/* ── HERO ─────────────────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${N} 0%, #0E3CE0 50%, #2547F4 100%)`,
+            borderRadius: 12,
+            color: "white",
+            boxShadow: `0 4px 16px ${N}25`,
+          }}>
+          <div aria-hidden style={{
+            position: "absolute", top: -40, right: -40, width: 180, height: 180,
+            background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
+            borderRadius: "50%",
+          }} />
+          <div className="relative px-5 sm:px-7 py-5 sm:py-6">
+            <h1 style={{ fontSize: "1.55rem", fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.01em" }}>
+              Portfolio Analytics
+            </h1>
+            <p style={{ fontSize: "0.84rem", color: "#C7D2FE", marginTop: 6, maxWidth: 700 }}>
               Executive view · Real-time exposure, premium, and appetite tracking · Education Practice
             </p>
           </div>
+        </div>
 
-          {/* KPI strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            {kpis.map((k, i) => (
-              <div key={i} className="px-4 sm:px-5 py-3 flex flex-col gap-0.5"
-                style={{ borderRight: "1px solid rgba(255,255,255,0.1)" }}>
-                <span style={{ fontSize: "0.58rem", fontWeight: 600, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  {k.label}
-                </span>
-                <span style={{ fontSize: "1.10rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>{k.value}</span>
-                <span style={{ fontSize: "0.60rem", color: "rgba(255,255,255,0.45)" }}>{k.sub}</span>
-              </div>
-            ))}
-          </div>
+        {/* ── KPI STRIP ────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {kpis.map((k, i) => (
+            <KPITile key={i} k={k}
+              onClick={k.key === "atRisk" ? () => setAtRiskOnly(v => !v) : undefined}
+              selected={k.key === "atRisk" && atRiskOnly}/>
+          ))}
         </div>
 
         {/* Content */}
-        <div className="px-4 sm:px-6 lg:px-8 py-5 space-y-5" style={{ background: "#EEF1F6", minHeight: "calc(100vh - 200px)" }}>
+        <div className="space-y-5">
 
           {/* Row 1: Premium trend + Product mix */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 h-full">
               <SectionCard title="Premium Trend — Written vs. Earned vs. Target" icon={<BarChart2 size={13} />} accent={N}>
-                <div className="flex items-center gap-5 mb-4">
-                  {[{ color: N, label: "Written" }, { color: "#005B99", label: "Earned" }, { color: G, label: "Target" }].map(l => (
-                    <div key={l.label} className="flex items-center gap-1.5">
-                      <span style={{ width: 10, height: 10, background: l.color, display: "block" }} />
-                      <span style={{ fontSize: "0.70rem", color: TM, fontWeight: 600 }}>{l.label} ($M)</span>
-                    </div>
-                  ))}
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center gap-5 mb-4">
+                    {[{ color: N, label: "Written" }, { color: "#005B99", label: "Earned" }, { color: G, label: "Target" }].map(l => (
+                      <div key={l.label} className="flex items-center gap-1.5">
+                        <span style={{ width: 10, height: 10, background: l.color, display: "block" }} />
+                        <span style={{ fontSize: "0.70rem", color: TM, fontWeight: 600 }}>{l.label} ($M)</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ flex: 1, minHeight: 200 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={PREMIUM_TREND} barGap={3} barCategoryGap="28%">
+                        <CartesianGrid strokeDasharray="3 3" stroke={BDL} vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: TT, fontFamily: font }} axisLine={{ stroke: BD }} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: TT, fontFamily: font }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ border: `1px solid ${BD}`, fontSize: "0.78rem", fontFamily: font }} cursor={{ fill: `${N}08` }} />
+                        <Bar dataKey="written" fill={N}        name="Written" />
+                        <Bar dataKey="earned"  fill="#005B99"  name="Earned"  />
+                        <Bar dataKey="target"  fill={`${G}60`} name="Target"  />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={PREMIUM_TREND} barGap={3} barCategoryGap="28%">
-                    <CartesianGrid strokeDasharray="3 3" stroke={BDL} vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: TT, fontFamily: font }} axisLine={{ stroke: BD }} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: TT, fontFamily: font }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ border: `1px solid ${BD}`, fontSize: "0.78rem", fontFamily: font }} cursor={{ fill: `${N}08` }} />
-                    <Bar dataKey="written" fill={N}        name="Written" />
-                    <Bar dataKey="earned"  fill="#005B99"  name="Earned"  />
-                    <Bar dataKey="target"  fill={`${G}60`} name="Target"  />
-                  </BarChart>
-                </ResponsiveContainer>
               </SectionCard>
             </div>
 
@@ -188,15 +376,29 @@ export function PortfolioPage() {
             accent={N}
             noPad
             action={
-              <div className="flex items-center gap-1">
-                {([{ id: "segment" as const, label: "By Segment" }, { id: "geo" as const, label: "By Geography" }]).map(t => (
-                  <button key={t.id}
-                    onClick={() => setSegTab(t.id)}
-                    className="px-3 py-1.5 transition-all"
-                    style={{ fontSize: "0.68rem", fontWeight: 700, background: segTab === t.id ? N : "transparent", color: segTab === t.id ? "white" : TM, border: `1px solid ${segTab === t.id ? N : BD}` }}>
-                    {t.label}
+              <div className="flex items-center gap-2 flex-wrap">
+                {atRiskOnly && (
+                  <button
+                    onClick={() => setAtRiskOnly(false)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 transition-all hover:brightness-95"
+                    style={{
+                      fontSize: "0.65rem", fontWeight: 700,
+                      background: "#FBEAEA", color: "#7A1F1F",
+                      border: "1px solid #E8A8A8", borderRadius: 6, cursor: "pointer",
+                    }}>
+                    At-Risk only · clear ×
                   </button>
-                ))}
+                )}
+                <div className="flex items-center gap-1">
+                  {([{ id: "segment" as const, label: "By Segment" }, { id: "geo" as const, label: "By Geography" }]).map(t => (
+                    <button key={t.id}
+                      onClick={() => setSegTab(t.id)}
+                      className="px-3 py-1.5 transition-all"
+                      style={{ fontSize: "0.68rem", fontWeight: 700, background: segTab === t.id ? N : "transparent", color: segTab === t.id ? "white" : TM, border: `1px solid ${segTab === t.id ? N : BD}`, borderRadius: 6 }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             }
           >
@@ -216,7 +418,9 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(segTab === "segment" ? SEGMENT_DATA : GEO_DATA).map((row: any, i) => {
+                  {((segTab === "segment" ? SEGMENT_DATA : GEO_DATA) as any[])
+                    .filter(row => !atRiskOnly || row.lossRatio >= 70)
+                    .map((row: any, i) => {
                     const lrColor = row.lossRatio >= 70 ? "#B91C1C" : row.lossRatio >= 60 ? "#B45309" : "#2E7D32";
                     return (
                       <tr key={i} className="hover:bg-slate-50/70 transition-colors"
@@ -255,7 +459,7 @@ export function PortfolioPage() {
 
           {/* Row 3: Appetite tracking + Accumulation risk */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 h-full">
               <SectionCard title="Appetite Tracking — Progress Toward Strategic Targets" icon={<Target size={13} />} accent={G}>
                 <div className="space-y-4">
                   {APPETITE_SEGMENTS.map((seg, i) => (

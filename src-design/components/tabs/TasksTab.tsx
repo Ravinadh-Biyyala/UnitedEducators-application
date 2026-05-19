@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Clock, AlertCircle, CheckCircle2, Plus, User, X,
   ChevronDown, Search, ChevronRight, RotateCcw,
 } from "lucide-react";
+import { useSubmissionWorkspace } from "../../context/SubmissionWorkspaceContext";
 
 /* ── Design tokens ────────────────────────────────────────────────────────── */
 const N    = "#0123D4";
@@ -15,13 +16,13 @@ const TT   = "#7A8FA3";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
-type Priority   = "High" | "Medium" | "Low";
-type TaskStatus = "Open" | "Done";
-type TaskType   =
+export type Priority   = "High" | "Medium" | "Low";
+export type TaskStatus = "Open" | "Done";
+export type TaskType   =
   | "Review" | "Follow-up" | "Communication" | "Decision" | "Document"
   | "Negotiation" | "Quote" | "Referral" | "Underwriting" | "Compliance";
 
-interface Task {
+export interface Task {
   id: number;
   title: string;
   assignee: string;
@@ -34,18 +35,18 @@ interface Task {
 }
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
-const TASK_TYPES: TaskType[] = [
+export const TASK_TYPES: TaskType[] = [
   "Review", "Follow-up", "Communication", "Decision", "Document",
   "Negotiation", "Quote", "Referral", "Underwriting", "Compliance",
 ];
-const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
-const ASSIGNEES = [
+export const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
+export const ASSIGNEES = [
   "Sarah Mitchell", "James Owens", "Tom Lee", "Devon Carter",
   "Maya Khanna", "Anika Shah", "John Michaels",
 ];
 
 /* ── Seed data ────────────────────────────────────────────────────────────── */
-const SEED_TASKS: Task[] = [
+export const SEED_TASKS: Task[] = [
   { id: 1, title: "Obtain updated open claims detail from broker", assignee: "Sarah Mitchell", due: "Apr 20, 2024", priority: "High",   status: "Open", type: "Communication" },
   { id: 2, title: "Verify background check policy documentation",  assignee: "James Owens",   due: "Apr 22, 2024", priority: "High",   status: "Open", type: "Compliance"    },
   { id: 3, title: "Review GASB 68 pension liability report",       assignee: "Tom Lee",        due: "Apr 25, 2024", priority: "Medium", status: "Open", type: "Review"        },
@@ -139,7 +140,7 @@ function CustomSelect<T extends string>({
         type="button"
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-3 py-2.5 text-left"
-        style={{ border: `1px solid ${BD}`, background: "white", fontSize: "0.84rem", color: value ? TD : TT, fontFamily: font }}>
+        style={{ border: `1px solid ${BD}`, background: "white", fontSize: "0.84rem", color: value ? TD : TT, fontFamily: font, borderRadius: 6 }}>
         <span>{value || placeholder || "Select…"}</span>
         <ChevronDown size={14} color={TT} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
       </button>
@@ -150,7 +151,7 @@ function CustomSelect<T extends string>({
             <button key={opt} type="button"
               onClick={() => { onChange(opt); setOpen(false); }}
               className="w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors"
-              style={{ fontSize: "0.84rem", fontFamily: font, background: value === opt ? N : "white", color: value === opt ? "white" : TD }}>
+              style={{ fontSize: "0.84rem", fontFamily: font, background: value === opt ? N : "white", color: value === opt ? "white" : TD, borderRadius: 6 }}>
               {opt}
             </button>
           ))}
@@ -161,19 +162,27 @@ function CustomSelect<T extends string>({
 }
 
 /* ── New Task Modal ───────────────────────────────────────────────────────── */
-interface NewTaskModalProps {
+export interface NewTaskModalProps {
   onClose: () => void;
   onSubmit: (task: Omit<Task, "id" | "status" | "completedAt">) => void;
+  defaults?: {
+    type?: TaskType;
+    title?: string;
+    priority?: Priority;
+    assignee?: string;
+    due?: string;
+    notes?: string;
+  };
 }
 
-function NewTaskModal({ onClose, onSubmit }: NewTaskModalProps) {
+export function NewTaskModal({ onClose, onSubmit, defaults }: NewTaskModalProps) {
   const [submission, setSubmission] = useState("SUB-10428");
-  const [type,       setType]       = useState<TaskType | "">("");
-  const [title,      setTitle]      = useState("");
-  const [priority,   setPriority]   = useState<Priority | "">("");
-  const [assignee,   setAssignee]   = useState<string>("");
-  const [due,        setDue]        = useState("");
-  const [notes,      setNotes]      = useState("");
+  const [type,       setType]       = useState<TaskType | "">(defaults?.type ?? "");
+  const [title,      setTitle]      = useState(defaults?.title ?? "");
+  const [priority,   setPriority]   = useState<Priority | "">(defaults?.priority ?? "");
+  const [assignee,   setAssignee]   = useState<string>(defaults?.assignee ?? "");
+  const [due,        setDue]        = useState(defaults?.due ?? "");
+  const [notes,      setNotes]      = useState(defaults?.notes ?? "");
 
   const canSubmit = title.trim() && type && priority && assignee;
 
@@ -189,13 +198,13 @@ function NewTaskModal({ onClose, onSubmit }: NewTaskModalProps) {
       style={{ background: "rgba(15, 25, 40, 0.55)" }}>
 
       <div className="w-full mx-4"
-        style={{ maxWidth: 640, background: "white", border: `1px solid ${BD}`, boxShadow: "0 20px 60px rgba(0,0,0,0.20)" }}>
+        style={{ maxWidth: 640, background: "white", border: `1px solid ${BD}`, boxShadow: "0 20px 60px rgba(0,0,0,0.20)", borderRadius: 10, overflow: "hidden" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BDL}` }}>
           <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD }}>New task</h2>
           <button onClick={onClose} className="flex items-center justify-center hover:bg-slate-100 transition-colors"
-            style={{ width: 28, height: 28, color: TT }}>
+            style={{ width: 28, height: 28, color: TT, borderRadius: 6 }}>
             <X size={16} />
           </button>
         </div>
@@ -209,7 +218,7 @@ function NewTaskModal({ onClose, onSubmit }: NewTaskModalProps) {
                 <span style={{ fontSize: "0.65rem", color: TT }}>optional</span>
               </div>
               <input value={submission} onChange={e => setSubmission(e.target.value)} className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font, background: "white" }} />
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, background: "white" }} />
             </div>
             <div>
               <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Type</label>
@@ -221,7 +230,7 @@ function NewTaskModal({ onClose, onSubmit }: NewTaskModalProps) {
             <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Task</label>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Follow up with broker on endorsement request"
               className="w-full px-3 py-2.5 outline-none"
-              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font, background: "white", boxSizing: "border-box" }} />
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, background: "white", boxSizing: "border-box" }} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -241,26 +250,26 @@ function NewTaskModal({ onClose, onSubmit }: NewTaskModalProps) {
               <span style={{ fontSize: "0.65rem", color: TT }}>optional</span>
             </div>
             <input type="date" value={due} onChange={e => setDue(e.target.value)} className="w-full px-3 py-2.5 outline-none"
-              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: due ? TD : TT, fontFamily: font, background: "white", boxSizing: "border-box" }} />
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: due ? TD : TT, fontFamily: font, background: "white", boxSizing: "border-box" }} />
           </div>
 
           <div>
             <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Notes</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Context for the task" rows={3}
               className="w-full outline-none resize-y px-3 py-2.5"
-              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: font, background: "white", boxSizing: "border-box" }} />
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, background: "white", boxSizing: "border-box" }} />
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2.5 px-6 py-4" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
           <button onClick={onClose} className="px-4 py-2 hover:brightness-97 transition-all"
-            style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}` }}>
+            style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={!canSubmit}
             className="flex items-center gap-1.5 px-5 py-2 transition-all hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
             <Plus size={13} /> Create task
           </button>
         </div>
@@ -309,7 +318,7 @@ function ActiveRow({ task, onComplete }: { task: Task; onComplete: (id: number) 
           fontSize: "0.72rem", fontWeight: 600,
           background: "white", color: ts.text,
           border: `1.5px solid ${ts.border}`,
-          padding: "3px 10px",
+          padding: "3px 10px", borderRadius: 4,
           display: "inline-block", width: "fit-content",
           whiteSpace: "nowrap",
         }}>
@@ -333,7 +342,7 @@ function ActiveRow({ task, onComplete }: { task: Task; onComplete: (id: number) 
       </div>
 
       {/* Priority */}
-      <span style={{ fontSize: "0.62rem", fontWeight: 700, background: ps.bg, color: ps.text, border: `1px solid ${ps.border}`, padding: "3px 8px", textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-block", width: "fit-content" }}>
+      <span style={{ fontSize: "0.62rem", fontWeight: 700, background: ps.bg, color: ps.text, border: `1px solid ${ps.border}`, padding: "3px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-block", width: "fit-content" }}>
         {task.priority}
       </span>
     </div>
@@ -367,7 +376,7 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: number) =
           fontSize: "0.72rem", fontWeight: 600,
           background: "white", color: ts.text,
           border: `1.5px solid ${ts.border}`,
-          padding: "3px 10px",
+          padding: "3px 10px", borderRadius: 4,
           display: "inline-block", width: "fit-content",
           whiteSpace: "nowrap", opacity: 0.6,
         }}>
@@ -393,7 +402,7 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: number) =
       {/* Reopen button */}
       <button onClick={() => onReopen(task.id)}
         className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ fontSize: "0.65rem", fontWeight: 700, color: TM, background: "white", border: `1px solid ${BD}`, padding: "3px 8px", whiteSpace: "nowrap" }}>
+        style={{ fontSize: "0.65rem", fontWeight: 700, color: TM, background: "white", border: `1px solid ${BD}`, padding: "3px 8px", whiteSpace: "nowrap", borderRadius: 6 }}>
         <RotateCcw size={9} /> Reopen
       </button>
     </div>
@@ -402,11 +411,10 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: number) =
 
 /* ── Main component ───────────────────────────────────────────────────────── */
 export function TasksTab() {
-  const [tasks,         setTasks]        = useState<Task[]>(SEED_TASKS);
+  const { tasks, addTask, completeTask, reopenTask } = useSubmissionWorkspace();
   const [search,        setSearch]       = useState("");
   const [showModal,     setShowModal]    = useState(false);
   const [completedOpen, setCompletedOpen] = useState(true);
-  const nextId = useRef(SEED_TASKS.length + 1);
 
   const activeTasks    = tasks.filter(t => t.status !== "Done");
   const completedTasks = tasks.filter(t => t.status === "Done");
@@ -425,17 +433,16 @@ export function TasksTab() {
   const visibleCompleted = applySearch(completedTasks);
 
   const handleAddTask = (partial: Omit<Task, "id" | "status" | "completedAt">) => {
-    setTasks(prev => [{ ...partial, id: nextId.current++, status: "Open" }, ...prev]);
+    addTask(partial);
   };
 
   const handleComplete = (id: number) => {
-    const now = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: "Done", completedAt: now } : t));
+    completeTask(id);
     setCompletedOpen(true);
   };
 
   const handleReopen = (id: number) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: "Open", completedAt: undefined } : t));
+    reopenTask(id);
   };
 
   return (
@@ -443,11 +450,18 @@ export function TasksTab() {
       <div className="space-y-5">
 
         {/* ── Task table ─────────────────────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+        <div style={{
+          background: "white",
+          border: `1px solid ${BDL}`,
+          borderTop: `3px solid ${N}`,
+          borderRadius: 8,
+          overflow: "hidden",
+          boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+        }}>
 
           {/* Toolbar */}
           <div className="px-5 py-3 flex items-center gap-4"
-            style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
+            style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
 
             {/* Title + counts */}
             <div className="flex items-center gap-2 shrink-0">
@@ -464,7 +478,7 @@ export function TasksTab() {
 
             {/* Search */}
             <div className="flex items-center gap-2 flex-1 px-3 py-2"
-              style={{ background: "white", border: `1px solid ${BD}` }}>
+              style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
               <Search size={13} color={TT} />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search tasks…"
@@ -475,7 +489,7 @@ export function TasksTab() {
             {/* New task */}
             <button onClick={() => setShowModal(true)}
               className="flex items-center gap-1.5 px-4 py-2 hover:brightness-95 transition-all shrink-0"
-              style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+              style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
               <Plus size={13} /> New task
             </button>
           </div>
@@ -503,7 +517,7 @@ export function TasksTab() {
               <button
                 onClick={() => setCompletedOpen(v => !v)}
                 className="w-full flex items-center gap-2.5 px-5 py-3 hover:brightness-97 transition-all text-left"
-                style={{ background: "#F0F7F2", borderTop: `2px solid #93C8A0`, borderBottom: completedOpen ? `1px solid ${BDL}` : "none" }}>
+                style={{ background: "#F0F7F2", borderTop: `2px solid #93C8A0`, borderBottom: completedOpen ? `1px solid ${BDL}` : "none", borderRadius: 6 }}>
                 <CheckCircle2 size={14} color="#2E7D32" />
                 <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1A5C30", textTransform: "uppercase", letterSpacing: "0.07em", flex: 1 }}>
                   Completed · {visibleCompleted.length} {visibleCompleted.length === 1 ? "task" : "tasks"}

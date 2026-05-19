@@ -1,0 +1,355 @@
+:root {
+  --font-size: 16px;
+  --background: transparent;
+  --foreground: oklch(0.145 0 0);
+  --card: rgba(255, 255, 255, 0.62);
+  --card-foreground: #0F1A2E;
+  --popover: rgba(255, 255, 255, 0.82);
+  --popover-foreground: #0F1A2E;
+  --primary: #0123D4;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(244, 246, 251, 0.7);
+  --secondary-foreground: #0F1A2E;
+  --muted: rgba(232, 237, 246, 0.55);
+  --muted-foreground: #5B6B80;
+  --accent: rgba(232, 237, 246, 0.7);
+  --accent-foreground: #0F1A2E;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.55);
+  --input: rgba(255, 255, 255, 0.55);
+  --input-background: rgba(255, 255, 255, 0.55);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  --glass-blur: 18px;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: rgba(255, 255, 255, 0.5);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: transparent;
+  --foreground: oklch(0.985 0 0);
+  --card: rgba(20, 22, 30, 0.5);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: rgba(20, 22, 30, 0.7);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: rgba(40, 42, 52, 0.5);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: rgba(40, 42, 52, 0.5);
+  --muted-foreground: oklch(0.78 0 0);
+  --accent: rgba(40, 42, 52, 0.5);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(20, 22, 30, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: rgba(20, 22, 30, 0.5);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    @apply text-foreground;
+    min-height: 100vh;
+    /* Calm pearl base with two soft brand-aligned washes (navy + warm gold).
+       Low saturation, low contrast — the UI sits on top, not under, the bg. */
+    background:
+      radial-gradient(ellipse 90% 60% at 15% 0%, rgba(1, 35, 212, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(201, 162, 39, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(99, 130, 200, 0.06) 0%, transparent 70%),
+      linear-gradient(180deg, #F4F6FB 0%, #EEF1F8 60%, #E9EEF6 100%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(ellipse 90% 60% at 15% 0%, rgba(56, 90, 220, 0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(201, 162, 39, 0.10) 0%, transparent 60%),
+      linear-gradient(180deg, #0B1220 0%, #111A2E 60%, #0A1124 100%);
+    background-attachment: fixed;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* ============================================================
+   Global Glassmorphism
+   Applies frosted-glass surface to every Shadcn primitive that
+   uses bg-card / bg-popover / bg-sidebar / bg-background / bg-muted
+   plus dialogs, sheets, dropdowns, tables, inputs, and buttons.
+   ============================================================ */
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+}
+
+/* Apply backdrop blur to every surface that uses these tokens. */
+.bg-card,
+.bg-popover,
+.bg-sidebar,
+[data-slot="card"],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dialog-content"],
+[data-slot="sheet-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="select-content"],
+[data-slot="command"],
+[data-slot="hover-card-content"],
+[data-slot="menubar-content"],
+[data-slot="context-menu-content"],
+[data-slot="navigation-menu-content"],
+[data-slot="tooltip-content"],
+[role="dialog"],
+[role="menu"],
+[role="listbox"],
+[role="tooltip"] {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Inputs, textareas, selects — softer blur, lighter shadow */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select,
+[data-slot="input"],
+[data-slot="textarea"],
+[data-slot="select-trigger"] {
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+  background-color: var(--input-background);
+  border: 1px solid var(--glass-border);
+}
+
+/* Tabs list strip */
+[data-slot="tabs-list"],
+.bg-muted {
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid var(--glass-border);
+}
+
+/* Tables */
+table,
+thead,
+tbody,
+[data-slot="table"] {
+  background-color: transparent;
+}
+thead tr,
+[data-slot="table-header"] tr {
+  background-color: rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.dark thead tr,
+.dark [data-slot="table-header"] tr {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Buttons — translucent default & secondary variants get glass too */
+button[data-slot="button"]:not(.bg-primary):not(.bg-destructive),
+.bg-secondary,
+.bg-accent {
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+}
+
+/* Sidebar */
+[data-slot="sidebar"],
+[data-slot="sidebar-inner"],
+aside {
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid var(--glass-border);
+}
+
+/* Overlay dimming for dialogs/sheets — translucent instead of black */
+[data-slot="dialog-overlay"],
+[data-slot="sheet-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background-color: rgba(15, 23, 42, 0.25) !important;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Inner scrollable areas should not paint a solid bg over the glass */
+[data-slot="scroll-area-viewport"] {
+  background-color: transparent;
+}
+
+/* ============================================================
+   Global override for hardcoded Tailwind palette backgrounds.
+   Many pages use bg-white / bg-slate-50 / bg-gray-50 / bg-indigo-50
+   etc. as opaque surfaces, which hide the body gradient and break
+   the glass effect. Convert them to translucent + frosted here so
+   every page picks up the theme without per-file edits.
+   ============================================================ */
+.bg-white,
+.bg-slate-50,
+.bg-slate-100,
+.bg-gray-50,
+.bg-gray-100,
+.bg-neutral-50,
+.bg-neutral-100,
+.bg-zinc-50,
+.bg-zinc-100,
+.bg-stone-50,
+.bg-stone-100,
+.bg-indigo-50,
+.bg-blue-50,
+.bg-sky-50 {
+  background-color: rgba(255, 255, 255, 0.55) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+
+/* Slightly stronger blur for darker pale tints so they read as glass */
+.bg-slate-100,
+.bg-gray-100,
+.bg-neutral-100,
+.bg-zinc-100,
+.bg-stone-100 {
+  background-color: rgba(244, 246, 251, 0.6) !important;
+}
+
+/* Inline style="background: white" / "#fff" / "#FFFFFF" — the most
+   common opaque-paint pattern in this codebase. Attribute selectors
+   catch the literal strings used in inline styles. */
+[style*="background: white"],
+[style*="background:white"],
+[style*="background: #fff"],
+[style*="background:#fff"],
+[style*="background: #FFFFFF"],
+[style*="background:#FFFFFF"],
+[style*="background: #ffffff"],
+[style*="background:#ffffff"],
+[style*="background-color: white"],
+[style*="background-color:white"],
+[style*="background-color: #fff"],
+[style*="background-color:#fff"],
+[style*="background-color: #ffffff"],
+[style*="background-color:#ffffff"] {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+
+/* Common opaque off-whites used as page/section backgrounds in this app */
+[style*="#EEF1F6"],
+[style*="#eef1f6"],
+[style*="#F4F6FA"],
+[style*="#f4f6fa"],
+[style*="#F0F3F8"],
+[style*="#f0f3f8"],
+[style*="#F8FAFC"],
+[style*="#f8fafc"],
+[style*="#F8FAFE"],
+[style*="#f8fafe"] {
+  background-color: rgba(244, 246, 251, 0.5) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+}
+
+/* Buttons/badges that legitimately want a solid color (primary brand,
+   destructive, success) should opt OUT by carrying a class we leave
+   alone — but they typically use bg-primary / bg-destructive which
+   are already excluded above. The selectors target only neutral
+   off-white fills, so brand-colored CTAs are untouched. */

@@ -1,13 +1,15 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   Check, Plus, X, Info, Shield, FileText, AlertCircle,
   ShieldCheck, UserCheck, Briefcase, Globe, Lock, Car,
   Users, Building2, Send, Mail, GitBranch, Save,
   Copy, CheckCircle2, DollarSign, Layers, ChevronDown,
   BookOpen, Library, Calendar, Bell, Star, Search, Trash2,
-  Pencil, Eye, ExternalLink,
+  Pencil, Eye, ExternalLink, MoreVertical, AlertTriangle, RotateCcw,
 } from "lucide-react";
+import { useSubmissionWorkspaceOptional } from "../../context/SubmissionWorkspaceContext";
+import { useCompanion, newId, now } from "../companion/CompanionContext";
 
 /* ─── Design tokens ─────────────────────────────────────────────────────── */
 const N    = "#0123D4";
@@ -20,8 +22,7 @@ const TM   = "#4A5D6E";
 const TT   = "#7A8FA3";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
-const OPTION_COLORS  = [N, "#7B2FBE", "#1A7A4A", "#B45309", "#0E7490", "#9D174D", "#4338CA", "#065F46"];
-const OPTION_LABELS  = ["Option A","Option B","Option C","Option D","Option E","Option F","Option G","Option H"];
+const OPTION_COLORS  = ["#6B8DD6", "#9B7EBD", "#6FAE93", "#D9A06B", "#7BABC4", "#C48BA0", "#8694D9", "#7FB89B"];
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 interface CoverageField {
@@ -35,9 +36,29 @@ interface CoverageItem {
 interface Endorsement {
   id: string; label: string; desc: string;
   premium: number; included: boolean;
+  /** Has empty fields that must be filled in manually. */
+  fillIn?: boolean;
+  /** Can be attached multiple times — each instance has its own sequence #. */
+  multiUse?: boolean;
 }
 interface LibraryEndorsement {
   id: string; label: string; desc: string; premium: number;
+  /** Requires underwriter fill-in (named insureds, dates, locations, sublimits). */
+  fillIn?: boolean;
+  /** Can be attached multiple times — each instance has its own sequence #. */
+  multiUse?: boolean;
+  /** Static sample / developer copy of the endorsement form. Falls back to a computed URL when absent. */
+  sampleUrl?: string;
+}
+interface LibrarySchedule {
+  id: string; label: string; desc: string;
+  premium: number;
+  /** Requires underwriter fill-in (locations, addresses, named insureds, etc.) */
+  fillIn?: boolean;
+  /** Can be attached multiple times — each instance has its own sequence #. */
+  multiUse?: boolean;
+  /** Static sample / developer copy of the schedule form. */
+  sampleUrl?: string;
 }
 interface ProductDef {
   id: string; label: string; abbr: string; desc: string;
@@ -47,52 +68,156 @@ interface ProductDef {
   coverageItems: CoverageItem[];
   endorsements: Endorsement[];          // default / informational
 }
+type OptionStatus = "draft" | "quoted" | "bound" | "declined";
 interface ProductOption {
   id: string; label: string; color: string;
+  status: OptionStatus;
   coverageFields: CoverageField[];
   coverageItems: CoverageItem[];
   addedEndorsements: Endorsement[];     // from library only
+  addedSchedules:    LibrarySchedule[]; // from schedules library
   manualPct: number;
+  createdAt: string;
+  createdBy: string;
 }
 type SubTab = "policy" | "endorsements" | "premium" | "schedules" | "memberBenefits" | "notifications";
 type QuoteStatus = "draft" | "issued" | "sent" | "referred";
 
+const OPTION_STATUS_META: Record<OptionStatus, { label: string; color: string; bg: string; border: string }> = {
+  draft:    { label: "Draft",    color: "#4A5D6E", bg: "#F1F5F9", border: "#CBD5E1" },
+  quoted:   { label: "Quoted",   color: "#0123D4", bg: "#E0E7FF", border: "#A5B4FC" },
+  bound:    { label: "Bound",    color: "#15803D", bg: "#E8F5EC", border: "#86EFAC" },
+  declined: { label: "Declined", color: "#B91C1C", bg: "#FEE2E2", border: "#FCA5A5" },
+};
+
+/* ─── Category palette ── All categories use the single brand color N (#0123D4) ── */
+const CAT_GL = N;
+const CAT_ML = N;
+const CAT_PL = N;
+const CAT_AR = N;
+const CAT_EL = N;
+
 /* ─── Product catalog ───────────────────────────────────────────────────── */
 const PRODUCTS: ProductDef[] = [
+  /* ════════ General Liability (GL) ════════ */
   {
-    id: "epl", label: "Employment Practices Liability", abbr: "EPL",
-    desc: "Discrimination, harassment, wrongful termination & retaliation",
-    icon: <UserCheck size={16} />, category: "Liability", categoryColor: N,
-    basePremium: 14200,
+    id: "cgl", label: "Primary General Liability", abbr: "CGL",
+    desc: "Primary BI/PD with premises, operations, products & completed ops",
+    icon: <Shield size={16} />, category: "General Liability", categoryColor: CAT_GL,
+    basePremium: 11200,
     coverageFields: [
-      { label: "Each Claim Limit",       value: "$1,000,000",   type: "select", options: ["$500,000","$1,000,000","$2,000,000","$3,000,000"] },
-      { label: "Aggregate Limit",        value: "$3,000,000",   type: "select", options: ["$1,000,000","$2,000,000","$3,000,000","$5,000,000"] },
-      { label: "Retention (Deductible)", value: "$50,000",      type: "select", options: ["$10,000","$25,000","$50,000","$100,000","$250,000"] },
-      { label: "Retroactive Date",       value: "07/01/2019",   type: "date" },
-      { label: "Defense Basis",          value: "Within Limit", type: "select", options: ["Within Limit","Outside Limit"] },
-      { label: "Coverage Territory",     value: "USA & Canada", type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
+      { label: "Each Occurrence",            value: "$1,000,000", type: "select", options: ["$1,000,000","$2,000,000"] },
+      { label: "General Aggregate",          value: "$3,000,000", type: "select", options: ["$2,000,000","$3,000,000","$5,000,000"] },
+      { label: "Products/Completed Ops.",    value: "$2,000,000", type: "select", options: ["$1,000,000","$2,000,000","$3,000,000"] },
+      { label: "Personal & Adv. Injury",     value: "$1,000,000", type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
+      { label: "Med. Payments (per person)", value: "$10,000",    type: "select", options: ["$5,000","$10,000","$25,000"] },
+      { label: "Fire Legal Liability",       value: "$300,000",   type: "select", options: ["$100,000","$300,000","$500,000"] },
     ],
     coverageItems: [
-      { id: "epl-c1", label: "Claims-Made Coverage",             desc: "Covers claims first made during the policy period",                    required: true,  checked: true,  price: 0    },
-      { id: "epl-c2", label: "Wrongful Termination",             desc: "Actual or constructive wrongful dismissal of an employee",             required: true,  checked: true,  price: 0    },
-      { id: "epl-c3", label: "Discrimination (Title VII)",       desc: "Race, sex, religion, national origin, age & disability discrimination", required: true,  checked: true,  price: 0    },
-      { id: "epl-c4", label: "Harassment / Hostile Work Env.",   desc: "Sexual harassment and hostile work environment claims",                required: false, checked: true,  price: 2800 },
-      { id: "epl-c5", label: "Retaliation",                      desc: "Retaliation against employees for protected activity",                 required: false, checked: true,  price: 2100 },
-      { id: "epl-c6", label: "Failure to Promote",               desc: "Claims of discriminatory promotional practices",                      required: false, checked: false, price: 1400 },
-      { id: "epl-c7", label: "EEOC Charge Defense",              desc: "Defense costs for Equal Employment Opportunity Commission charges",    required: false, checked: false, price: 1600 },
-      { id: "epl-c8", label: "Punitive Damages (where insurable)",desc: "Punitive damages coverage where permitted by law",                   required: false, checked: false, price: 2200 },
+      { id: "cgl-c1", label: "Premises & Operations",           desc: "Bodily injury and property damage on premises",          required: true,  checked: true,  price: 0    },
+      { id: "cgl-c2", label: "Products & Completed Operations", desc: "Liability arising from products and completed work",     required: true,  checked: true,  price: 0    },
+      { id: "cgl-c3", label: "Personal & Advertising Injury",   desc: "Libel, slander, copyright infringement claims",          required: true,  checked: true,  price: 0    },
+      { id: "cgl-c4", label: "Medical Payments",                desc: "Medical expenses regardless of fault",                   required: false, checked: true,  price: 1800 },
+      { id: "cgl-c5", label: "Fire Legal Liability",            desc: "Damage to rented or borrowed premises by fire",          required: false, checked: true,  price: 1200 },
+      { id: "cgl-c6", label: "Host Liquor Liability",           desc: "Bodily injury from alcohol at sponsored events",         required: false, checked: false, price: 1600 },
     ],
     endorsements: [
-      { id: "epl-e1", label: "Third-Party EPL",            desc: "Extends coverage to claims by non-employees (vendors, students)", premium: 3200, included: false },
-      { id: "epl-e2", label: "Wage & Hour Defense",        desc: "Defense costs for wage/hour class action violations",             premium: 2800, included: false },
-      { id: "epl-e3", label: "Crisis Management",          desc: "PR & communications costs after a covered EPL event",            premium: 1500, included: false },
-      { id: "epl-e4", label: "Retroactive Date Extension", desc: "Extends retroactive date by 2 additional years",                 premium: 4100, included: false },
+      { id: "cgl-e1", label: "Sexual Abuse & Molestation", desc: "SAM liability for the institution and its employees",  premium: 8400, included: false, fillIn: true,  multiUse: true  },
+      { id: "cgl-e2", label: "Liquor Liability Extension", desc: "Events where alcohol is served on premises",            premium: 1600, included: false, fillIn: true                  },
+      { id: "cgl-e3", label: "Volunteer Liability",        desc: "Extends GL to approved volunteer activities",           premium: 900,  included: false,                multiUse: true  },
+      { id: "cgl-e4", label: "Broad Form Contractual",     desc: "Broadens contractual liability assumed in contracts",   premium: 1100, included: false                                 },
     ],
   },
   {
+    id: "blx", label: "Buffer Excess Liability", abbr: "BLX",
+    desc: "First-layer buffer above primary GL to attach excess towers",
+    icon: <Layers size={16} />, category: "General Liability", categoryColor: CAT_GL,
+    basePremium: 5800,
+    coverageFields: [
+      { label: "Limit per Occurrence", value: "$2,000,000",     type: "select", options: ["$1,000,000","$2,000,000","$5,000,000"] },
+      { label: "Aggregate Limit",      value: "$2,000,000",     type: "select", options: ["$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Attachment Point",     value: "$1,000,000",     type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
+      { label: "Underlying Policy",    value: "Primary CGL",    type: "select", options: ["Primary CGL","Auto","ELL"] },
+      { label: "Form Basis",           value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory",   value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
+    ],
+    coverageItems: [
+      { id: "blx-c1", label: "Following Form",         desc: "Follows the terms of the underlying primary policy",      required: true,  checked: true,  price: 0    },
+      { id: "blx-c2", label: "Defense Cost Inclusion", desc: "Defense costs included within the limit of liability",    required: true,  checked: true,  price: 0    },
+      { id: "blx-c3", label: "Drop-Down Coverage",     desc: "Drops down if primary is exhausted by an unrelated claim",required: false, checked: true,  price: 1400 },
+      { id: "blx-c4", label: "Maintenance Deductible", desc: "Self-insured retention for claims piercing the buffer",   required: false, checked: false, price: 900  },
+      { id: "blx-c5", label: "Sublimit Pollution",     desc: "$1M sublimit for pollution events",                       required: false, checked: false, price: 1800 },
+      { id: "blx-c6", label: "Worldwide Territory",    desc: "Extends territory to worldwide operations",               required: false, checked: false, price: 1200 },
+    ],
+    endorsements: [
+      { id: "blx-e1", label: "Excess Sexual Misconduct", desc: "Excess SAM coverage following primary",        premium: 4200, included: false },
+      { id: "blx-e2", label: "Aggregate Reinstatement",  desc: "One automatic reinstatement of the aggregate", premium: 3100, included: false },
+      { id: "blx-e3", label: "Auto Buffer Extension",    desc: "Extends buffer to commercial auto liability",  premium: 1800, included: false },
+      { id: "blx-e4", label: "Worldwide Territory",      desc: "Worldwide territory endorsement",              premium: 900,  included: false },
+    ],
+  },
+  {
+    id: "glx", label: "General Liability Excess", abbr: "GLX",
+    desc: "Excess GL tower above primary and buffer policies",
+    icon: <Layers size={16} />, category: "General Liability", categoryColor: CAT_GL,
+    basePremium: 4400,
+    coverageFields: [
+      { label: "Limit per Occurrence", value: "$5,000,000",     type: "select", options: ["$5,000,000","$10,000,000","$25,000,000"] },
+      { label: "Aggregate Limit",      value: "$5,000,000",     type: "select", options: ["$5,000,000","$10,000,000","$25,000,000"] },
+      { label: "Attachment Point",     value: "$3,000,000",     type: "select", options: ["$2,000,000","$3,000,000","$5,000,000"] },
+      { label: "Underlying Layer",     value: "Buffer + CGL",   type: "select", options: ["Primary CGL","Buffer + CGL","Stand-Alone"] },
+      { label: "Form Basis",           value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory",   value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
+    ],
+    coverageItems: [
+      { id: "glx-c1", label: "Following Form",          desc: "Follows the terms of the underlying tower",         required: true,  checked: true,  price: 0    },
+      { id: "glx-c2", label: "Higher Limits",           desc: "Extends limits above primary and buffer layers",    required: true,  checked: true,  price: 0    },
+      { id: "glx-c3", label: "Drop-Down Coverage",      desc: "Drops down on exhaustion of underlying aggregate",  required: false, checked: true,  price: 2200 },
+      { id: "glx-c4", label: "Aggregate Reinstatement", desc: "One automatic reinstatement of the aggregate",      required: false, checked: false, price: 3400 },
+      { id: "glx-c5", label: "Defense Outside Limit",   desc: "Defense costs paid outside the limit of liability", required: false, checked: false, price: 1800 },
+      { id: "glx-c6", label: "Maintenance Deductible",  desc: "SIR for direct piercing claims",                    required: false, checked: false, price: 1000 },
+    ],
+    endorsements: [
+      { id: "glx-e1", label: "Punitive Damages",          desc: "Adds punitive damages where insurable by law",   premium: 3800, included: false },
+      { id: "glx-e2", label: "Sexual Misconduct (Excess)",desc: "Excess SAM coverage following primary",          premium: 5600, included: false },
+      { id: "glx-e3", label: "Stand-Alone Form",          desc: "Switches to stand-alone form for select perils", premium: 4200, included: false },
+      { id: "glx-e4", label: "Worldwide Territory",       desc: "Worldwide territory extension",                  premium: 1100, included: false },
+    ],
+  },
+  {
+    id: "psl", label: "Public School Liability", abbr: "PSL",
+    desc: "Statutory liability protection for public school districts",
+    icon: <Building2 size={16} />, category: "General Liability", categoryColor: CAT_GL,
+    basePremium: 9600,
+    coverageFields: [
+      { label: "Each Occurrence",        value: "$1,000,000",   type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
+      { label: "Aggregate Limit",        value: "$3,000,000",   type: "select", options: ["$1,000,000","$3,000,000","$5,000,000"] },
+      { label: "Retention (Deductible)", value: "$25,000",      type: "select", options: ["$10,000","$25,000","$50,000","$100,000"] },
+      { label: "Statutory Cap",          value: "Yes",          type: "select", options: ["Yes","No"] },
+      { label: "Defense Basis",          value: "Outside Limit",type: "select", options: ["Within Limit","Outside Limit"] },
+      { label: "Coverage Territory",     value: "Statewide",    type: "select", options: ["Statewide","USA & Canada","Worldwide"] },
+    ],
+    coverageItems: [
+      { id: "psl-c1", label: "Statutory Tort Defense",         desc: "Defense for statutory tort claims against the district",  required: true,  checked: true,  price: 0    },
+      { id: "psl-c2", label: "Sovereign Immunity Reservation", desc: "Coverage preserves sovereign immunity defenses",          required: true,  checked: true,  price: 0    },
+      { id: "psl-c3", label: "Civil Rights Defense",           desc: "Defense for 42 U.S.C. §1983 civil rights claims",         required: true,  checked: true,  price: 0    },
+      { id: "psl-c4", label: "Student Discipline Defense",     desc: "Expulsion and disciplinary proceeding defense",           required: false, checked: true,  price: 2200 },
+      { id: "psl-c5", label: "Title IX Defense",               desc: "Sex discrimination and education program access claims",  required: false, checked: false, price: 2000 },
+      { id: "psl-c6", label: "Athletic Injury Defense",        desc: "Defense for athletic participation injury claims",        required: false, checked: false, price: 1600 },
+    ],
+    endorsements: [
+      { id: "psl-e1", label: "Sexual Abuse Defense",      desc: "Defense costs for sexual abuse allegations",      premium: 6800, included: false },
+      { id: "psl-e2", label: "Special Education Defense", desc: "IDEA / 504 plan dispute defense costs",           premium: 2400, included: false },
+      { id: "psl-e3", label: "Bond Election Defense",     desc: "Defense for school bond election disputes",       premium: 1800, included: false },
+      { id: "psl-e4", label: "Open Meeting Law Defense",  desc: "Defense for alleged open-meeting law violations", premium: 1500, included: false },
+    ],
+  },
+
+  /* ════════ Management Liability (ML) ════════ */
+  {
     id: "ell", label: "Educators Legal Liability", abbr: "ELL",
     desc: "Professional errors & omissions for educators and administrators",
-    icon: <ShieldCheck size={16} />, category: "Liability", categoryColor: N,
+    icon: <ShieldCheck size={16} />, category: "Management Liability", categoryColor: CAT_ML,
     basePremium: 16400,
     coverageFields: [
       { label: "Each Claim Limit",   value: "$1,000,000",   type: "select", options: ["$500,000","$1,000,000","$2,000,000","$3,000,000"] },
@@ -120,285 +245,415 @@ const PRODUCTS: ProductDef[] = [
     ],
   },
   {
-    id: "gl", label: "General Liability", abbr: "GL",
-    desc: "Bodily injury, property damage, personal & advertising injury",
-    icon: <Shield size={16} />, category: "Liability", categoryColor: N,
-    basePremium: 11200,
+    id: "elx", label: "Excess Educators Legal Liability", abbr: "ELX",
+    desc: "Excess limits following form above primary ELL",
+    icon: <Layers size={16} />, category: "Management Liability", categoryColor: CAT_ML,
+    basePremium: 7200,
     coverageFields: [
-      { label: "Each Occurrence",            value: "$1,000,000", type: "select", options: ["$1,000,000","$2,000,000"] },
-      { label: "General Aggregate",          value: "$3,000,000", type: "select", options: ["$2,000,000","$3,000,000","$5,000,000"] },
-      { label: "Products/Completed Ops.",    value: "$2,000,000", type: "select", options: ["$1,000,000","$2,000,000","$3,000,000"] },
-      { label: "Personal & Adv. Injury",     value: "$1,000,000", type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
-      { label: "Med. Payments (per person)", value: "$10,000",    type: "select", options: ["$5,000","$10,000","$25,000"] },
-      { label: "Fire Legal Liability",       value: "$300,000",   type: "select", options: ["$100,000","$300,000","$500,000"] },
+      { label: "Limit per Claim",    value: "$3,000,000",     type: "select", options: ["$2,000,000","$3,000,000","$5,000,000","$10,000,000"] },
+      { label: "Aggregate Limit",    value: "$5,000,000",     type: "select", options: ["$3,000,000","$5,000,000","$10,000,000"] },
+      { label: "Attachment Point",   value: "$2,000,000",     type: "select", options: ["$1,000,000","$2,000,000","$3,000,000"] },
+      { label: "Underlying ELL",     value: "Primary ELL",    type: "select", options: ["Primary ELL","Stand-Alone"] },
+      { label: "Form Basis",         value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory", value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "gl-c1", label: "Premises & Operations",          desc: "Bodily injury and property damage on school premises",            required: true,  checked: true,  price: 0    },
-      { id: "gl-c2", label: "Products & Completed Operations",desc: "Liability arising from products and completed work",             required: true,  checked: true,  price: 0    },
-      { id: "gl-c3", label: "Personal & Advertising Injury",  desc: "Libel, slander, copyright infringement, wrongful eviction",      required: true,  checked: true,  price: 0    },
-      { id: "gl-c4", label: "Medical Payments",               desc: "Medical expenses regardless of fault for on-premises injuries",   required: false, checked: true,  price: 1800 },
-      { id: "gl-c5", label: "Fire Legal Liability",           desc: "Damage to rented or borrowed premises caused by fire",            required: false, checked: true,  price: 1200 },
-      { id: "gl-c6", label: "Host Liquor Liability",          desc: "Bodily injury from alcohol served at school-sponsored events",    required: false, checked: false, price: 1600 },
-      { id: "gl-c7", label: "Contractual Liability",          desc: "Liability assumed under insured contracts and agreements",        required: false, checked: false, price: 1100 },
-      { id: "gl-c8", label: "Non-Owned Watercraft",           desc: "Liability for watercraft less than 51 feet not owned by district",required: false, checked: false, price: 800  },
+      { id: "elx-c1", label: "Following Form",          desc: "Follows the terms of the primary ELL policy",         required: true,  checked: true,  price: 0    },
+      { id: "elx-c2", label: "Higher Limits",           desc: "Extends limits above the primary ELL",                required: true,  checked: true,  price: 0    },
+      { id: "elx-c3", label: "Drop-Down Coverage",      desc: "Drops down on exhaustion of primary aggregate",       required: false, checked: true,  price: 1800 },
+      { id: "elx-c4", label: "Defense Outside Limit",   desc: "Defense costs paid outside the limit of liability",   required: false, checked: false, price: 1600 },
+      { id: "elx-c5", label: "Aggregate Reinstatement", desc: "One automatic reinstatement of the aggregate",        required: false, checked: false, price: 2400 },
+      { id: "elx-c6", label: "Punitive Damages",        desc: "Adds punitive damages where insurable",               required: false, checked: false, price: 2200 },
     ],
     endorsements: [
-      { id: "gl-e1", label: "Sexual Abuse & Molestation", desc: "SAM liability for the institution and its employees",  premium: 8400, included: false },
-      { id: "gl-e2", label: "Liquor Liability Extension", desc: "Events where alcohol is served on district premises",  premium: 1600, included: false },
-      { id: "gl-e3", label: "Volunteer Liability",        desc: "Extends GL to district-approved volunteer activities", premium: 900,  included: false },
-      { id: "gl-e4", label: "Broad Form Contractual",     desc: "Broadens contractual liability assumed in contracts",  premium: 1100, included: false },
+      { id: "elx-e1", label: "Title IX Excess",          desc: "Excess Title IX defense coverage",          premium: 2800, included: false },
+      { id: "elx-e2", label: "IDEA Defense Excess",      desc: "Excess limits for IDEA / 504 dispute defense", premium: 1900, included: false },
+      { id: "elx-e3", label: "Online Learning Extension",desc: "Excess for remote/online instruction claims", premium: 1200, included: false },
+      { id: "elx-e4", label: "Stand-Alone Form",         desc: "Switches to stand-alone form",              premium: 3400, included: false },
     ],
   },
   {
-    id: "ml", label: "Management Liability", abbr: "ML",
-    desc: "D&O for board members, trustees & senior administrators",
-    icon: <Briefcase size={16} />, category: "Liability", categoryColor: N,
-    basePremium: 9800,
+    id: "fdl", label: "Fiduciary Liability", abbr: "FDL",
+    desc: "ERISA fiduciary duty breach coverage for plan administrators",
+    icon: <Lock size={16} />, category: "Management Liability", categoryColor: CAT_ML,
+    basePremium: 4800,
     coverageFields: [
-      { label: "Each Claim Limit",  value: "$2,000,000",    type: "select", options: ["$1,000,000","$2,000,000","$3,000,000","$5,000,000"] },
-      { label: "Aggregate Limit",   value: "$4,000,000",    type: "select", options: ["$2,000,000","$4,000,000","$5,000,000","$10,000,000"] },
-      { label: "Retention",         value: "$25,000",       type: "select", options: ["$10,000","$25,000","$50,000","$100,000"] },
-      { label: "Defense Basis",     value: "Outside Limit", type: "select", options: ["Within Limit","Outside Limit"] },
-      { label: "Continuity Date",   value: "07/01/2015",    type: "date" },
-      { label: "Discovery Period",  value: "12 Months",     type: "select", options: ["12 Months","24 Months","36 Months"] },
+      { label: "Each Claim Limit",       value: "$1,000,000",   type: "select", options: ["$500,000","$1,000,000","$2,000,000","$3,000,000"] },
+      { label: "Aggregate Limit",        value: "$3,000,000",   type: "select", options: ["$1,000,000","$2,000,000","$3,000,000","$5,000,000"] },
+      { label: "Retention (Deductible)", value: "$15,000",      type: "select", options: ["$5,000","$10,000","$15,000","$25,000","$50,000"] },
+      { label: "Retroactive Date",       value: "07/01/2017",   type: "date" },
+      { label: "Defense Basis",          value: "Outside Limit",type: "select", options: ["Within Limit","Outside Limit"] },
+      { label: "Coverage Territory",     value: "USA & Canada", type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "ml-c1", label: "Directors & Officers Liability",  desc: "Wrongful acts by board members, trustees and senior officials",    required: true,  checked: true,  price: 0    },
-      { id: "ml-c2", label: "Advancement of Defense Costs",    desc: "Defense costs advanced prior to final adjudication",              required: true,  checked: true,  price: 0    },
-      { id: "ml-c3", label: "Entity Coverage",                 desc: "Covers the institution itself for governance claims",             required: false, checked: true,  price: 2600 },
-      { id: "ml-c4", label: "Employment Practices (D&O only)", desc: "D&O-side EPL coverage for discrimination at board level",         required: false, checked: true,  price: 1800 },
-      { id: "ml-c5", label: "Fiduciary Liability",             desc: "ERISA fiduciary duty breaches by plan administrators",            required: false, checked: false, price: 3200 },
-      { id: "ml-c6", label: "Government Investigation Defense",desc: "Defense costs for regulatory and government investigations",      required: false, checked: false, price: 2200 },
-      { id: "ml-c7", label: "Employed Lawyers Coverage",       desc: "In-house counsel acting in a legal/advisory capacity",           required: false, checked: false, price: 1600 },
-      { id: "ml-c8", label: "Crisis Event Coverage",           desc: "PR and communication costs following a governance scandal",      required: false, checked: false, price: 1400 },
+      { id: "fdl-c1", label: "ERISA Fiduciary Liability",        desc: "Breach of fiduciary duty under ERISA",                       required: true,  checked: true,  price: 0    },
+      { id: "fdl-c2", label: "Settlor Function Defense",         desc: "Defense for plan design and settlor decisions",              required: true,  checked: true,  price: 0    },
+      { id: "fdl-c3", label: "Plan Administration Errors",       desc: "Negligent administration of benefit plans",                  required: true,  checked: true,  price: 0    },
+      { id: "fdl-c4", label: "Voluntary Compliance Programs",    desc: "Voluntary correction program filing fees and penalties",     required: false, checked: true,  price: 1200 },
+      { id: "fdl-c5", label: "HIPAA Defense",                    desc: "Defense for HIPAA privacy breach claims",                    required: false, checked: false, price: 1400 },
+      { id: "fdl-c6", label: "Cyber Plan Asset Theft",           desc: "Cyber-related theft of plan assets",                         required: false, checked: false, price: 1800 },
     ],
     endorsements: [
-      { id: "ml-e1", label: "Full Entity Coverage",         desc: "Expands entity coverage to all wrongful act types",     premium: 3800, included: false },
-      { id: "ml-e2", label: "Employed Lawyers Enhancement", desc: "Increased sublimit for in-house counsel defense",       premium: 2200, included: false },
-      { id: "ml-e3", label: "Fiduciary Liability",          desc: "Standalone ERISA fiduciary liability coverage",         premium: 4600, included: false },
-      { id: "ml-e4", label: "Run-Off Coverage (3-yr)",      desc: "Extended reporting period for departing board members", premium: 5100, included: false },
+      { id: "fdl-e1", label: "Voluntary Compliance Loss",  desc: "Penalty payments under EBSA voluntary compliance programs", premium: 1600, included: false },
+      { id: "fdl-e2", label: "HIPAA / HITECH Defense",     desc: "Enhanced defense for HIPAA privacy and security claims",    premium: 1900, included: false },
+      { id: "fdl-e3", label: "Plan Asset Cyber Theft",     desc: "Coverage for cyber theft of participant plan assets",       premium: 2400, included: false },
+      { id: "fdl-e4", label: "Retired Trustee Run-Off",    desc: "Run-off coverage for retired plan trustees",                premium: 1100, included: false },
     ],
   },
   {
-    id: "property", label: "Property", abbr: "Prop",
-    desc: "Buildings, contents, equipment & business interruption",
-    icon: <Building2 size={16} />, category: "Property & Auto", categoryColor: "#1A7A4A",
-    basePremium: 18500,
+    id: "fdx", label: "Excess Fiduciary Liability", abbr: "FDX",
+    desc: "Excess limits following form above primary fiduciary policy",
+    icon: <Layers size={16} />, category: "Management Liability", categoryColor: CAT_ML,
+    basePremium: 2400,
     coverageFields: [
-      { label: "Total Insured Value (TIV)", value: "$185,000,000",    type: "text" },
-      { label: "Building Coverage",         value: "$160,000,000",    type: "text" },
-      { label: "Contents Coverage",         value: "$18,000,000",     type: "text" },
-      { label: "Deductible (All Peril)",    value: "$25,000",         type: "select", options: ["$10,000","$25,000","$50,000","$100,000"] },
-      { label: "Coinsurance",               value: "90%",             type: "select", options: ["80%","90%","100%"] },
-      { label: "Valuation Basis",           value: "Replacement Cost",type: "select", options: ["Replacement Cost","Actual Cash Value"] },
+      { label: "Limit per Claim",    value: "$2,000,000",     type: "select", options: ["$1,000,000","$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Aggregate Limit",    value: "$3,000,000",     type: "select", options: ["$2,000,000","$3,000,000","$5,000,000"] },
+      { label: "Attachment Point",   value: "$1,000,000",     type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
+      { label: "Underlying FDL",     value: "Primary FDL",    type: "select", options: ["Primary FDL","Stand-Alone"] },
+      { label: "Form Basis",         value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory", value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "prop-c1", label: "Buildings & Structures",       desc: "All school buildings including portables and outbuildings",         required: true,  checked: true,  price: 0    },
-      { id: "prop-c2", label: "Business Personal Property",   desc: "Furniture, fixtures, equipment, and inventory",                    required: true,  checked: true,  price: 0    },
-      { id: "prop-c3", label: "Business Income / Extra Exp.", desc: "Lost revenue and extra expenses during period of restoration",     required: true,  checked: true,  price: 0    },
-      { id: "prop-c4", label: "Ordinance or Law",             desc: "Additional costs to comply with ordinances during rebuild",        required: false, checked: true,  price: 4200 },
-      { id: "prop-c5", label: "Valuable Papers & Records",    desc: "Reproduction costs for lost or damaged documents and records",     required: false, checked: false, price: 1800 },
-      { id: "prop-c6", label: "Electronic Data Processing",   desc: "Computers, servers, network equipment and electronic media",       required: false, checked: false, price: 3200 },
-      { id: "prop-c7", label: "Fine Arts & Collections",      desc: "Scheduled coverage for artwork, trophies and historical artifacts",required: false, checked: false, price: 1400 },
-      { id: "prop-c8", label: "Outdoor Property",             desc: "Fences, signs, antennas and outdoor equipment",                   required: false, checked: false, price: 900  },
+      { id: "fdx-c1", label: "Following Form",          desc: "Follows the primary fiduciary policy",            required: true,  checked: true,  price: 0    },
+      { id: "fdx-c2", label: "Higher Limits",           desc: "Extends limits above the primary fiduciary",       required: true,  checked: true,  price: 0    },
+      { id: "fdx-c3", label: "Drop-Down Coverage",      desc: "Drops down on exhaustion of primary aggregate",    required: false, checked: true,  price: 800  },
+      { id: "fdx-c4", label: "Defense Outside Limit",   desc: "Defense costs paid outside the limit",             required: false, checked: false, price: 600  },
+      { id: "fdx-c5", label: "Aggregate Reinstatement", desc: "One reinstatement of the aggregate",               required: false, checked: false, price: 1100 },
+      { id: "fdx-c6", label: "Voluntary Compliance",    desc: "Extends voluntary compliance program coverage",    required: false, checked: false, price: 700  },
     ],
     endorsements: [
-      { id: "prop-e1", label: "Equipment Breakdown", desc: "Mechanical & electrical breakdown including boilers", premium: 6200,  included: false },
-      { id: "prop-e2", label: "Flood Extension",     desc: "First-dollar flood coverage above NFIP limits",       premium: 9800,  included: false },
-      { id: "prop-e3", label: "Earthquake",          desc: "Earthquake damage coverage (Zone C rated)",           premium: 14200, included: false },
-      { id: "prop-e4", label: "Inland Marine",       desc: "Coverage for property in transit and off-premises",   premium: 2100,  included: false },
+      { id: "fdx-e1", label: "Run-Off Coverage (3-yr)",  desc: "Extended reporting period for departing fiduciaries", premium: 1800, included: false },
+      { id: "fdx-e2", label: "HIPAA Excess",             desc: "Excess limits for HIPAA defense",                    premium: 1100, included: false },
+      { id: "fdx-e3", label: "Cyber Plan Asset Theft",   desc: "Excess limits for cyber plan asset theft",           premium: 1400, included: false },
+      { id: "fdx-e4", label: "Stand-Alone Form",         desc: "Switches to stand-alone form",                       premium: 1900, included: false },
     ],
   },
   {
-    id: "auto", label: "Commercial Automobile", abbr: "Auto",
-    desc: "Liability & physical damage for school vehicles",
-    icon: <Car size={16} />, category: "Property & Auto", categoryColor: "#1A7A4A",
-    basePremium: 7400,
+    id: "sbl", label: "School Board Legal", abbr: "SBL",
+    desc: "Personal liability protection for board members and trustees",
+    icon: <Briefcase size={16} />, category: "Management Liability", categoryColor: CAT_ML,
+    basePremium: 5400,
     coverageFields: [
-      { label: "Combined Single Limit",    value: "$1,000,000", type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
-      { label: "Uninsured Motorist",       value: "$1,000,000", type: "select", options: ["$250,000","$500,000","$1,000,000"] },
-      { label: "Medical Payments",         value: "$10,000",    type: "select", options: ["$5,000","$10,000","$25,000"] },
-      { label: "Comprehensive Deductible", value: "$2,500",     type: "select", options: ["$1,000","$2,500","$5,000"] },
-      { label: "Collision Deductible",     value: "$5,000",     type: "select", options: ["$2,500","$5,000","$10,000"] },
-      { label: "Number of Vehicles",       value: "48",         type: "text" },
+      { label: "Each Claim Limit",       value: "$2,000,000",   type: "select", options: ["$1,000,000","$2,000,000","$3,000,000","$5,000,000"] },
+      { label: "Aggregate Limit",        value: "$4,000,000",   type: "select", options: ["$2,000,000","$4,000,000","$5,000,000","$10,000,000"] },
+      { label: "Retention (Deductible)", value: "$25,000",      type: "select", options: ["$10,000","$25,000","$50,000","$100,000"] },
+      { label: "Continuity Date",        value: "07/01/2015",   type: "date" },
+      { label: "Defense Basis",          value: "Outside Limit",type: "select", options: ["Within Limit","Outside Limit"] },
+      { label: "Discovery Period",       value: "12 Months",    type: "select", options: ["12 Months","24 Months","36 Months"] },
     ],
     coverageItems: [
-      { id: "auto-c1", label: "Auto Liability",                desc: "Bodily injury and property damage from vehicle accidents",          required: true,  checked: true,  price: 0    },
-      { id: "auto-c2", label: "Uninsured Motorist",            desc: "Protection when at-fault driver is uninsured or underinsured",     required: true,  checked: true,  price: 0    },
-      { id: "auto-c3", label: "Medical Payments",              desc: "Medical expenses for occupants injured in covered vehicles",        required: true,  checked: true,  price: 0    },
-      { id: "auto-c4", label: "Comprehensive Physical Damage", desc: "Non-collision losses: theft, vandalism, weather, fire",            required: false, checked: true,  price: 2400 },
-      { id: "auto-c5", label: "Collision Physical Damage",     desc: "Damage to covered vehicles from collision with another object",    required: false, checked: true,  price: 2200 },
-      { id: "auto-c6", label: "Hired Auto Liability",          desc: "Liability for vehicles rented or leased by the district",          required: false, checked: false, price: 1200 },
-      { id: "auto-c7", label: "Non-Owned Auto Liability",      desc: "Liability for employee-owned vehicles on district business",       required: false, checked: false, price: 1000 },
-      { id: "auto-c8", label: "Towing & Labor",                desc: "Towing and labor costs when a covered vehicle breaks down",        required: false, checked: false, price: 400  },
+      { id: "sbl-c1", label: "Directors & Officers Liability",  desc: "Wrongful acts by board members and trustees",          required: true,  checked: true,  price: 0    },
+      { id: "sbl-c2", label: "Advancement of Defense Costs",    desc: "Defense costs advanced prior to final adjudication",   required: true,  checked: true,  price: 0    },
+      { id: "sbl-c3", label: "Open Meeting Law Defense",        desc: "Defense for alleged open-meeting law violations",      required: true,  checked: true,  price: 0    },
+      { id: "sbl-c4", label: "Entity Coverage",                 desc: "Covers the institution itself for governance claims",  required: false, checked: true,  price: 1800 },
+      { id: "sbl-c5", label: "Government Investigation Defense",desc: "Defense costs for regulatory investigations",          required: false, checked: false, price: 2200 },
+      { id: "sbl-c6", label: "Crisis Event Coverage",           desc: "PR and communication costs after a governance event",  required: false, checked: false, price: 1400 },
     ],
     endorsements: [
-      { id: "auto-e1", label: "Hired & Non-Owned Auto",   desc: "Liability for employee-owned & rented vehicles",       premium: 2100, included: false },
-      { id: "auto-e2", label: "Student Transportation",   desc: "Enhanced coverage for district-operated school buses",  premium: 3400, included: false },
-      { id: "auto-e3", label: "Drive Other Car Coverage", desc: "Personal auto extension for named executives",          premium: 800,  included: false },
-      { id: "auto-e4", label: "Gap Coverage",             desc: "Covers gap between ACV and loan/lease balance",         premium: 600,  included: false },
+      { id: "sbl-e1", label: "Bond Election Defense",   desc: "Defense for school bond election disputes",        premium: 1900, included: false },
+      { id: "sbl-e2", label: "Outside Directorship",    desc: "Extends D&O to outside non-profit board service",  premium: 1700, included: false },
+      { id: "sbl-e3", label: "Run-Off Coverage (3-yr)", desc: "Extended reporting period for departing trustees", premium: 4800, included: false },
+      { id: "sbl-e4", label: "Crisis Communications",   desc: "Board-level crisis communication consulting fees", premium: 1600, included: false },
     ],
   },
+
+  /* ════════ Professional Liability (PL) ════════ */
   {
-    id: "crime", label: "Crime / Fidelity", abbr: "Crime",
-    desc: "Employee dishonesty, forgery, theft & funds transfer fraud",
-    icon: <Lock size={16} />, category: "Specialty", categoryColor: "#7B2FBE",
+    id: "ipl", label: "Internships and Professional Services Liability", abbr: "IPL",
+    desc: "E&O for internship programs and student professional services",
+    icon: <UserCheck size={16} />, category: "Professional Liability", categoryColor: CAT_PL,
     basePremium: 3800,
     coverageFields: [
-      { label: "Employee Dishonesty",  value: "$500,000",  type: "select", options: ["$250,000","$500,000","$1,000,000","$2,000,000"] },
-      { label: "Forgery / Alteration", value: "$500,000",  type: "select", options: ["$250,000","$500,000","$1,000,000"] },
-      { label: "Money & Securities",   value: "$100,000",  type: "select", options: ["$50,000","$100,000","$250,000"] },
-      { label: "Computer Fraud",       value: "$500,000",  type: "select", options: ["$250,000","$500,000","$1,000,000"] },
-      { label: "Deductible",           value: "$5,000",    type: "select", options: ["$2,500","$5,000","$10,000","$25,000"] },
-      { label: "Discovery Period",     value: "12 Months", type: "select", options: ["12 Months","24 Months","36 Months"] },
+      { label: "Each Claim Limit",       value: "$1,000,000",   type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
+      { label: "Aggregate Limit",        value: "$2,000,000",   type: "select", options: ["$1,000,000","$2,000,000","$3,000,000"] },
+      { label: "Retention (Deductible)", value: "$10,000",      type: "select", options: ["$5,000","$10,000","$25,000","$50,000"] },
+      { label: "Retroactive Date",       value: "07/01/2020",   type: "date" },
+      { label: "Defense Basis",          value: "Within Limit", type: "select", options: ["Within Limit","Outside Limit"] },
+      { label: "Coverage Territory",     value: "USA & Canada", type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "crime-c1", label: "Employee Dishonesty",              desc: "Theft, embezzlement or fraud by employees or volunteers",       required: true,  checked: true,  price: 0    },
-      { id: "crime-c2", label: "Forgery & Alteration",             desc: "Loss from forged or altered checks, drafts or promissory notes",required: true,  checked: true,  price: 0    },
-      { id: "crime-c3", label: "Money & Securities (On Premises)", desc: "Theft, destruction or disappearance of money on premises",      required: true,  checked: true,  price: 0    },
-      { id: "crime-c4", label: "Money & Securities (In Transit)",  desc: "Theft of money or securities while being transported",          required: false, checked: true,  price: 1200 },
-      { id: "crime-c5", label: "Computer Fraud",                   desc: "Loss from unauthorized computer access and manipulation",       required: false, checked: true,  price: 1400 },
-      { id: "crime-c6", label: "Funds Transfer Fraud",             desc: "Fraudulent transfer instructions causing financial loss",       required: false, checked: false, price: 1800 },
-      { id: "crime-c7", label: "Social Engineering Fraud",         desc: "Deceptive instruction losses from impersonation schemes",       required: false, checked: false, price: 1600 },
-      { id: "crime-c8", label: "Vendor / Client Fraud",            desc: "Impersonation of vendors or clients in financial transactions", required: false, checked: false, price: 1200 },
+      { id: "ipl-c1", label: "Internship Program E&O",        desc: "Negligence by interns in covered professional capacity",  required: true,  checked: true,  price: 0    },
+      { id: "ipl-c2", label: "Student Clinic Liability",       desc: "Liability for student-operated clinical activities",      required: true,  checked: true,  price: 0    },
+      { id: "ipl-c3", label: "Supervisory Negligence",         desc: "Negligent supervision of student professional work",      required: true,  checked: true,  price: 0    },
+      { id: "ipl-c4", label: "Allied Health Programs",         desc: "Coverage for nursing/allied health student programs",     required: false, checked: true,  price: 1400 },
+      { id: "ipl-c5", label: "Counseling / Therapy Services",  desc: "Coverage for student-run counseling services",            required: false, checked: false, price: 1100 },
+      { id: "ipl-c6", label: "Legal Aid Clinics",              desc: "Coverage for student-run legal aid clinics",              required: false, checked: false, price: 1300 },
     ],
     endorsements: [
-      { id: "crime-e1", label: "Social Engineering Fraud",   desc: "Covers losses from deceptive instruction schemes",    premium: 2800, included: false },
-      { id: "crime-e2", label: "Funds Transfer Fraud",       desc: "Covers unauthorized electronic funds transfers",       premium: 3100, included: false },
-      { id: "crime-e3", label: "Vendor/Client Fraud",        desc: "Impersonation of vendors or clients in transactions",  premium: 1900, included: false },
-      { id: "crime-e4", label: "Extended Discovery (12 mo)", desc: "Extended reporting period after policy expiry",        premium: 1200, included: false },
+      { id: "ipl-e1", label: "Allied Health Enhancement",   desc: "Enhanced limits for nursing and allied health interns", premium: 1800, included: false },
+      { id: "ipl-e2", label: "International Internships",   desc: "Extends coverage to international internship placements",premium: 2200, included: false },
+      { id: "ipl-e3", label: "Counseling Services Ext.",    desc: "Extends to mental-health counseling services",          premium: 1400, included: false },
+      { id: "ipl-e4", label: "Sexual Misconduct Defense",   desc: "Defense for sexual misconduct allegations",              premium: 2900, included: false },
+    ],
+  },
+
+  /* ════════ Assumed Risk (AR) ════════ */
+  {
+    id: "rps", label: "Assumed Public School", abbr: "RPS",
+    desc: "Reinsurance / assumed risk for public school members",
+    icon: <Users size={16} />, category: "Assumed Risk", categoryColor: CAT_AR,
+    basePremium: 14500,
+    coverageFields: [
+      { label: "Quota Share %",       value: "50%",            type: "select", options: ["25%","50%","75%","100%"] },
+      { label: "Maximum Loss Limit",  value: "$5,000,000",     type: "select", options: ["$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Treaty Inception",    value: "07/01/2026",     type: "date" },
+      { label: "Pool Retention",      value: "$250,000",       type: "select", options: ["$100,000","$250,000","$500,000","$1,000,000"] },
+      { label: "Ceding Commission",   value: "22%",            type: "select", options: ["18%","20%","22%","25%"] },
+      { label: "Coverage Territory",  value: "USA Only",       type: "select", options: ["Statewide","USA Only","USA & Canada"] },
+    ],
+    coverageItems: [
+      { id: "rps-c1", label: "General Liability Layer",   desc: "Assumed share of underlying GL losses",                   required: true,  checked: true,  price: 0    },
+      { id: "rps-c2", label: "Auto Liability Layer",      desc: "Assumed share of underlying auto liability losses",       required: true,  checked: true,  price: 0    },
+      { id: "rps-c3", label: "Educators Legal Layer",     desc: "Assumed share of underlying ELL losses",                  required: true,  checked: true,  price: 0    },
+      { id: "rps-c4", label: "Property Layer",            desc: "Assumed share of property losses",                        required: false, checked: true,  price: 1800 },
+      { id: "rps-c5", label: "Crime / Cyber Layer",       desc: "Assumed share of crime and cyber-related losses",         required: false, checked: false, price: 2200 },
+      { id: "rps-c6", label: "Catastrophe Cap",           desc: "Annual aggregate catastrophe cap on assumed losses",      required: false, checked: false, price: 1600 },
+    ],
+    endorsements: [
+      { id: "rps-e1", label: "Sexual Abuse Pool",     desc: "Carve-out SAM pool with separate retention",          premium: 6400, included: false },
+      { id: "rps-e2", label: "Catastrophe Cover",     desc: "Per-event catastrophe limit for assumed risks",       premium: 4800, included: false },
+      { id: "rps-e3", label: "Loss Corridor",         desc: "Quota share corridor between two retention levels",   premium: 2200, included: false },
+      { id: "rps-e4", label: "Aggregate Reinstatement",desc: "One automatic reinstatement of the aggregate cap",   premium: 3400, included: false },
     ],
   },
   {
-    id: "cyber", label: "Cyber Liability", abbr: "Cyber",
-    desc: "Data breach, ransomware, network security & privacy liability",
-    icon: <Globe size={16} />, category: "Specialty", categoryColor: "#7B2FBE",
-    basePremium: 8600,
+    id: "rph", label: "Assumed Higher Education", abbr: "RPH",
+    desc: "Reinsurance / assumed risk for higher education members",
+    icon: <Star size={16} />, category: "Assumed Risk", categoryColor: CAT_AR,
+    basePremium: 12200,
     coverageFields: [
-      { label: "Each Claim / Incident",     value: "$2,000,000", type: "select", options: ["$1,000,000","$2,000,000","$3,000,000","$5,000,000"] },
-      { label: "Aggregate Limit",           value: "$4,000,000", type: "select", options: ["$2,000,000","$4,000,000","$5,000,000","$10,000,000"] },
-      { label: "Retention",                 value: "$50,000",    type: "select", options: ["$25,000","$50,000","$100,000","$250,000"] },
-      { label: "Breach Response Sub-limit", value: "$500,000",   type: "select", options: ["$250,000","$500,000","$1,000,000"] },
-      { label: "Ransomware Sub-limit",      value: "$1,000,000", type: "select", options: ["$500,000","$1,000,000","$2,000,000"] },
-      { label: "Waiting Period (BI)",       value: "8 Hours",    type: "select", options: ["4 Hours","8 Hours","12 Hours","24 Hours"] },
+      { label: "Quota Share %",       value: "40%",            type: "select", options: ["25%","40%","50%","75%"] },
+      { label: "Maximum Loss Limit",  value: "$5,000,000",     type: "select", options: ["$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Treaty Inception",    value: "07/01/2026",     type: "date" },
+      { label: "Pool Retention",      value: "$500,000",       type: "select", options: ["$250,000","$500,000","$1,000,000"] },
+      { label: "Ceding Commission",   value: "20%",            type: "select", options: ["18%","20%","22%","25%"] },
+      { label: "Coverage Territory",  value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "cyber-c1", label: "Network Security Liability",       desc: "Failure to prevent unauthorized access, malware, DoS attacks",  required: true,  checked: true,  price: 0    },
-      { id: "cyber-c2", label: "Privacy Liability",                desc: "Violation of privacy laws and unauthorized disclosure of data",  required: true,  checked: true,  price: 0    },
-      { id: "cyber-c3", label: "First-Party Data Breach Response", desc: "Notification costs, credit monitoring, forensics, PR",          required: true,  checked: true,  price: 0    },
-      { id: "cyber-c4", label: "Business Interruption",            desc: "Lost revenue and extra expenses from a cyber event",            required: false, checked: true,  price: 2800 },
-      { id: "cyber-c5", label: "Cyber Extortion / Ransomware",     desc: "Extortion demands, ransom payments and response costs",         required: false, checked: true,  price: 2400 },
-      { id: "cyber-c6", label: "Regulatory Defense & Penalties",   desc: "Fines and penalties from FERPA, HIPAA, state privacy regulators",required: false, checked: false, price: 2200 },
-      { id: "cyber-c7", label: "Media Liability",                  desc: "Defamation, libel and intellectual property claims in media",   required: false, checked: false, price: 1400 },
-      { id: "cyber-c8", label: "Dependent Systems Failure",        desc: "Losses from failure of third-party technology vendors",         required: false, checked: false, price: 2000 },
+      { id: "rph-c1", label: "General Liability Layer", desc: "Assumed share of underlying GL losses",                  required: true,  checked: true,  price: 0    },
+      { id: "rph-c2", label: "Educators Legal Layer",   desc: "Assumed share of underlying ELL losses",                 required: true,  checked: true,  price: 0    },
+      { id: "rph-c3", label: "Title IX Layer",          desc: "Assumed share of Title IX claim losses",                 required: true,  checked: true,  price: 0    },
+      { id: "rph-c4", label: "Property Layer",          desc: "Assumed share of property losses",                       required: false, checked: true,  price: 1600 },
+      { id: "rph-c5", label: "Cyber Layer",             desc: "Assumed share of cyber-related losses",                  required: false, checked: false, price: 2400 },
+      { id: "rph-c6", label: "Athletics Layer",         desc: "Assumed share of athletics-related losses",              required: false, checked: false, price: 1800 },
     ],
     endorsements: [
-      { id: "cyber-e1", label: "Ransomware Enhancement",    desc: "Increases ransomware sublimit & adds crisis support", premium: 4200, included: false },
-      { id: "cyber-e2", label: "Dependent Systems Failure", desc: "Third-party system failure outage coverage",           premium: 3600, included: false },
-      { id: "cyber-e3", label: "Reputational Harm",         desc: "Revenue loss from cyber-related reputational damage",  premium: 2800, included: false },
-      { id: "cyber-e4", label: "Social Engineering",        desc: "Phishing and social engineering financial losses",     premium: 3100, included: false },
+      { id: "rph-e1", label: "Title IX Pool Carve-Out", desc: "Carve-out Title IX pool with separate retention",     premium: 4600, included: false },
+      { id: "rph-e2", label: "Athletics Catastrophe",   desc: "Catastrophe cover for athletic-related losses",       premium: 3800, included: false },
+      { id: "rph-e3", label: "International Programs",  desc: "Extends assumed risk to international programs",      premium: 1900, included: false },
+      { id: "rph-e4", label: "Aggregate Reinstatement", desc: "One automatic reinstatement of the aggregate cap",    premium: 2900, included: false },
+    ],
+  },
+
+  /* ════════ Excess Liability (EL) ════════ */
+  {
+    id: "xff", label: "Excess Following Form", abbr: "XFF",
+    desc: "Excess liability tower following primary policy forms",
+    icon: <Layers size={16} />, category: "Excess Liability", categoryColor: CAT_EL,
+    basePremium: 6800,
+    coverageFields: [
+      { label: "Limit per Occurrence",   value: "$10,000,000",    type: "select", options: ["$5,000,000","$10,000,000","$25,000,000","$50,000,000"] },
+      { label: "Aggregate Limit",        value: "$10,000,000",    type: "select", options: ["$10,000,000","$25,000,000","$50,000,000"] },
+      { label: "Attachment Point",       value: "$5,000,000",     type: "select", options: ["$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Underlying Tower",       value: "CGL + Auto",     type: "select", options: ["CGL Only","CGL + Auto","CGL + Auto + ELL"] },
+      { label: "Form Basis",             value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory",     value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
+    ],
+    coverageItems: [
+      { id: "xff-c1", label: "Following Form",          desc: "Follows the terms of the underlying tower",         required: true,  checked: true,  price: 0    },
+      { id: "xff-c2", label: "Higher Limits",           desc: "Extends limits above the primary tower",            required: true,  checked: true,  price: 0    },
+      { id: "xff-c3", label: "Drop-Down Coverage",      desc: "Drops down on exhaustion of underlying aggregate",  required: false, checked: true,  price: 2200 },
+      { id: "xff-c4", label: "Defense Outside Limit",   desc: "Defense costs paid outside the limit of liability", required: false, checked: false, price: 1800 },
+      { id: "xff-c5", label: "Aggregate Reinstatement", desc: "One automatic reinstatement of the aggregate",      required: false, checked: false, price: 3400 },
+      { id: "xff-c6", label: "Maintenance Deductible",  desc: "SIR for direct piercing claims",                    required: false, checked: false, price: 1100 },
+    ],
+    endorsements: [
+      { id: "xff-e1", label: "Punitive Damages",          desc: "Adds punitive damages where insurable by law",     premium: 4200, included: false },
+      { id: "xff-e2", label: "Sexual Misconduct (Excess)",desc: "Excess SAM coverage following primary",            premium: 5800, included: false },
+      { id: "xff-e3", label: "Stand-Alone Form",          desc: "Switches to stand-alone form for select perils",   premium: 4600, included: false },
+      { id: "xff-e4", label: "Worldwide Territory",       desc: "Worldwide territory extension",                    premium: 1200, included: false },
     ],
   },
   {
-    id: "student", label: "Student Accident", abbr: "SA",
-    desc: "Medical benefits for students injured in school-sponsored activities",
-    icon: <Users size={16} />, category: "Specialty", categoryColor: "#7B2FBE",
-    basePremium: 2800,
+    id: "xpg", label: "Excess Liability Following Form — Shared Aggregate", abbr: "XPG",
+    desc: "Excess following form with a shared aggregate across covered lines",
+    icon: <Layers size={16} />, category: "Excess Liability", categoryColor: CAT_EL,
+    basePremium: 8200,
     coverageFields: [
-      { label: "Maximum Benefit",          value: "$25,000",    type: "select", options: ["$10,000","$25,000","$50,000","$100,000"] },
-      { label: "Accidental Death Benefit", value: "$10,000",    type: "select", options: ["$5,000","$10,000","$25,000"] },
-      { label: "Dental Benefit",           value: "$2,500",     type: "select", options: ["$1,000","$2,500","$5,000"] },
-      { label: "Deductible",               value: "$0",         type: "select", options: ["$0","$100","$250","$500"] },
-      { label: "Coverage Period",          value: "School Year",type: "select", options: ["School Year","24-Hour","Sports Only"] },
-      { label: "Covered Students",         value: "14,200",     type: "text" },
+      { label: "Limit per Occurrence",   value: "$10,000,000",    type: "select", options: ["$5,000,000","$10,000,000","$25,000,000"] },
+      { label: "Shared Aggregate",       value: "$10,000,000",    type: "select", options: ["$10,000,000","$25,000,000","$50,000,000"] },
+      { label: "Attachment Point",       value: "$5,000,000",     type: "select", options: ["$2,000,000","$5,000,000","$10,000,000"] },
+      { label: "Covered Lines",          value: "CGL · Auto · ELL", type: "select", options: ["CGL · Auto","CGL · Auto · ELL","CGL · Auto · ELL · FDL"] },
+      { label: "Form Basis",             value: "Following Form", type: "select", options: ["Following Form","Stand-Alone"] },
+      { label: "Coverage Territory",     value: "USA & Canada",   type: "select", options: ["USA Only","USA & Canada","Worldwide"] },
     ],
     coverageItems: [
-      { id: "sa-c1", label: "Accidental Medical Expense",     desc: "Medical expenses for accidental injuries on school premises",    required: true,  checked: true,  price: 0   },
-      { id: "sa-c2", label: "Accidental Death & Dismemberment",desc: "Lump-sum benefit for accidental death or loss of limb",        required: true,  checked: true,  price: 0   },
-      { id: "sa-c3", label: "School-Time Coverage",           desc: "Injuries during school hours and school-sponsored activities",  required: true,  checked: true,  price: 0   },
-      { id: "sa-c4", label: "Athletic Participation",         desc: "Injuries sustained during organized athletic activities",        required: false, checked: true,  price: 800 },
-      { id: "sa-c5", label: "Extended Coverage (24-Hour)",    desc: "Extends coverage beyond school hours to all daily activities",  required: false, checked: false, price: 1400 },
-      { id: "sa-c6", label: "Catastrophic Coverage",          desc: "Benefit for catastrophic injuries with permanent disability",   required: false, checked: false, price: 1200 },
+      { id: "xpg-c1", label: "Shared Aggregate Limit",     desc: "Single aggregate shared across all covered lines",         required: true,  checked: true,  price: 0    },
+      { id: "xpg-c2", label: "Following Form (per line)",  desc: "Follows the terms of each underlying covered line",        required: true,  checked: true,  price: 0    },
+      { id: "xpg-c3", label: "Higher Limits",              desc: "Extends limits above the covered primary tower",           required: true,  checked: true,  price: 0    },
+      { id: "xpg-c4", label: "Drop-Down Coverage",         desc: "Drops down on exhaustion of any underlying aggregate",     required: false, checked: true,  price: 2600 },
+      { id: "xpg-c5", label: "Aggregate Reinstatement",    desc: "One automatic reinstatement of the shared aggregate",      required: false, checked: false, price: 4100 },
+      { id: "xpg-c6", label: "Cross-Line Defense",         desc: "Defense allocation logic across multiple covered lines",   required: false, checked: false, price: 1800 },
     ],
     endorsements: [
-      { id: "sa-e1", label: "Catastrophic Benefit",     desc: "Additional benefit for catastrophic permanent injuries",  premium: 1600, included: false },
-      { id: "sa-e2", label: "Athletic Enhancement",     desc: "Increased limits for varsity athletic injuries",          premium: 2200, included: false },
-      { id: "sa-e3", label: "Foreign Student Coverage", desc: "Extends coverage to international exchange students",      premium: 800,  included: false },
+      { id: "xpg-e1", label: "Auto Tower Drop-Down",    desc: "Specific drop-down for the auto tower",            premium: 3400, included: false },
+      { id: "xpg-e2", label: "Fiduciary Inclusion",     desc: "Adds fiduciary tower to the shared aggregate",     premium: 4900, included: false },
+      { id: "xpg-e3", label: "Punitive Damages",        desc: "Adds punitive damages where insurable",            premium: 4400, included: false },
+      { id: "xpg-e4", label: "Worldwide Territory",     desc: "Worldwide territory extension",                    premium: 1500, included: false },
     ],
   },
 ];
 
 /* ─── Endorsements library catalog (per product) ──────────────────────���─── */
 const ENDORSEMENTS_LIBRARY: Record<string, LibraryEndorsement[]> = {
-  epl: [
-    { id: "epl-lib1", label: "School Board Liability",    desc: "Personal liability for board members in employment decisions",    premium: 2400 },
-    { id: "epl-lib2", label: "Settlement Consent Waiver", desc: "Allows settlement without insured consent within retention",     premium: 1800 },
-    { id: "epl-lib3", label: "Immigration-Related EPL",   desc: "Claims from immigration documentation requirements",              premium: 1100 },
-    { id: "epl-lib4", label: "Pre-Litigation Mediation",  desc: "Covers costs of pre-litigation mediation proceedings",            premium: 900  },
-    { id: "epl-lib5", label: "Leased Workers Extension",  desc: "Extends coverage to temporary and leased staff",                 premium: 1600 },
+  cgl: [
+    { id: "cgl-lib1", label: "Athletic Participants",        desc: "Liability for student injuries during athletic events",          premium: 2600, fillIn: true, multiUse: true },
+    { id: "cgl-lib2", label: "Playground Equipment",         desc: "Bodily injury from playground apparatus and surfacing",          premium: 1900, fillIn: true },
+    { id: "cgl-lib3", label: "Cafeteria Food Service",       desc: "Foodborne illness and product liability for food service",       premium: 2200 },
+    { id: "cgl-lib4", label: "After-School Programs",        desc: "Extends GL to chaperoned after-school clubs and activities",     premium: 1300, multiUse: true },
+    { id: "cgl-lib5", label: "Drone Operations Coverage",    desc: "Liability for UAS / drone flights for instruction or filming",   premium: 1400, fillIn: true },
+    { id: "cgl-lib6", label: "Premises Pollution Liability", desc: "First- and third-party pollution from school operations",         premium: 2900, fillIn: true },
+  ],
+  blx: [
+    { id: "blx-lib1", label: "Auto Buffer Extension",   desc: "Extends buffer to commercial auto liability",         premium: 1800, fillIn: true },
+    { id: "blx-lib2", label: "Worldwide Territory",     desc: "Worldwide territory endorsement",                      premium: 900  },
+    { id: "blx-lib3", label: "Aggregate Reinstatement", desc: "One automatic reinstatement of the aggregate",        premium: 3100 },
+    { id: "blx-lib4", label: "Maintenance Deductible",  desc: "SIR for direct piercing claims",                       premium: 900,  fillIn: true },
+    { id: "blx-lib5", label: "Sublimit Pollution",      desc: "$1M sublimit for pollution events",                    premium: 1800 },
+  ],
+  glx: [
+    { id: "glx-lib1", label: "Punitive Damages",            desc: "Adds punitive damages where insurable by law",       premium: 3800 },
+    { id: "glx-lib2", label: "Stand-Alone Form",            desc: "Switches to stand-alone form for select perils",      premium: 4200 },
+    { id: "glx-lib3", label: "Worldwide Territory",         desc: "Worldwide territory extension",                       premium: 1100 },
+    { id: "glx-lib4", label: "Aggregate Reinstatement",     desc: "Automatic reinstatement of the aggregate",            premium: 3400 },
+    { id: "glx-lib5", label: "Defense Outside Limit",       desc: "Defense costs paid outside the limit",                premium: 1800 },
+  ],
+  psl: [
+    { id: "psl-lib1", label: "Bond Election Defense",        desc: "Defense for school bond election disputes",        premium: 1800 },
+    { id: "psl-lib2", label: "Open Meeting Law Defense",     desc: "Defense for alleged open-meeting violations",       premium: 1500 },
+    { id: "psl-lib3", label: "Title IX Coordinator Defense", desc: "Defense for Title IX coordinator decisions",        premium: 2000 },
+    { id: "psl-lib4", label: "Sexual Abuse Defense",         desc: "Defense costs for sexual abuse allegations",        premium: 6800 },
+    { id: "psl-lib5", label: "Athletic Injury Defense",      desc: "Defense for athletic participation injury claims",  premium: 1600 },
   ],
   ell: [
-    { id: "ell-lib1", label: "504 Plan Defense Enhancement", desc: "Enhanced sublimit for Section 504 plan disputes",               premium: 1400 },
-    { id: "ell-lib2", label: "Teacher Certification Defense",desc: "Defense costs for teaching license revocation proceedings",     premium: 1600 },
-    { id: "ell-lib3", label: "Curriculum Liability Ext.",    desc: "Coverage for claims arising from curriculum design or content", premium: 1300 },
-    { id: "ell-lib4", label: "International Programs",       desc: "Extends ELL to international student exchange programs",        premium: 2200 },
-    { id: "ell-lib5", label: "Parent/Guardian Defense",      desc: "Defense for disputes brought by parents or guardians",          premium: 1100 },
+    { id: "ell-lib1",  label: "504 Plan Defense Enhancement",    desc: "Enhanced sublimit for Section 504 plan disputes",                     premium: 1400, fillIn: true },
+    { id: "ell-lib2",  label: "Teacher Certification Defense",   desc: "Defense costs for teaching license revocation proceedings",           premium: 1600 },
+    { id: "ell-lib3",  label: "Curriculum Liability Ext.",       desc: "Coverage for claims arising from curriculum design or content",        premium: 1300 },
+    { id: "ell-lib4",  label: "International Programs",          desc: "Extends ELL to international student exchange programs",              premium: 2200, fillIn: true, multiUse: true },
+    { id: "ell-lib5",  label: "Parent/Guardian Defense",         desc: "Defense for disputes brought by parents or guardians",                premium: 1100 },
+    { id: "ell-lib6",  label: "IEP Implementation Defense",      desc: "Defense for IEP design and implementation disputes",                  premium: 1800, fillIn: true },
+    { id: "ell-lib7",  label: "Counselor Liability Enhancement", desc: "Higher sublimit for school counselor and psychologist claims",        premium: 1500 },
+    { id: "ell-lib8",  label: "Standardized Testing Disputes",   desc: "Defense for grading, scoring, and testing accommodation claims",      premium: 1200 },
+    { id: "ell-lib9",  label: "Vocational Program Coverage",     desc: "Coverage for CTE, internship, and work-study program claims",         premium: 1400, multiUse: true },
+    { id: "ell-lib10", label: "Title IX Coordinator Defense",    desc: "Defense for Title IX investigations and coordinator decisions",       premium: 2000, fillIn: true },
+    { id: "ell-lib11", label: "Library/Media Specialist Defense",desc: "Defense for collection-development and content-access disputes",      premium: 800  },
+    { id: "ell-lib12", label: "Restraint & Seclusion Defense",   desc: "Defense for restraint and seclusion-related student claims",          premium: 2400, fillIn: true },
   ],
-  gl: [
-    { id: "gl-lib1", label: "Assault & Battery",            desc: "Bodily injury from fights or assaults on school property",      premium: 3200 },
-    { id: "gl-lib2", label: "Contractors Blanket AI",        desc: "Automatic additional insured for contractors on premises",      premium: 1400 },
-    { id: "gl-lib3", label: "Special Events Extension",      desc: "Extends GL to approved off-campus special events",             premium: 1100 },
-    { id: "gl-lib4", label: "Athletic Participants",         desc: "Liability for student injuries during athletic events",         premium: 2600 },
-    { id: "gl-lib5", label: "Named Perils Extension",        desc: "Expands covered perils beyond standard GL form",               premium: 1800 },
+  elx: [
+    { id: "elx-lib1", label: "Stand-Alone Form",          desc: "Switches to stand-alone form",                    premium: 3400 },
+    { id: "elx-lib2", label: "Aggregate Reinstatement",   desc: "One automatic reinstatement of the aggregate",     premium: 2900 },
+    { id: "elx-lib3", label: "Title IX Excess",           desc: "Excess Title IX defense coverage",                 premium: 2800 },
+    { id: "elx-lib4", label: "IDEA Defense Excess",       desc: "Excess limits for IDEA / 504 dispute defense",     premium: 1900 },
+    { id: "elx-lib5", label: "Online Learning Extension", desc: "Excess for remote/online instruction claims",      premium: 1200 },
   ],
-  ml: [
-    { id: "ml-lib1", label: "Bond Call Protection",     desc: "Protection for called or defaulted financial bonds",             premium: 3600 },
-    { id: "ml-lib2", label: "Antitrust Defense",        desc: "Defense costs for antitrust law proceedings",                   premium: 2600 },
-    { id: "ml-lib3", label: "Social Media Liability",   desc: "D&O coverage for board-level social media decisions",           premium: 1800 },
-    { id: "ml-lib4", label: "Cyber Event (D&O)",        desc: "D&O coverage for governance failures related to cyber events",  premium: 2900 },
-    { id: "ml-lib5", label: "Compensation Defense",     desc: "Defense for executive compensation disputes",                   premium: 2200 },
+  fdl: [
+    { id: "fdl-lib1", label: "Voluntary Compliance Loss",  desc: "Penalty payments under EBSA voluntary compliance programs", premium: 1600 },
+    { id: "fdl-lib2", label: "HIPAA / HITECH Defense",     desc: "Enhanced defense for HIPAA privacy and security claims",    premium: 1900 },
+    { id: "fdl-lib3", label: "Plan Asset Cyber Theft",     desc: "Coverage for cyber theft of participant plan assets",       premium: 2400 },
+    { id: "fdl-lib4", label: "Retired Trustee Run-Off",    desc: "Run-off coverage for retired plan trustees",                premium: 1100 },
+    { id: "fdl-lib5", label: "Settlor Function Expansion", desc: "Broadens settlor function defense",                         premium: 1300 },
   ],
-  property: [
-    { id: "prop-lib1", label: "Terrorism (TRIA)",         desc: "Physical damage from certified terrorism acts under TRIA",       premium: 4800 },
-    { id: "prop-lib2", label: "Debris Removal Enhancement",desc: "Increased debris removal sublimit over standard form",          premium: 2200 },
-    { id: "prop-lib3", label: "Spoilage / Refrigeration", desc: "Food spoilage losses from power outage or equipment failure",    premium: 1600 },
-    { id: "prop-lib4", label: "Electronic Data Restoration",desc: "Costs to restore lost or corrupted electronic data",           premium: 3400 },
-    { id: "prop-lib5", label: "Utility Interruption",     desc: "Losses from off-premises utility service interruption",          premium: 2800 },
+  fdx: [
+    { id: "fdx-lib1", label: "Run-Off Coverage (3-yr)",  desc: "Extended reporting period for departing fiduciaries", premium: 1800 },
+    { id: "fdx-lib2", label: "HIPAA Excess",             desc: "Excess limits for HIPAA defense",                    premium: 1100 },
+    { id: "fdx-lib3", label: "Cyber Plan Asset Theft",   desc: "Excess limits for cyber plan asset theft",           premium: 1400 },
+    { id: "fdx-lib4", label: "Stand-Alone Form",         desc: "Switches to stand-alone form",                       premium: 1900 },
+    { id: "fdx-lib5", label: "Drop-Down Enhancement",    desc: "Drops down on multiple covered triggers",            premium: 1500 },
   ],
-  auto: [
-    { id: "auto-lib1", label: "Mobile Equipment Float",     desc: "Coverage for unlisted mobile equipment not on schedule",       premium: 1800 },
-    { id: "auto-lib2", label: "Driver Training Vehicles",   desc: "Enhanced coverage for student driver training vehicles",       premium: 2600 },
-    { id: "auto-lib3", label: "Chartered Vehicle Coverage", desc: "Coverage for chartered or rented buses for school trips",      premium: 2400 },
-    { id: "auto-lib4", label: "Electronic Equipment",       desc: "Coverage for in-vehicle electronic equipment and cameras",     premium: 1200 },
-    { id: "auto-lib5", label: "Rental Reimbursement",       desc: "Rental vehicle costs while covered auto is being repaired",    premium: 600  },
+  sbl: [
+    { id: "sbl-lib1", label: "Bond Election Defense",   desc: "Defense for school bond election disputes",        premium: 1900 },
+    { id: "sbl-lib2", label: "Outside Directorship",    desc: "Extends D&O to outside non-profit board service",  premium: 1700 },
+    { id: "sbl-lib3", label: "Run-Off Coverage (3-yr)", desc: "Extended reporting period for departing trustees", premium: 4800 },
+    { id: "sbl-lib4", label: "Crisis Communications",   desc: "Board-level crisis communication consulting fees", premium: 1600 },
+    { id: "sbl-lib5", label: "Open Meeting Law Defense",desc: "Defense for alleged open-meeting law violations",  premium: 1500 },
+    { id: "sbl-lib6", label: "Books & Records Defense", desc: "Defense for statutory books-and-records demands",  premium: 1500 },
   ],
-  crime: [
-    { id: "crime-lib1", label: "Employee Benefits Plan",  desc: "Covers funds held under employee benefit plans",               premium: 1600 },
-    { id: "crime-lib2", label: "Auction Fraud",           desc: "Losses from fraudulent online or in-person auction activity",  premium: 2200 },
-    { id: "crime-lib3", label: "Commercial Crime Ext.",   desc: "Extends crime coverage to temporary or contract employees",    premium: 1400 },
-    { id: "crime-lib4", label: "Tax Fraud Defense",       desc: "Defense costs for tax fraud or filing inaccuracy allegations", premium: 1800 },
-    { id: "crime-lib5", label: "Telephone Fraud",         desc: "Losses from unauthorized use of telephone systems",            premium: 900  },
+  ipl: [
+    { id: "ipl-lib1", label: "Allied Health Enhancement",  desc: "Enhanced limits for nursing and allied health interns",  premium: 1800 },
+    { id: "ipl-lib2", label: "International Internships",  desc: "Extends coverage to international internship placements", premium: 2200 },
+    { id: "ipl-lib3", label: "Counseling Services Ext.",   desc: "Extends to mental-health counseling services",           premium: 1400 },
+    { id: "ipl-lib4", label: "Sexual Misconduct Defense",  desc: "Defense for sexual misconduct allegations",               premium: 2900 },
+    { id: "ipl-lib5", label: "Telehealth Extension",       desc: "Extends to telehealth and remote consultation services", premium: 1300 },
   ],
-  cyber: [
-    { id: "cyber-lib1", label: "FERPA Notification Enhancement", desc: "Enhanced FERPA compliance breach notification support",       premium: 2400 },
-    { id: "cyber-lib2", label: "Board Incident Response",         desc: "Cyber incident response services tailored for board level",  premium: 3200 },
-    { id: "cyber-lib3", label: "Proof of Loss Extension",         desc: "Extended time window to file proof of loss for cyber claims",premium: 1100 },
-    { id: "cyber-lib4", label: "Reputational Recovery",           desc: "PR and reputation management after a cyber-related event",   premium: 4800 },
-    { id: "cyber-lib5", label: "Student Data Liability",          desc: "Specific sublimit for student PII data breach claims",        premium: 3600 },
+  rps: [
+    { id: "rps-lib1", label: "Sexual Abuse Pool",      desc: "Carve-out SAM pool with separate retention",        premium: 6400 },
+    { id: "rps-lib2", label: "Catastrophe Cover",      desc: "Per-event catastrophe limit for assumed risks",     premium: 4800 },
+    { id: "rps-lib3", label: "Loss Corridor",          desc: "Quota share corridor between two retention levels", premium: 2200 },
+    { id: "rps-lib4", label: "Aggregate Reinstatement",desc: "One automatic reinstatement of the aggregate cap",  premium: 3400 },
+    { id: "rps-lib5", label: "Cyber Layer Inclusion",  desc: "Adds cyber to the assumed risk treaty",             premium: 2700 },
   ],
-  student: [
-    { id: "sa-lib1", label: "Mental Health Coverage", desc: "Medical benefits extending to mental health treatment",           premium: 1400 },
-    { id: "sa-lib2", label: "Equipment Coverage",     desc: "Coverage for student equipment losses from accidents",            premium: 800  },
-    { id: "sa-lib3", label: "Field Trip Extension",   desc: "Extended coverage for approved off-campus field trips",           premium: 1200 },
-    { id: "sa-lib4", label: "Travel Accident",        desc: "Coverage for students traveling for school-sponsored events",     premium: 1600 },
-    { id: "sa-lib5", label: "Dental Injury",          desc: "Enhanced dental benefit for traumatic dental injuries",           premium: 700  },
+  rph: [
+    { id: "rph-lib1", label: "Title IX Pool Carve-Out",  desc: "Carve-out Title IX pool with separate retention",     premium: 4600 },
+    { id: "rph-lib2", label: "Athletics Catastrophe",    desc: "Catastrophe cover for athletic-related losses",       premium: 3800 },
+    { id: "rph-lib3", label: "International Programs",   desc: "Extends assumed risk to international programs",      premium: 1900 },
+    { id: "rph-lib4", label: "Aggregate Reinstatement",  desc: "One automatic reinstatement of the aggregate cap",    premium: 2900 },
+    { id: "rph-lib5", label: "Greek Life Carve-Out",     desc: "Carve-out pool for fraternity and sorority losses",   premium: 3300 },
+  ],
+  xff: [
+    { id: "xff-lib1", label: "Punitive Damages",           desc: "Adds punitive damages where insurable by law",   premium: 4200 },
+    { id: "xff-lib2", label: "Sexual Misconduct (Excess)", desc: "Excess SAM coverage following primary",          premium: 5800 },
+    { id: "xff-lib3", label: "Stand-Alone Form",           desc: "Switches to stand-alone form for select perils", premium: 4600 },
+    { id: "xff-lib4", label: "Worldwide Territory",        desc: "Worldwide territory extension",                  premium: 1200 },
+    { id: "xff-lib5", label: "Drop-Down Coverage",         desc: "Drops down on exhaustion of underlying aggregate",premium: 2200 },
+  ],
+  xpg: [
+    { id: "xpg-lib1", label: "Auto Tower Drop-Down",   desc: "Specific drop-down for the auto tower",                premium: 3400 },
+    { id: "xpg-lib2", label: "Fiduciary Inclusion",    desc: "Adds fiduciary tower to the shared aggregate",         premium: 4900 },
+    { id: "xpg-lib3", label: "Punitive Damages",       desc: "Adds punitive damages where insurable",                premium: 4400 },
+    { id: "xpg-lib4", label: "Worldwide Territory",    desc: "Worldwide territory extension",                        premium: 1500 },
+    { id: "xpg-lib5", label: "Aggregate Reinstatement",desc: "Automatic reinstatement of the shared aggregate",      premium: 4100 },
   ],
 };
 
+/* ─── Member benefits (shared across products) ────────────────────────────── */
+const MEMBER_BENEFITS: { id: string; bundle: string; name: string; desc: string }[] = [
+  { id: "proresponse-crisis-comms",      bundle: "ProResponse", name: "Crisis Communications",               desc: "On-call crisis communications consulting and statement drafting for school incidents" },
+  { id: "proresponse-trauma-counseling", bundle: "ProResponse", name: "Trauma/Grief Counseling",             desc: "Onsite trauma and grief counseling services following a covered incident" },
+  { id: "proresponse-threat-assessment", bundle: "ProResponse", name: "Threat Assessment Case Consultation", desc: "Expert case consultation on threat assessments involving students or staff" },
+  { id: "proresponse-sexual-misconduct", bundle: "ProResponse", name: "Sexual Misconduct Investigation",     desc: "Independent investigator support for sexual misconduct allegations" },
+];
+
+/* ─── Notifications (forms attached to every product option) ──────────────── */
+const NOTIFICATIONS: { id: string; code: string; desc: string }[] = [
+  { id: "triads", code: "TRIADS", desc: "Terrorism Risk Insurance Act Disclosure Statement" },
+  { id: "bids",   code: "BIDS",   desc: "Broker Information Disclosure Statement" },
+  { id: "pmb",    code: "PMB",    desc: "ProResponse Member Benefits notification" },
+];
+
+/* ─── Default schedules (auto-attached to every product option) ──────────── */
+const DEFAULT_SCHEDULES: LibrarySchedule[] = [
+  { id: "sch-main",      label: "Main District Campus",    desc: "Primary K-12 campus, classrooms, administrative offices and core academic facilities", premium: 0, fillIn: true,                  sampleUrl: "#schedules/samples/sch-main" },
+  { id: "sch-athletics", label: "Athletic Facilities",     desc: "Gymnasiums, stadiums, fields and locker rooms used for athletic programs and events",   premium: 0, fillIn: true, multiUse: true, sampleUrl: "#schedules/samples/sch-athletics" },
+  { id: "sch-admin",     label: "Administration Building", desc: "District headquarters housing superintendent, business office and board meeting spaces", premium: 0, fillIn: true,                  sampleUrl: "#schedules/samples/sch-admin" },
+  { id: "sch-transport", label: "Transportation Fleet",    desc: "School buses, district-owned vehicles and the transportation yard with maintenance bay", premium: 0, fillIn: true,                  sampleUrl: "#schedules/samples/sch-transport" },
+];
+
+/* ─── Schedules library catalog (shared across products) ─────────────────── */
+const SCHEDULES_LIBRARY: LibrarySchedule[] = [
+  { id: "sch-cafeteria",   label: "Food Service & Cafeterias",      desc: "Kitchen facilities, dining halls and central food preparation operations",            premium: 1200,                                sampleUrl: "#schedules/samples/sch-cafeteria"   },
+  { id: "sch-maintenance", label: "Maintenance & Grounds",          desc: "Maintenance shops, groundskeeping equipment storage and custodial operations",         premium:  900,                                sampleUrl: "#schedules/samples/sch-maintenance" },
+  { id: "sch-aux",         label: "Auxiliary / Off-Site Locations", desc: "Leased classrooms, alternative learning centers and other off-campus instructional sites", premium: 1800, fillIn: true, multiUse: true, sampleUrl: "#schedules/samples/sch-aux"         },
+  { id: "sch-tech",        label: "Technology & Data Center",       desc: "District data center, server rooms and centralized IT infrastructure",                 premium: 2400, fillIn: true,                  sampleUrl: "#schedules/samples/sch-tech"        },
+  { id: "sch-library",     label: "Library / Media Center",         desc: "Central and school-level library media centers and shared collections",                premium:  600,                                sampleUrl: "#schedules/samples/sch-library"     },
+  { id: "sch-performing",  label: "Performing Arts Center",         desc: "Auditoriums, theaters and rehearsal spaces used for performances and assemblies",      premium: 1500, fillIn: true,                  sampleUrl: "#schedules/samples/sch-performing"  },
+];
+
 const CATEGORIES = [
-  { id: "liability",    label: "Liability",       productIds: ["epl","ell","gl","ml"],          color: N          },
-  { id: "property",     label: "Property & Auto", productIds: ["property","auto"],              color: "#1A7A4A"  },
-  { id: "specialty",    label: "Specialty",       productIds: ["crime","cyber","student"],       color: "#7B2FBE"  },
+  { id: "gl", label: "General Liability",     productIds: ["cgl","blx","glx","psl"],         color: CAT_GL },
+  { id: "ml", label: "Management Liability",  productIds: ["ell","elx","fdl","fdx","sbl"],   color: CAT_ML },
+  { id: "pl", label: "Professional Liability", productIds: ["ipl"],                           color: CAT_PL },
+  { id: "ar", label: "Assumed Risk",          productIds: ["rps","rph"],                     color: CAT_AR },
+  { id: "el", label: "Excess Liability",      productIds: ["xff","xpg"],                     color: CAT_EL },
 ];
 
 /* ─── Per-item limit option sets ────────────────────────────────────────── */
@@ -413,16 +668,83 @@ const AGGREGATE_LIMIT_OPTIONS = [
 const DEFAULT_ITEM_CLAIM     = "$500,000";
 const DEFAULT_ITEM_AGGREGATE = "$1,000,000";
 
+/* ─── Coverage-field advisor: senior-UW micro-coaching when a coverage
+ * field (limit / aggregate / retention / retro / defense / territory)
+ * changes. Returns "" to suppress the companion message. */
+function adviseCoverageField(
+  product: ProductDef,
+  optionLabel: string,
+  fieldLabel: string,
+  before: string,
+  after: string,
+): string {
+  const line = product.abbr;
+  const lbl  = fieldLabel.toLowerCase();
+  const dollarsNum = (s: string) => Number(s.replace(/[^0-9]/g, "")) || 0;
+
+  if (lbl.includes("each claim") || lbl.includes("each incident")) {
+    const b = dollarsNum(before), a = dollarsNum(after);
+    if (a > b) {
+      return `**${line} · ${optionLabel}** — Each-claim limit raised from ${before} → **${after}**. Expect a ~${Math.round(((a - b) / b) * 22)}% premium increase on this line. At ${after} on a K-12 risk you're still inside standard authority; >$5M would trip the senior-UW referral.`;
+    }
+    return `**${line} · ${optionLabel}** — Each-claim limit lowered from ${before} → **${after}**. Member premium drops, but check the broker's competing tower for shadow limits. At ${after} you have ${a < 1_000_000 ? "below" : "at"} the typical K-12 ${line} benchmark.`;
+  }
+
+  if (lbl.includes("aggregate")) {
+    const b = dollarsNum(before), a = dollarsNum(after);
+    if (a > b) {
+      return `**${line}** — Aggregate raised to **${after}**. Ratio to each-claim is now ${(a / Math.max(dollarsNum(after) * 0.5, 1)).toFixed(1)}×; common K-12 aggregates run 2–4× the each-claim limit.`;
+    }
+    return `**${line}** — Aggregate trimmed to **${after}**. Watch for clash risk: a single bad claim year on a $${(a / 1_000_000).toFixed(1)}M aggregate could blow through inside one policy period.`;
+  }
+
+  if (lbl.includes("retention") || lbl.includes("deductible")) {
+    const b = dollarsNum(before), a = dollarsNum(after);
+    if (a > b) {
+      const pct = Math.min(12, Math.round(((a - b) / Math.max(b, 1)) * 6));
+      return `**${line}** — Retention raised ${before} → **${after}**. Typically buys ~${pct}% premium relief on ${line} for a school of this size. Confirm the member's reserve fund can absorb a single ${after} hit before quoting.`;
+    }
+    return `**${line}** — Retention dropped ${before} → **${after}**. Member premium goes up; on a 6-yr loss ratio of 58% I'd usually push the other direction. Document why you're recommending the lower retention in the file.`;
+  }
+
+  if (lbl.includes("retroactive")) {
+    return `**${line}** — Retroactive date set to **${after}**. Every year of retro coverage you pull back adds ~3–5% to claims-made premium on a ${line} risk. Confirm prior acts coverage isn't already sitting with the expiring carrier.`;
+  }
+
+  if (lbl.includes("defense")) {
+    if (/outside/i.test(after)) {
+      return `**${line}** — Defense moved to **Outside Limit**. Big member-side win on a ${line} line — defense costs no longer erode the indemnity bucket. UE typically charges +8–12% for outside-limit defense on K-12.`;
+    }
+    return `**${line}** — Defense set to **Within Limit**. Standard for K-12 ${line}; keeps premium tight but defense costs eat into the each-claim limit.`;
+  }
+
+  if (lbl.includes("territory")) {
+    if (/worldwide/i.test(after)) {
+      return `**${line}** — Territory expanded to **Worldwide**. Material change: confirm the school has international exposure (study-abroad, athletic tours). Triggers a small premium load and may require a sanctions-screening attestation.`;
+    }
+    if (/usa only/i.test(after)) {
+      return `**${line}** — Territory narrowed to **USA Only**. Premium relief ~2–4%. Only safe if you've confirmed no Canadian field trips, study-abroad, or hosted-foreign-student exposure.`;
+    }
+    return `**${line}** — Coverage Territory set to **${after}**.`;
+  }
+
+  return "";
+}
+
 /* ─── Helper to make a fresh option from a product def ─────────────────── */
 function makeOption(product: ProductDef, idx: number, customName?: string): ProductOption {
   return {
     id: `opt_${Date.now()}_${idx}`,
     label: customName ?? `${product.abbr} - ${String(idx + 1).padStart(2, "0")}`,
     color: OPTION_COLORS[idx % OPTION_COLORS.length],
+    status: "draft",
     coverageFields:    product.coverageFields.map(f => ({ ...f })),
     coverageItems:     product.coverageItems.map(ci => ({ ...ci })),
     addedEndorsements: [],
+    addedSchedules:    [],
     manualPct: 0,
+    createdAt: new Date().toISOString(),
+    createdBy: "Maya Khanna",
   };
 }
 
@@ -446,10 +768,129 @@ function Modal({ onClose, children, wide }: { onClose: () => void; children: Rea
     <div className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.50)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "white", border: `1px solid ${BD}`, width: "100%", maxWidth: wide ? 780 : 560, maxHeight: "90vh", overflowY: "auto", fontFamily: font }}>
+      <div style={{ background: "white", border: `1px solid ${BD}`, width: "100%", maxWidth: wide ? 780 : 560, maxHeight: "90vh", overflowY: "auto", fontFamily: font, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}>
         {children}
       </div>
     </div>
+  );
+}
+
+/* ─── Fill-in modal ──────────────────────────────────────────────────────
+   Lightweight stand-in for the per-endorsement fill-in form. Each endorsement
+   defines a small set of mock fields (limits, dates, named insureds) that the
+   underwriter must populate. Saving flips the row's chip from "Fill-in" to
+   "Filled" — see RatingTab's `filledDefaults` state. */
+function FillInModal({
+  pid, end, seq, alreadyFilled, onClose, onSave,
+}: {
+  pid: string; end: { id: string; label: string; multiUse?: boolean }; seq: number;
+  alreadyFilled: boolean;
+  onClose: () => void; onSave: () => void;
+}) {
+  // Per-endorsement field templates. Falls back to a generic two-field form.
+  const FIELD_TEMPLATES: Record<string, { label: string; placeholder: string; type?: "date" | "text" | "number" }[]> = {
+    "cgl-e1": [
+      { label: "Coverage Trigger",     placeholder: "Occurrence / Claims-made", type: "text" },
+      { label: "Per-Claim Sublimit",   placeholder: "$1,000,000",               type: "text" },
+      { label: "Aggregate Sublimit",   placeholder: "$2,000,000",               type: "text" },
+      { label: "Retroactive Date",     placeholder: "",                          type: "date" },
+      { label: "Named Insured(s)",     placeholder: "Brookfield Day School",     type: "text" },
+    ],
+    "cgl-e2": [
+      { label: "Event Name",           placeholder: "Annual Gala",              type: "text" },
+      { label: "Event Date",           placeholder: "",                          type: "date" },
+      { label: "Aggregate Limit",      placeholder: "$1,000,000",               type: "text" },
+    ],
+    "cgl-e3": [
+      { label: "Volunteer Group(s)",   placeholder: "Booster Club, PTA",         type: "text" },
+      { label: "Sublimit per Volunteer", placeholder: "$250,000",                type: "text" },
+    ],
+  };
+  const fields = FIELD_TEMPLATES[end.id] ?? [
+    { label: "Description",          placeholder: "Endorsement-specific details", type: "text" },
+    { label: "Effective Date",       placeholder: "",                              type: "date" },
+  ];
+
+  const [values, setValues] = useState<string[]>(() => fields.map(() => ""));
+  const canSave = values.some(v => v.trim().length > 0);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ height: 4, background: N }} />
+      <div className="flex items-center justify-between px-6 py-4" style={{ background: N, borderBottom: `1px solid ${BDL}` }}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
+            <Pencil size={15} color="white" />
+          </div>
+          <div className="min-w-0">
+            <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>
+              Fill in: {end.label}
+              {end.multiUse && (
+                <span style={{ marginLeft: 8, fontSize: "0.66rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)", padding: "1px 6px", borderRadius: 4 }}>
+                  #{String(seq).padStart(2, "0")}
+                </span>
+              )}
+            </h2>
+            <p style={{ fontSize: "0.66rem", color: "rgba(255,255,255,0.55)", marginTop: 1 }}>
+              Complete the underwriter fields below and save to mark this endorsement as filled.
+            </p>
+          </div>
+        </div>
+        <button onClick={onClose}
+          style={{ width: 28, height: 28, background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", borderRadius: 6 }}>
+          <X size={14} />
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {alreadyFilled && (
+          <div className="flex items-start gap-2 px-3 py-2"
+            style={{ background: "#E8F5EC", border: "1px solid #93C8A0", borderRadius: 6 }}>
+            <CheckCircle2 size={14} color="#1A5C30" style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: "0.74rem", color: "#1A5C30", fontWeight: 600 }}>
+              This instance is already marked as filled. Re-saving will update the captured values.
+            </p>
+          </div>
+        )}
+        {fields.map((f, i) => (
+          <div key={i}>
+            <label style={{ display: "block", fontSize: "0.66rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+              {f.label}
+            </label>
+            <input
+              type={f.type ?? "text"}
+              value={values[i]}
+              onChange={e => setValues(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
+              placeholder={f.placeholder}
+              className="w-full px-3 py-2.5 outline-none"
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, background: "white", boxSizing: "border-box" }}
+              autoFocus={i === 0}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
+        <button onClick={onClose}
+          className="px-4 py-2 hover:brightness-97 transition-all"
+          style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, borderRadius: 6, cursor: "pointer", fontFamily: font }}>
+          Cancel
+        </button>
+        <button
+          onClick={onSave}
+          disabled={!canSave}
+          className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6, border: "none", cursor: canSave ? "pointer" : "not-allowed", fontFamily: font }}>
+          <Save size={13} /> Save & mark filled
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -480,20 +921,70 @@ interface RatingTabProps {
 export function RatingTab({ selectedProductIds }: RatingTabProps) {
 
   /* ── Visible products in sidebar (from submission, user can add more) ── */
-  const [visibleProductIds, setVisibleProductIds] = useState<string[]>(
-    selectedProductIds ?? PRODUCTS.map(p => p.id)
-  );
+  const initialVisible = selectedProductIds ?? PRODUCTS.map(p => p.id);
+  const [visibleProductIds, setVisibleProductIds] = useState<string[]>(initialVisible);
 
   /* ── Selection & navigation ── */
-  const [selected, setSelected]       = useState<Set<string>>(new Set());
-  const [activeProductId, setActive]  = useState<string | null>(null);
+  /* All visible products are "selected" (in the submission) by default — */
+  /* the sidebar is a navigator, not an include/exclude toggle.           */
+  const [selected, setSelected]       = useState<Set<string>>(new Set(initialVisible));
+  const [activeProductId, setActive]  = useState<string | null>(initialVisible[0] ?? null);
 
-  /* ── Per-product options: productId → options array ── */
-  const [allOptions, setAllOptions]   = useState<Record<string, ProductOption[]>>({});
+  /* ── Per-product options: productId → options array (seeded with variety) ── */
+  const [allOptions, setAllOptions]   = useState<Record<string, ProductOption[]>>(() => {
+    const seed: Record<string, ProductOption[]> = {};
+    initialVisible.forEach((pid, productIdx) => {
+      const product = PRODUCTS.find(p => p.id === pid);
+      if (!product) return;
+      // Each product gets a Standard option (e.g. "EPL - 01")
+      const optA = makeOption(product, 0);
+      // First two products get a second variant (higher SIR / lower premium)
+      if (productIdx < 2) {
+        const optB: ProductOption = {
+          ...makeOption(product, 1),
+          manualPct: -8,
+          status: productIdx === 0 ? "quoted" : "draft",
+        };
+        // First product also gets a third bound variant for demo coverage
+        if (productIdx === 0) {
+          const optC: ProductOption = {
+            ...makeOption(product, 2),
+            manualPct: 12,
+            status: "bound",
+          };
+          seed[pid] = [optA, optB, optC];
+        } else {
+          seed[pid] = [optA, optB];
+        }
+      } else {
+        seed[pid] = [optA];
+      }
+    });
+    return seed;
+  });
   /* ── Active option per product ── */
   const [activeOptId, setActiveOptId] = useState<Record<string, string>>({});
   /* ── Active sub-tab per product ── */
   const [subTabs, setSubTabs]         = useState<Record<string, SubTab>>({});
+
+  /* ── Deep-link: read ?focus=pid::oid and focus that product + option ── */
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const focus = searchParams.get("focus");
+    if (!focus) return;
+    const [pid, oid] = focus.split("::");
+    if (!pid) return;
+    if (!visibleProductIds.includes(pid)) return;
+    setActive(pid);
+    if (oid && (allOptions[pid] ?? []).some(o => o.id === oid)) {
+      setActiveOptId(prev => ({ ...prev, [pid]: oid }));
+    }
+    // Scroll the editor anchor into view once the tab has had a tick to render.
+    setTimeout(() => {
+      document.getElementById("rating-option-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   /* ── Inline rename state ── */
   const [editingOptId,   setEditingOptId]   = useState<string | null>(null);
   const [editingOptName, setEditingOptName] = useState<string>("");
@@ -518,6 +1009,76 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
     }));
   };
 
+  /* ── Editable default-endorsement premiums: keyed by "pid::eid" ── */
+  const [defaultEndOverrides, setDefaultEndOverrides] = useState<Record<string, number>>({});
+
+  /* ── Default-endorsement instances: how many copies of a multi-use endorsement
+   *    are attached. Keyed by "pid::eid". Defaults to 1 instance when absent. */
+  const [defaultEndInstances, setDefaultEndInstances] = useState<Record<string, number>>({});
+  const getInstanceCount = (pid: string, eid: string): number =>
+    defaultEndInstances[`${pid}::${eid}`] ?? 1;
+  const addInstance = (pid: string, eid: string) =>
+    setDefaultEndInstances(prev => ({ ...prev, [`${pid}::${eid}`]: (prev[`${pid}::${eid}`] ?? 1) + 1 }));
+  const removeInstance = (pid: string, eid: string, seq: number) => {
+    const key = `${pid}::${eid}`;
+    const count = defaultEndInstances[key] ?? 1;
+    if (count <= 1) return; // never drop below the seed instance
+    setDefaultEndInstances(prev => ({ ...prev, [key]: count - 1 }));
+    // Re-key filled flags above `seq` down by one so sequence numbers stay tight.
+    setFilledDefaults(prev => {
+      const next = new Set<string>();
+      prev.forEach(k => {
+        const [p, e, s] = k.split("::");
+        if (p !== pid || e !== eid) { next.add(k); return; }
+        const sNum = Number(s);
+        if (sNum === seq) return;            // drop the removed one
+        if (sNum > seq)  next.add(`${pid}::${eid}::${sNum - 1}`);
+        else             next.add(k);
+      });
+      return next;
+    });
+  };
+
+  /* ── Filled instances of default endorsements: keys "pid::eid::seq" ── */
+  const [filledDefaults, setFilledDefaults] = useState<Set<string>>(new Set());
+  const isFilled = (pid: string, eid: string, seq: number) =>
+    filledDefaults.has(`${pid}::${eid}::${seq}`);
+  const markFilled = (pid: string, eid: string, seq: number) =>
+    setFilledDefaults(prev => new Set(prev).add(`${pid}::${eid}::${seq}`));
+
+  /* ── Fill-in modal target (which instance is being edited) ── */
+  const [fillInTarget, setFillInTarget] = useState<{ pid: string; end: Endorsement; seq: number } | null>(null);
+
+  /* ── Member-benefit service selections (default: all included) ── */
+  const [memberBenefitsExcluded, setMemberBenefitsExcluded] = useState<Set<string>>(new Set());
+  const toggleMemberBenefit = (id: string) => {
+    setMemberBenefitsExcluded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  /* ── Notification selections (default: all attached) ── */
+  const [notificationsExcluded, setNotificationsExcluded] = useState<Set<string>>(new Set());
+  const toggleNotification = (id: string) => {
+    setNotificationsExcluded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const getDefaultEndPremium = (pid: string, end: Endorsement) => {
+    const key = `${pid}::${end.id}`;
+    return defaultEndOverrides[key] ?? 0;
+  };
+
+  const updateDefaultEndPremium = (pid: string, eid: string, value: number) => {
+    const key = `${pid}::${eid}`;
+    setDefaultEndOverrides(prev => ({ ...prev, [key]: value }));
+  };
+
   /* ── Quote status ── */
   const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>("draft");
   const [quoteNumber, setQuoteNumber] = useState<string | null>(null);
@@ -525,6 +1086,108 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
   /* ── Library modals ── */
   const [showProductsLibrary,      setShowProductsLibrary]      = useState(false);
   const [showEndorsementsLibrary,  setShowEndorsementsLibrary]  = useState(false);
+  const [endorsementsLibraryQuery, setEndorsementsLibraryQuery] = useState("");
+  const [showSchedulesLibrary,     setShowSchedulesLibrary]     = useState(false);
+  const [schedulesLibraryQuery,    setSchedulesLibraryQuery]    = useState("");
+
+  /* ── Per-(option × schedule) instance counts. Key: "pid::optId::sid". Defaults to 1. ── */
+  const [scheduleInstances, setScheduleInstances] = useState<Record<string, number>>({});
+  const scheduleInstanceKey = (pid: string, optId: string, sid: string) => `${pid}::${optId}::${sid}`;
+  const getScheduleInstanceCount = (pid: string, optId: string, sid: string): number =>
+    scheduleInstances[scheduleInstanceKey(pid, optId, sid)] ?? 1;
+  const addScheduleInstance = (pid: string, optId: string, sid: string) =>
+    setScheduleInstances(prev => {
+      const k = scheduleInstanceKey(pid, optId, sid);
+      return { ...prev, [k]: (prev[k] ?? 1) + 1 };
+    });
+  const removeScheduleInstance = (pid: string, optId: string, sid: string, seq: number) => {
+    const k = scheduleInstanceKey(pid, optId, sid);
+    const count = scheduleInstances[k] ?? 1;
+    if (count <= 1) return;
+    setScheduleInstances(prev => ({ ...prev, [k]: count - 1 }));
+    setFilledScheduleInstances(prev => {
+      const next = new Set<string>();
+      prev.forEach(key => {
+        const [p, o, s, q] = key.split("::");
+        if (p !== pid || o !== optId || s !== sid) { next.add(key); return; }
+        const sNum = Number(q);
+        if (sNum === seq) return;
+        if (sNum > seq) next.add(`${pid}::${optId}::${sid}::${sNum - 1}`);
+        else next.add(key);
+      });
+      return next;
+    });
+  };
+
+  /* ── Filled schedule instances: "pid::optId::sid::seq" ── */
+  const [filledScheduleInstances, setFilledScheduleInstances] = useState<Set<string>>(new Set());
+  const isScheduleFilled = (pid: string, optId: string, sid: string, seq: number) =>
+    filledScheduleInstances.has(`${pid}::${optId}::${sid}::${seq}`);
+  const markScheduleFilled = (pid: string, optId: string, sid: string, seq: number) =>
+    setFilledScheduleInstances(prev => new Set(prev).add(`${pid}::${optId}::${sid}::${seq}`));
+
+  /* ── Editable schedule premiums per (option × schedule). Falls back to library default. ── */
+  const [schedulePremiumOverrides, setSchedulePremiumOverrides] = useState<Record<string, number>>({});
+  const getSchedulePremium = (pid: string, optId: string, sid: string, fallback: number): number => {
+    const k = scheduleInstanceKey(pid, optId, sid);
+    return schedulePremiumOverrides[k] ?? fallback;
+  };
+  const updateSchedulePremium = (pid: string, optId: string, sid: string, value: number) => {
+    const k = scheduleInstanceKey(pid, optId, sid);
+    setSchedulePremiumOverrides(prev => ({ ...prev, [k]: Math.max(0, value) }));
+  };
+  const resetSchedulePremium = (pid: string, optId: string, sid: string) => {
+    const k = scheduleInstanceKey(pid, optId, sid);
+    setSchedulePremiumOverrides(prev => {
+      const next = { ...prev };
+      delete next[k];
+      return next;
+    });
+  };
+
+  /* ── Schedule fill-in target (which option × schedule × seq is being edited) ── */
+  const [scheduleFillInTarget, setScheduleFillInTarget] =
+    useState<{ pid: string; optId: string; sched: LibrarySchedule; seq: number } | null>(null);
+
+  /* ── Per-(option × added endorsement) instance counts. Key: "pid::optId::eid". Defaults to 1. ── */
+  const [addedEndInstances, setAddedEndInstances] = useState<Record<string, number>>({});
+  const addedEndInstanceKey = (pid: string, optId: string, eid: string) => `${pid}::${optId}::${eid}`;
+  const getAddedEndInstanceCount = (pid: string, optId: string, eid: string): number =>
+    addedEndInstances[addedEndInstanceKey(pid, optId, eid)] ?? 1;
+  const addAddedEndInstance = (pid: string, optId: string, eid: string) =>
+    setAddedEndInstances(prev => {
+      const k = addedEndInstanceKey(pid, optId, eid);
+      return { ...prev, [k]: (prev[k] ?? 1) + 1 };
+    });
+  const removeAddedEndInstance = (pid: string, optId: string, eid: string, seq: number) => {
+    const k = addedEndInstanceKey(pid, optId, eid);
+    const count = addedEndInstances[k] ?? 1;
+    if (count <= 1) return;
+    setAddedEndInstances(prev => ({ ...prev, [k]: count - 1 }));
+    setFilledAddedEnds(prev => {
+      const next = new Set<string>();
+      prev.forEach(key => {
+        const [p, o, e, q] = key.split("::");
+        if (p !== pid || o !== optId || e !== eid) { next.add(key); return; }
+        const sNum = Number(q);
+        if (sNum === seq) return;
+        if (sNum > seq) next.add(`${pid}::${optId}::${eid}::${sNum - 1}`);
+        else next.add(key);
+      });
+      return next;
+    });
+  };
+
+  /* ── Filled added-endorsement instances: "pid::optId::eid::seq" ── */
+  const [filledAddedEnds, setFilledAddedEnds] = useState<Set<string>>(new Set());
+  const isAddedEndFilled = (pid: string, optId: string, eid: string, seq: number) =>
+    filledAddedEnds.has(`${pid}::${optId}::${eid}::${seq}`);
+  const markAddedEndFilled = (pid: string, optId: string, eid: string, seq: number) =>
+    setFilledAddedEnds(prev => new Set(prev).add(`${pid}::${optId}::${eid}::${seq}`));
+
+  /* ── Added-endorsement fill-in target (which option × endorsement × seq is being edited) ── */
+  const [addedEndFillInTarget, setAddedEndFillInTarget] =
+    useState<{ pid: string; optId: string; end: Endorsement; seq: number } | null>(null);
 
   /* ── Issue / Send / Refer modals ── */
   const [showIssueModal, setShowIssueModal] = useState(false);
@@ -545,6 +1208,58 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
   const [referCategory, setReferCategory] = useState("Pricing Exception");
   const [referPriority, setReferPriority] = useState("High");
   const [referNotes,    setReferNotes]    = useState("");
+
+  /* ── Per-option kebab menu (which option's actions menu is open) ── */
+  const [openKebabId, setOpenKebabId] = useState<string | null>(null);
+  const kebabRef = useRef<HTMLDivElement>(null);
+
+  /* ── Task 4 handoff: companion may push a recommended option ── */
+  const workspace = useSubmissionWorkspaceOptional();
+  useEffect(() => {
+    if (!workspace?.pendingRatingOption) return;
+    const draft = workspace.consumePendingRatingOption();
+    if (!draft) return;
+    const product = PRODUCTS.find(p => p.id === draft.productId);
+    if (!product) return;
+    // Create a new option using the recommended values, slot it in, select it.
+    setAllOptions(prev => {
+      const opts = prev[draft.productId] ?? [];
+      const base = makeOption(product, opts.length, draft.optionName);
+      // Map recommended limit/aggregate/retention into the first 3 coverage fields
+      const updatedFields = base.coverageFields.map((f, idx) => {
+        if (idx === 0) return { ...f, value: draft.limit };
+        if (idx === 1) return { ...f, value: draft.aggregate };
+        if (idx === 2) return { ...f, value: draft.retention };
+        return f;
+      });
+      const newOpt: ProductOption = { ...base, coverageFields: updatedFields, status: "draft" };
+      setActiveOptId(p2 => ({ ...p2, [draft.productId]: newOpt.id }));
+      return { ...prev, [draft.productId]: [...opts, newOpt] };
+    });
+    setActive(draft.productId);
+    showToast(`Loaded "${draft.optionName}" from Companion`, "info");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace?.pendingRatingOption]);
+  useEffect(() => {
+    if (!openKebabId) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) setOpenKebabId(null);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [openKebabId]);
+
+  /* ── Delete confirmation modal state ── */
+  const [deleteConfirm, setDeleteConfirm] = useState<{ pid: string; optId: string; label: string } | null>(null);
+
+  /* ── Lightweight toast/snackbar ── */
+  const [toast, setToast] = useState<{ msg: string; tone: "success" | "info" | "error" } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string, tone: "success" | "info" | "error" = "success") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, tone });
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  }, []);
 
   /* ── Helpers ── */
   const getProduct = (id: string) => PRODUCTS.find(p => p.id === id)!;
@@ -595,25 +1310,59 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
       setActiveOptId(p2 => ({ ...p2, [pid]: newOpt.id }));
       return { ...prev, [pid]: next };
     });
+    showToast("Rating option created", "success");
   };
 
-  /* Duplicate active option */
-  const duplicateOption = (pid: string) => {
+  /* Duplicate a specific option (or active if id omitted) */
+  const duplicateOption = (pid: string, srcOptId?: string) => {
     setAllOptions(prev => {
       const opts = prev[pid] ?? [];
-      const src  = opts.find(o => o.id === activeOptId[pid]) ?? opts[0];
+      const src  = opts.find(o => o.id === (srcOptId ?? activeOptId[pid])) ?? opts[0];
       if (!src) return prev;
-      const idx    = opts.length;
+      const idx     = opts.length;
+      const product = getProduct(pid);
       const newOpt: ProductOption = {
         ...JSON.parse(JSON.stringify(src)),
         id: `opt_${Date.now()}_${idx}`,
-        label: `${src.label} (Copy)`,
+        label: `${product?.abbr ?? "OPT"} - ${String(idx + 1).padStart(2, "0")}`,
         color: OPTION_COLORS[idx % OPTION_COLORS.length],
+        status: "draft",
+        createdAt: new Date().toISOString(),
       };
       const next = [...opts, newOpt];
       setActiveOptId(p2 => ({ ...p2, [pid]: newOpt.id }));
       return { ...prev, [pid]: next };
     });
+    showToast("Option duplicated", "success");
+  };
+
+  /* Open delete confirm modal for an option */
+  const requestDeleteOption = (pid: string, optId: string) => {
+    const opts = allOptions[pid] ?? [];
+    if (opts.length <= 1) {
+      showToast("At least one option must remain for this product.", "error");
+      return;
+    }
+    const o = opts.find(x => x.id === optId);
+    if (!o) return;
+    setDeleteConfirm({ pid, optId, label: o.label });
+    setOpenKebabId(null);
+  };
+
+  /* Confirm + commit delete */
+  const commitDeleteOption = () => {
+    if (!deleteConfirm) return;
+    removeOption(deleteConfirm.pid, deleteConfirm.optId);
+    showToast(`Deleted "${deleteConfirm.label}"`, "success");
+    setDeleteConfirm(null);
+  };
+
+  /* Update an option's status */
+  const setOptionStatus = (pid: string, optId: string, status: OptionStatus) => {
+    setAllOptions(prev => ({
+      ...prev,
+      [pid]: (prev[pid] ?? []).map(o => o.id !== optId ? o : { ...o, status }),
+    }));
   };
 
   /* Remove an option */
@@ -637,14 +1386,32 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
     }));
   };
 
+  /* ── Companion (chatbot) wiring ───────────────────────────────────────── */
+  const { id: routeSubId } = useParams<{ id: string }>();
+  const subIdForCompanion = routeSubId ?? "SUB-7829";
+  const ratingRouteKey = `page:submission:${subIdForCompanion}:rating`;
+  const { pushMsg } = useCompanion();
+
   /* Update a coverage field value */
   const updateField = (pid: string, optId: string, fieldIdx: number, value: string) => {
+    // Capture previous value + field label so we can produce companion advice.
+    const product = PRODUCTS.find(p => p.id === pid);
+    const optBefore = (allOptions[pid] ?? []).find(o => o.id === optId);
+    const fieldBefore = optBefore?.coverageFields[fieldIdx];
     setAllOptions(prev => ({
       ...prev,
       [pid]: (prev[pid] ?? []).map(o =>
         o.id !== optId ? o : { ...o, coverageFields: o.coverageFields.map((f, i) => i === fieldIdx ? { ...f, value } : f) }
       ),
     }));
+    if (product && fieldBefore && optBefore && fieldBefore.value !== value) {
+      const advice = adviseCoverageField(product, optBefore.label, fieldBefore.label, fieldBefore.value, value);
+      if (advice) {
+        pushMsg(ratingRouteKey, {
+          id: newId(), role: "agent", kind: "text", ts: now(), text: advice,
+        });
+      }
+    }
   };
 
   /* Toggle a coverage item */
@@ -657,19 +1424,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           coverageItems: o.coverageItems.map(ci =>
             ci.id !== itemId || ci.required ? ci : { ...ci, checked: !ci.checked }
           ),
-        }
-      ),
-    }));
-  };
-
-  /* Toggle an added endorsement */
-  const toggleAddedEndorsement = (pid: string, optId: string, eid: string) => {
-    setAllOptions(prev => ({
-      ...prev,
-      [pid]: (prev[pid] ?? []).map(o =>
-        o.id !== optId ? o : {
-          ...o,
-          addedEndorsements: o.addedEndorsements.map(e => e.id !== eid ? e : { ...e, included: !e.included }),
         }
       ),
     }));
@@ -688,6 +1442,26 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
     }));
   };
 
+  /* Update the premium amount of an added endorsement */
+  const updateAddedEndPremium = (pid: string, optId: string, eid: string, value: number) => {
+    setAllOptions(prev => ({
+      ...prev,
+      [pid]: (prev[pid] ?? []).map(o =>
+        o.id !== optId ? o : {
+          ...o,
+          addedEndorsements: o.addedEndorsements.map(e => e.id !== eid ? e : { ...e, premium: Math.max(0, value) }),
+        }
+      ),
+    }));
+  };
+
+  /* Look up the library default premium for an added endorsement (for reset/EDITED detection) */
+  const getLibraryDefaultPremium = (pid: string, eid: string): number | null => {
+    const lib = ENDORSEMENTS_LIBRARY[pid] ?? [];
+    const match = lib.find(l => l.id === eid);
+    return match ? match.premium : null;
+  };
+
   /* Add endorsement from library to active option */
   const addEndorsementFromLibrary = (pid: string, optId: string, libEnd: LibraryEndorsement) => {
     setAllOptions(prev => ({
@@ -697,6 +1471,32 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
         if (o.addedEndorsements.some(e => e.id === libEnd.id)) return o;
         return { ...o, addedEndorsements: [...o.addedEndorsements, { ...libEnd, included: true }] };
       }),
+    }));
+  };
+
+  /* Add schedule from library to active option */
+  const addScheduleFromLibrary = (pid: string, optId: string, libSched: LibrarySchedule) => {
+    setAllOptions(prev => ({
+      ...prev,
+      [pid]: (prev[pid] ?? []).map(o => {
+        if (o.id !== optId) return o;
+        const existing = o.addedSchedules ?? [];
+        if (existing.some(s => s.id === libSched.id)) return o;
+        return { ...o, addedSchedules: [...existing, { ...libSched }] };
+      }),
+    }));
+  };
+
+  /* Remove an added schedule from the option */
+  const removeAddedSchedule = (pid: string, optId: string, sid: string) => {
+    setAllOptions(prev => ({
+      ...prev,
+      [pid]: (prev[pid] ?? []).map(o =>
+        o.id !== optId ? o : {
+          ...o,
+          addedSchedules: (o.addedSchedules ?? []).filter(s => s.id !== sid),
+        }
+      ),
     }));
   };
 
@@ -797,11 +1597,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
   const activeOpts       = activeProductId ? (allOptions[activeProductId] ?? []) : [];
   const currentOpt       = activeProductId ? getActiveOpt(activeProductId) : undefined;
   const currentSubTab    = (activeProductId && subTabs[activeProductId]) || "policy";
-  const totalSelectedPremium = Array.from(selected).reduce((sum, pid) => {
-    const opt = getActiveOpt(pid);
-    if (!opt) return sum;
-    return sum + calcPremium(getProduct(pid), opt);
-  }, 0);
 
   /* ─── Products available to add from library ── */
   const libraryAvailableProducts = PRODUCTS.filter(p => !visibleProductIds.includes(p.id));
@@ -821,7 +1616,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           {/* Sidebar header */}
           <div className="px-4 py-3.5" style={{ borderBottom: `1px solid ${BDL}`, background: "white" }}>
             <div style={{ fontSize: "0.82rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.12em" }}>Submission Coverage Lines</div>
-            <div style={{ fontSize: "0.72rem", color: TT, marginTop: 2 }}>Select products below to configure and rate</div>
+            <div style={{ fontSize: "0.72rem", color: TT, marginTop: 2 }}>Click a product to view its rating options</div>
           </div>
 
           {/* Products Library button — below header */}
@@ -829,7 +1624,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
             <button
               onClick={() => setShowProductsLibrary(true)}
               className="w-full flex items-center justify-center gap-2 py-2 transition-all hover:brightness-95"
-              style={{ background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font }}>
+              style={{ background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
               <Library size={13} /> Products Library
             </button>
           </div>
@@ -854,40 +1649,45 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     const premium  = (isSel && opt) ? calcPremium(product, opt) : null;
                     return (
                       <div key={pid}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => navigateTo(pid)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all"
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigateTo(pid); } }}
+                        aria-current={isActive ? "true" : undefined}
+                        className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all outline-none"
                         style={{
                           borderBottom: `1px solid ${BDL}`,
                           borderLeft: isActive ? `3px solid ${cat.color}` : "3px solid transparent",
-                          background: isActive ? `${cat.color}08` : "white",
+                          background: isActive ? `${cat.color}08` : isSel ? `${cat.color}03` : "white",
                         }}>
-                        {/* Checkbox */}
-                        <div
-                          onClick={e => { e.stopPropagation(); toggleProduct(pid); }}
-                          className="shrink-0 flex items-center justify-center transition-all"
-                          style={{ width: 18, height: 18, background: isSel ? cat.color : "white", border: `2px solid ${isSel ? cat.color : BD}`, cursor: "pointer" }}>
-                          {isSel && <Check size={10} color="white" strokeWidth={3} />}
-                        </div>
-                        {/* Icon */}
-                        <div className="shrink-0 flex items-center justify-center"
-                          style={{ width: 30, height: 30, background: `${cat.color}10`, border: `1px solid ${cat.color}20`, color: cat.color }}>
-                          {product.icon}
-                        </div>
-                        {/* Name + abbr + premium */}
+                        {/* Name + abbr + option count + premium range */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span style={{ fontSize: "0.80rem", fontWeight: isSel ? 700 : 500, color: isActive ? cat.color : TD, lineHeight: 1.2 }}>{product.label}</span>
-                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: cat.color, background: `${cat.color}12`, border: `1px solid ${cat.color}25`, padding: "1px 5px", letterSpacing: "0.05em" }}>{product.abbr}</span>
+                            <span style={{ fontSize: "0.80rem", fontWeight: 700, color: isActive ? cat.color : TD, lineHeight: 1.2 }}>{product.label}</span>
+                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: cat.color, background: `${cat.color}12`, border: `1px solid ${cat.color}25`, padding: "1px 5px", letterSpacing: "0.05em", borderRadius: 4 }}>{product.abbr}</span>
                           </div>
-                          {isSel && premium !== null && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <DollarSign size={9} color={TT} />
-                              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: TM }}>{fmt(premium)}</span>
-                              {(allOptions[pid]?.length ?? 0) > 1 && (
-                                <span style={{ fontSize: "0.60rem", color: TT }}>({allOptions[pid].length} opts)</span>
-                              )}
-                            </div>
-                          )}
+                          {(() => {
+                            const optsForRow = allOptions[pid] ?? [];
+                            const optCount   = optsForRow.length;
+                            if (optCount === 0) return null;
+                            const premiums   = optsForRow.map(o => calcPremium(product, o));
+                            const minP = Math.min(...premiums);
+                            const maxP = Math.max(...premiums);
+                            return (
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span style={{
+                                  fontSize: "0.58rem", fontWeight: 700, color: cat.color,
+                                  background: `${cat.color}10`, padding: "1px 6px", borderRadius: 3,
+                                  letterSpacing: "0.04em",
+                                }}>
+                                  {optCount} option{optCount !== 1 ? "s" : ""}
+                                </span>
+                                <span style={{ fontSize: "0.70rem", fontWeight: 700, color: TM }}>
+                                  {minP === maxP ? fmt(minP) : `${fmt(minP)} – ${fmt(maxP)}`}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -937,15 +1737,11 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                 <div className="flex items-start justify-between gap-4 px-6 py-5"
                   style={{ borderBottom: `1px solid ${BDL}`, background: "white" }}>
                   <div className="flex items-start gap-4">
-                    <div className="flex items-center justify-center shrink-0"
-                      style={{ width: 44, height: 44, background: `${product.categoryColor}12`, border: `1.5px solid ${product.categoryColor}25`, color: product.categoryColor }}>
-                      {product.icon}
-                    </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD }}>{product.label}</h2>
-                        <span style={{ fontSize: "0.60rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "2px 7px", letterSpacing: "0.07em" }}>{product.abbr}</span>
-                        <span style={{ fontSize: "0.60rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 7px" }}>{product.category}</span>
+                        <span style={{ fontSize: "0.60rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "2px 7px", letterSpacing: "0.07em", borderRadius: 4 }}>{product.abbr}</span>
+                        <span style={{ fontSize: "0.60rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 7px", borderRadius: 4 }}>{product.category}</span>
                       </div>
                       <p style={{ fontSize: "0.76rem", color: TT, marginTop: 3 }}>{product.desc}</p>
                     </div>
@@ -970,7 +1766,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       <button
                         onClick={() => setOpenDropdownPid(prev => prev === pid ? null : pid)}
                         className="flex items-center gap-2 px-3 py-1.5 hover:brightness-95 transition-all"
-                        style={{ background: "white", border: `1.5px solid ${opt.color}`, color: TD, fontSize: "0.78rem", fontWeight: 700, maxWidth: 280, minWidth: 180 }}>
+                        style={{ background: "white", border: `1.5px solid ${opt.color}`, color: TD, fontSize: "0.78rem", fontWeight: 700, maxWidth: 280, minWidth: 180, borderRadius: 6 }}>
                         <span style={{ width: 8, height: 8, background: opt.color, borderRadius: "50%", display: "inline-block", flexShrink: 0 }} />
                         <span className="truncate flex-1 text-left">{opt.label}</span>
                         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: opt.color, flexShrink: 0 }}>{fmt(premium)}</span>
@@ -984,12 +1780,13 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       {openDropdownPid === pid && (
                         <div
                           className="absolute left-0 z-50"
-                          style={{ top: "calc(100% + 4px)", minWidth: 300, background: "white", border: `1.5px solid ${BD}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
+                          style={{ top: "calc(100% + 4px)", minWidth: 320, background: "white", border: `1.5px solid ${BD}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
                           {/* Options list */}
                           {opts.map((o, i) => {
                             const isAct     = o.id === opt.id;
                             const isEditing = editingOptId === o.id;
                             const p         = calcPremium(product, o);
+                            const sm        = OPTION_STATUS_META[o.status];
                             return (
                               <div key={o.id}
                                 style={{ borderBottom: i < opts.length - 1 ? `1px solid ${BDL}` : "none", background: isAct ? `${o.color}08` : "white" }}>
@@ -1005,18 +1802,18 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                         if (e.key === "Escape") setEditingOptId(null);
                                       }}
                                       className="flex-1 px-2 py-1 outline-none"
-                                      style={{ border: `1.5px solid ${N}`, fontSize: "0.76rem", color: TD, fontFamily: font }}
+                                      style={{ border: `1.5px solid ${N}`, fontSize: "0.76rem", color: TD, fontFamily: font, borderRadius: 5 }}
                                     />
                                     <button
                                       onMouseDown={e => { e.preventDefault(); renameOption(pid, o.id, editingOptName); setEditingOptId(null); }}
                                       className="flex items-center justify-center p-1.5"
-                                      style={{ background: N, color: "white", border: "none", cursor: "pointer" }}>
+                                      style={{ background: N, color: "white", border: "none", cursor: "pointer", borderRadius: 5 }}>
                                       <Check size={11} />
                                     </button>
                                     <button
                                       onMouseDown={e => { e.preventDefault(); setEditingOptId(null); }}
                                       className="flex items-center justify-center p-1.5"
-                                      style={{ background: "white", color: TT, border: `1px solid ${BD}`, cursor: "pointer" }}>
+                                      style={{ background: "white", color: TT, border: `1px solid ${BD}`, cursor: "pointer", borderRadius: 5 }}>
                                       <X size={11} />
                                     </button>
                                   </div>
@@ -1028,24 +1825,34 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                     <span style={{ width: 8, height: 8, background: o.color, borderRadius: "50%", display: "inline-block", flexShrink: 0, opacity: isAct ? 1 : 0.4 }} />
                                     {/* Name */}
                                     <span className="flex-1 truncate" style={{ fontSize: "0.80rem", fontWeight: isAct ? 700 : 500, color: isAct ? o.color : TM }}>{o.label}</span>
+                                    {/* Status badge */}
+                                    <span style={{
+                                      fontSize: "0.52rem", fontWeight: 800, color: sm.color,
+                                      background: sm.bg, border: `1px solid ${sm.border}`,
+                                      padding: "1px 6px", borderRadius: 3,
+                                      textTransform: "uppercase", letterSpacing: "0.07em",
+                                      flexShrink: 0,
+                                    }}>
+                                      {sm.label}
+                                    </span>
                                     {/* Premium */}
-                                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: isAct ? o.color : TT, flexShrink: 0 }}>{fmt(p)}</span>
+                                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: isAct ? o.color : TT, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{fmt(p)}</span>
                                     {/* Actions — visible on row hover */}
                                     <span className="flex items-center gap-1 opacity-0 group-hover/optrow:opacity-100 transition-opacity">
                                       <span
                                         title="Rename"
                                         onClick={e => { e.stopPropagation(); setEditingOptId(o.id); setEditingOptName(o.label); }}
                                         className="flex items-center justify-center p-1 hover:bg-gray-100 cursor-pointer"
-                                        style={{ color: TT }}>
+                                        style={{ color: TT, borderRadius: 4 }}>
                                         <Pencil size={11} />
                                       </span>
                                       {opts.length > 1 && (
                                         <span
-                                          title="Remove"
-                                          onClick={e => { e.stopPropagation(); removeOption(pid, o.id); }}
+                                          title="Delete"
+                                          onClick={e => { e.stopPropagation(); requestDeleteOption(pid, o.id); setOpenDropdownPid(null); }}
                                           className="flex items-center justify-center p-1 hover:bg-red-50 cursor-pointer"
-                                          style={{ color: "#B91C1C" }}>
-                                          <X size={11} />
+                                          style={{ color: "#B91C1C", borderRadius: 4 }}>
+                                          <Trash2 size={11} />
                                         </span>
                                       )}
                                     </span>
@@ -1060,13 +1867,13 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                             <button
                               onClick={() => { addOption(pid); setOpenDropdownPid(null); }}
                               className="flex items-center gap-1 px-2.5 py-1 hover:brightness-95 transition-all"
-                              style={{ border: `1px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
+                              style={{ border: `1px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600, borderRadius: 6, cursor: "pointer" }}>
                               <Plus size={11} /> New Option
                             </button>
                             <button
                               onClick={() => { duplicateOption(pid); setOpenDropdownPid(null); }}
                               className="flex items-center gap-1 px-2.5 py-1 hover:brightness-95 transition-all"
-                              style={{ border: `1px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
+                              style={{ border: `1px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600, borderRadius: 6, cursor: "pointer" }}>
                               <Copy size={11} /> Duplicate
                             </button>
                           </div>
@@ -1080,42 +1887,43 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     <button
                       onClick={() => addOption(pid)}
                       className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                      style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
+                      style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600, borderRadius: 6, cursor: "pointer" }}>
                       <Plus size={12} /> New Option
                     </button>
                     <button onClick={() => duplicateOption(pid)}
                       className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                      style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
+                      style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.72rem", fontWeight: 600, borderRadius: 6, cursor: "pointer" }}>
                       <Copy size={12} /> Duplicate
                     </button>
                     <button
                       onClick={handlePreview}
                       className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                      style={{ border: `1.5px solid ${N}`, background: N, color: "white", fontSize: "0.72rem", fontWeight: 700 }}>
+                      style={{ border: `1.5px solid ${N}`, background: N, color: "white", fontSize: "0.72rem", fontWeight: 700, borderRadius: 6, cursor: "pointer" }}>
                       <Eye size={12} /> Preview Quote
                     </button>
                   </div>
                 </div>
 
+                {/* Inline editor anchor — kebab "Edit" scrolls here */}
+                <div id="rating-option-editor"/>
                 {/* Sub-tab nav */}
-                <div className="flex items-center gap-0 overflow-x-auto" style={{ borderBottom: `1px solid ${BD}`, background: "white" }}>
-                  {(["policy", "endorsements", "premium", "schedules", "memberBenefits", "notifications"] as SubTab[]).map(tab => {
+                <div className="flex flex-nowrap items-center gap-0" style={{ borderBottom: `1px solid ${BD}`, background: "white" }}>
+                  {(["policy", "endorsements", "schedules", "memberBenefits", "notifications", "premium"] as SubTab[]).map(tab => {
                     const isAct = currentSubTab === tab;
                     const labels: Record<SubTab, { icon: React.ReactNode; text: string; count?: number }> = {
-                      policy:         { icon: <Shield size={13} />,      text: "Policy & Coverage",  count: selectedItemCount },
-                      endorsements:   { icon: <Layers size={13} />,      text: "Endorsements",        count: opt.addedEndorsements.filter(e => e.included).length },
+                      policy:         { icon: <Shield size={13} />,      text: "Coverage",            count: selectedItemCount },
+                      endorsements:   { icon: <Layers size={13} />,      text: "Endorsements",        count: product.endorsements.length + opt.addedEndorsements.filter(e => e.included).length },
                       premium:        { icon: <DollarSign size={13} />,  text: "Premium" },
-                      schedules:      { icon: <Calendar size={13} />,    text: "Schedules" },
-                      memberBenefits: { icon: <Star size={13} />,        text: "Member Benefits" },
-                      notifications:  { icon: <Bell size={13} />,        text: "Notifications" },
+                      schedules:      { icon: <Calendar size={13} />,    text: "Schedules",           count: DEFAULT_SCHEDULES.length + (opt.addedSchedules?.length ?? 0) },
+                      memberBenefits: { icon: <Star size={13} />,        text: "Member Benefits",     count: MEMBER_BENEFITS.filter(b => !memberBenefitsExcluded.has(b.id)).length },
+                      notifications:  { icon: <Bell size={13} />,        text: "Notifications",       count: NOTIFICATIONS.filter(n => !notificationsExcluded.has(n.id)).length },
                     };
                     const tl = labels[tab];
                     return (
                       <button key={tab}
                         onClick={() => setSubTabs(prev => ({ ...prev, [pid]: tab }))}
-                        className="relative flex items-center gap-2 px-5 py-3 transition-all whitespace-nowrap"
-                        style={{ fontSize: "0.78rem", fontWeight: isAct ? 700 : 400, color: isAct ? N : TM, background: "transparent", border: "none", outline: "none" }}>
-                        <span style={{ color: isAct ? N : TT }}>{tl.icon}</span>
+                        className="relative flex flex-1 items-center justify-center gap-1.5 px-2 py-3 transition-all whitespace-nowrap min-w-0"
+                        style={{ fontSize: "0.74rem", fontWeight: isAct ? 700 : 400, color: isAct ? N : TM, background: "transparent", border: "none", outline: "none", borderRadius: 6 }}>
                         {tl.text}
                         {tl.count !== undefined && (
                           <span style={{ fontSize: "0.62rem", fontWeight: 800, color: isAct ? "white" : TT, background: isAct ? N : BD, padding: "1px 6px", borderRadius: 10, minWidth: 18, textAlign: "center" as const }}>{tl.count}</span>
@@ -1145,7 +1953,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                     value={field.value}
                                     onChange={e => updateField(pid, opt.id, idx, e.target.value)}
                                     className="w-full px-3 py-2 outline-none appearance-none pr-8"
-                                    style={{ border: `1px solid ${BD}`, fontSize: "0.82rem", color: TD, background: "white", cursor: "pointer" }}>
+                                    style={{ border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", color: TD, background: "white", cursor: "pointer" }}>
                                     {field.options.map(o => <option key={o} value={o}>{o}</option>)}
                                   </select>
                                   <ChevronDown size={12} color={TT} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -1156,7 +1964,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                   value={field.value}
                                   onChange={e => updateField(pid, opt.id, idx, e.target.value)}
                                   className="w-full px-3 py-2 outline-none"
-                                  style={{ border: `1px solid ${BD}`, fontSize: "0.82rem", color: TD, background: "white" }}
+                                  style={{ border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", color: TD, background: "white" }}
                                 />
                               )}
                             </div>
@@ -1175,12 +1983,12 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <button onClick={() => selectAllItems(pid, opt.id, false)} style={{ fontSize: "0.72rem", color: N, fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>Select all</button>
+                            <button onClick={() => selectAllItems(pid, opt.id, false)} style={{ fontSize: "0.72rem", color: N, fontWeight: 700, background: "none", border: "none", cursor: "pointer", borderRadius: 6 }}>Select all</button>
                             <span style={{ color: BDL }}>·</span>
-                            <button onClick={() => selectAllItems(pid, opt.id, true)} style={{ fontSize: "0.72rem", color: TT, fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>Required only</button>
+                            <button onClick={() => selectAllItems(pid, opt.id, true)} style={{ fontSize: "0.72rem", color: TT, fontWeight: 600, background: "none", border: "none", cursor: "pointer", borderRadius: 6 }}>Required only</button>
                           </div>
                         </div>
-                        <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
                           {opt.coverageItems.map((item, idx) => {
                             const isChecked = item.checked || item.required;
                             return (
@@ -1203,7 +2011,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span style={{ fontSize: "0.82rem", fontWeight: isChecked ? 700 : 500, color: isChecked ? TD : TM }}>{item.label}</span>
                                       {item.required && (
-                                        <span style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 5px", letterSpacing: "0.06em", flexShrink: 0 }}>REQUIRED</span>
+                                        <span style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", flexShrink: 0, borderRadius: 4 }}>DEFAULT</span>
                                       )}
                                     </div>
                                     <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{item.desc}</p>
@@ -1224,7 +2032,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                      <div className="flex items-center gap-2">
                                        <label style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Claim Limit</label>
                                        <div className="relative">
-                                         <select value={getItemLimits(opt.id, item.id).claimLimit} onChange={e => updateItemLimit(opt.id, item.id, "claimLimit", e.target.value)} className="appearance-none outline-none pr-6 pl-2 py-1 cursor-pointer" style={{ border: `1px solid ${BD}`, fontSize: "0.74rem", color: TD, background: "white", minWidth: 110 }}>
+                                         <select value={getItemLimits(opt.id, item.id).claimLimit} onChange={e => updateItemLimit(opt.id, item.id, "claimLimit", e.target.value)} className="appearance-none outline-none pr-6 pl-2 py-1 cursor-pointer" style={{ border: `1px solid ${BD}`, borderRadius: 5, fontSize: "0.74rem", color: TD, background: "white", minWidth: 110 }}>
                                            {CLAIM_LIMIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                          </select>
                                          <ChevronDown size={10} color={TT} style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -1233,7 +2041,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                      <div className="flex items-center gap-2">
                                        <label style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Aggregate Limit</label>
                                        <div className="relative">
-                                         <select value={getItemLimits(opt.id, item.id).aggregateLimit} onChange={e => updateItemLimit(opt.id, item.id, "aggregateLimit", e.target.value)} className="appearance-none outline-none pr-6 pl-2 py-1 cursor-pointer" style={{ border: `1px solid ${BD}`, fontSize: "0.74rem", color: TD, background: "white", minWidth: 120 }}>
+                                         <select value={getItemLimits(opt.id, item.id).aggregateLimit} onChange={e => updateItemLimit(opt.id, item.id, "aggregateLimit", e.target.value)} className="appearance-none outline-none pr-6 pl-2 py-1 cursor-pointer" style={{ border: `1px solid ${BD}`, borderRadius: 5, fontSize: "0.74rem", color: TD, background: "white", minWidth: 120 }}>
                                            {AGGREGATE_LIMIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                          </select>
                                          <ChevronDown size={10} color={TT} style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -1250,7 +2058,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                         <div className="flex justify-end mt-4">
                           <button
                             className="flex items-center gap-2 px-5 py-2 transition-all hover:brightness-95"
-                            style={{ background: N, color: "white", fontSize: "0.78rem", fontWeight: 700, border: `1.5px solid ${N}` }}>
+                            style={{ background: N, color: "white", fontSize: "0.78rem", fontWeight: 700, border: `1.5px solid ${N}`, borderRadius: 6 }}>
                             <Save size={13} /> Save Option
                           </button>
                         </div>
@@ -1262,7 +2070,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   {currentSubTab === "endorsements" && (
                     <div className="space-y-5">
 
-                      {/* Default endorsements (read-only) */}
+                      {/* Default endorsements (premium editable) */}
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <div>
@@ -1270,84 +2078,314 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                             <div style={{ fontSize: "0.70rem", color: TT, marginTop: 2 }}>Standard endorsements attached to this product</div>
                           </div>
                         </div>
-                        <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                          {product.endorsements.map((end, idx) => (
-                            <div key={end.id}
-                              className="flex items-start gap-3 px-4 py-4"
-                              style={{ borderBottom: idx < product.endorsements.length - 1 ? `1px solid ${BDL}` : "none" }}>
-                              {/* Default badge icon — not interactive */}
-                              <div className="shrink-0 flex items-center justify-center mt-0.5"
-                                style={{ width: 18, height: 18, background: `${product.categoryColor}15`, border: `1.5px solid ${product.categoryColor}40` }}>
-                                <BookOpen size={9} color={product.categoryColor} />
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
+                          {product.endorsements.map((end, idx) => {
+                            const currentPremium = getDefaultEndPremium(pid, end);
+                            const isOverridden   = currentPremium !== 0;
+                            const count          = getInstanceCount(pid, end.id);
+                            const seqs           = Array.from({ length: count }, (_, i) => i + 1);
+                            return (
+                              <div key={end.id}
+                                style={{ borderBottom: idx < product.endorsements.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                                {seqs.map((seq, sIdx) => {
+                                  const filled = isFilled(pid, end.id, seq);
+                                  return (
+                                    <div key={`${end.id}-${seq}`}
+                                      className="flex items-start gap-3 px-4 py-2.5"
+                                      style={{ borderTop: sIdx > 0 ? `1px dashed ${BDL}` : "none" }}>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {end.multiUse && (
+                                            <span style={{
+                                              fontSize: "0.58rem", fontWeight: 800, color: TM,
+                                              background: TH, border: `1px solid ${BDL}`,
+                                              padding: "1px 6px", borderRadius: 4,
+                                              fontVariantNumeric: "tabular-nums",
+                                            }}>#{String(seq).padStart(2, "0")}</span>
+                                          )}
+                                          <a
+                                            href="#"
+                                            onClick={e => { e.preventDefault(); setFillInTarget({ pid, end, seq }); }}
+                                            style={{ fontSize: "0.82rem", fontWeight: 600, color: N, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer" }}>
+                                            {end.label}
+                                          </a>
+                                          {sIdx === 0 && (
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>DEFAULT</span>
+                                          )}
+                                          {end.fillIn && (
+                                            filled ? (
+                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                            ) : (
+                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                            )
+                                          )}
+                                          {end.multiUse && sIdx === 0 && (
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                          )}
+                                          {isOverridden && sIdx === 0 && (
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                          )}
+                                        </div>
+                                        {sIdx === 0 && (
+                                          <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.35 }}>{end.desc}</p>
+                                        )}
+                                      </div>
+                                      <div className="shrink-0 flex items-center gap-1.5" style={{ minWidth: 120 }}>
+                                        {sIdx === 0 && (
+                                          <>
+                                            <span style={{ fontSize: "0.72rem", color: TT, fontWeight: 600 }}>$</span>
+                                            <div style={{ position: "relative", display: "inline-block" }}>
+                                              <input
+                                                type="number"
+                                                min={0}
+                                                value={currentPremium}
+                                                onChange={e => {
+                                                  const v = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                                  updateDefaultEndPremium(pid, end.id, v);
+                                                }}
+                                                className="py-1 outline-none text-right"
+                                                style={{
+                                                  width: 90,
+                                                  paddingLeft: 8,
+                                                  paddingRight: isOverridden ? 24 : 8,
+                                                  border: `1px solid ${isOverridden ? `${G}80` : BD}`,
+                                                  background: isOverridden ? `${G}08` : "white",
+                                                  borderRadius: 4,
+                                                  fontSize: "0.72rem",
+                                                  color: TD,
+                                                  fontWeight: 600,
+                                                  fontFamily: font,
+                                                }}
+                                                title="Edit endorsement premium"
+                                              />
+                                              {isOverridden && (
+                                                <button
+                                                  onClick={() => updateDefaultEndPremium(pid, end.id, 0)}
+                                                  className="hover:bg-slate-100 transition-colors flex items-center justify-center"
+                                                  style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, padding: 0, border: "none", background: "none", cursor: "pointer", color: G, borderRadius: 3 }}
+                                                  title={`Reset to default (${fmt(end.premium)})`}>
+                                                  <RotateCcw size={10} strokeWidth={2.4} />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </>
+                                        )}
+                                        {sIdx > 0 && (
+                                          <button
+                                            onClick={() => removeInstance(pid, end.id, seq)}
+                                            className="p-1 hover:bg-red-50 transition-colors"
+                                            style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C", borderRadius: 6 }}
+                                            title="Remove this instance">
+                                            <X size={12} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {end.multiUse && (
+                                  <div className="px-4 pb-2.5 pt-1">
+                                    <button
+                                      onClick={() => addInstance(pid, end.id)}
+                                      className="inline-flex items-center gap-1 transition-all hover:underline"
+                                      style={{ fontSize: "0.68rem", fontWeight: 700, color: N, background: "transparent", border: "none", cursor: "pointer", padding: "2px 0", fontFamily: font }}>
+                                      <Plus size={11} /> Add another instance
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: TM }}>{end.label}</span>
-                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em" }}>DEFAULT</span>
-                                </div>
-                                <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{end.desc}</p>
-                              </div>
-                              <div className="shrink-0 text-right" style={{ minWidth: 72 }}>
-                                <span style={{ fontSize: "0.72rem", color: TT, fontWeight: 500 }}>{fmt(end.premium)}</span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* Added endorsements from library */}
-                      {opt.addedEndorsements.length > 0 && (
+                      {/* Added endorsements from library — aggregated across every
+                          option of this product. */}
+                      {(() => {
+                        type Attachment = { opt: ProductOption; end: Endorsement };
+                        const productOpts = allOptions[pid] ?? [];
+                        const aggRows = new Map<string, { end: Endorsement; attachments: Attachment[] }>();
+                        productOpts.forEach(po => {
+                          po.addedEndorsements.forEach(e => {
+                            const entry = aggRows.get(e.id) ?? { end: e, attachments: [] };
+                            entry.attachments.push({ opt: po, end: e });
+                            aggRows.set(e.id, entry);
+                          });
+                        });
+                        const rowList = Array.from(aggRows.values());
+                        if (rowList.length === 0) return null;
+                        return (
                         <div>
                           <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Added Endorsements</div>
-                          <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                            {opt.addedEndorsements.map((end, idx) => (
-                              <div key={end.id}
-                                className="flex items-start gap-3 px-4 py-4 cursor-pointer transition-all"
-                                style={{
-                                  borderBottom: idx < opt.addedEndorsements.length - 1 ? `1px solid ${BDL}` : "none",
-                                  background: end.included ? `${product.categoryColor}04` : "white",
-                                  borderLeft: end.included ? `3px solid ${product.categoryColor}` : "3px solid transparent",
-                                }}
-                                onClick={() => toggleAddedEndorsement(pid, opt.id, end.id)}>
-                                <div className="shrink-0 flex items-center justify-center mt-0.5"
-                                  style={{ width: 18, height: 18, background: end.included ? product.categoryColor : "white", border: `2px solid ${end.included ? product.categoryColor : BD}`, transition: "all 0.12s" }}>
-                                  {end.included && <Check size={10} color="white" strokeWidth={3} />}
+                          <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
+                            {rowList.map((row, rIdx) => {
+                              const end = row.end;
+                              return (
+                                <div key={end.id}
+                                  style={{ borderBottom: rIdx < rowList.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                                  {row.attachments.map((att, aIdx) => {
+                                    const optId        = att.opt.id;
+                                    const attEnd       = att.end;
+                                    const libDefault   = getLibraryDefaultPremium(pid, end.id);
+                                    const isOverridden = libDefault !== null && attEnd.premium !== libDefault;
+                                    const count        = getAddedEndInstanceCount(pid, optId, end.id);
+                                    const seqs         = end.multiUse ? Array.from({ length: count }, (_, i) => i + 1) : [1];
+                                    return (
+                                      <div key={`${end.id}::${optId}`}
+                                        style={{
+                                          borderTop: aIdx > 0 ? `1px dashed ${BDL}` : "none",
+                                          background: `${product.categoryColor}04`,
+                                          borderLeft: `3px solid ${product.categoryColor}`,
+                                        }}>
+                                        {seqs.map((seq, sIdx) => {
+                                          const filled = isAddedEndFilled(pid, optId, end.id, seq);
+                                          return (
+                                            <div key={`${end.id}::${optId}::${seq}`}
+                                              className="flex items-start gap-3 px-4 py-3"
+                                              style={{ borderTop: sIdx > 0 ? `1px dashed ${BDL}` : "none" }}>
+                                              <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                  {end.multiUse && (
+                                                    <span style={{
+                                                      fontSize: "0.58rem", fontWeight: 800, color: TM,
+                                                      background: TH, border: `1px solid ${BDL}`,
+                                                      padding: "1px 6px", borderRadius: 4,
+                                                      fontVariantNumeric: "tabular-nums",
+                                                    }}>#{String(seq).padStart(2, "0")}</span>
+                                                  )}
+                                                  {end.fillIn ? (
+                                                    <a
+                                                      href="#"
+                                                      onClick={e => { e.preventDefault(); setAddedEndFillInTarget({ pid, optId, end, seq }); }}
+                                                      style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer" }}>
+                                                      {end.label}
+                                                    </a>
+                                                  ) : (
+                                                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{end.label}</span>
+                                                  )}
+                                                  {end.fillIn && (
+                                                    filled ? (
+                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                                    ) : (
+                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                                    )
+                                                  )}
+                                                  {end.multiUse && sIdx === 0 && (
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                                  )}
+                                                  {sIdx === 0 && isOverridden && (
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                                  )}
+                                                </div>
+                                                {sIdx === 0 && (
+                                                  <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{end.desc}</p>
+                                                )}
+                                                {sIdx === 0 && (
+                                                  <div className="flex items-center gap-1.5 flex-wrap" style={{ marginTop: 6 }}>
+                                                    <span style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em" }}>Attached to:</span>
+                                                    <span style={{
+                                                      fontSize: "0.62rem", fontWeight: 800, color: "white",
+                                                      background: att.opt.color, padding: "1px 7px",
+                                                      letterSpacing: "0.04em", borderRadius: 4,
+                                                    }}>{att.opt.label}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className="shrink-0 flex items-center gap-1.5" style={{ minWidth: 140 }}>
+                                                {sIdx === 0 && (
+                                                  <>
+                                                    <span style={{ fontSize: "0.72rem", color: product.categoryColor, fontWeight: 700 }}>$</span>
+                                                    <div style={{ position: "relative", display: "inline-block" }}>
+                                                      <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={attEnd.premium}
+                                                        onChange={e => {
+                                                          const v = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                                          updateAddedEndPremium(pid, optId, end.id, v);
+                                                        }}
+                                                        className="py-1 outline-none text-right"
+                                                        style={{
+                                                          width: 90,
+                                                          paddingLeft: 8,
+                                                          paddingRight: isOverridden ? 24 : 8,
+                                                          border: `1px solid ${isOverridden ? `${G}80` : BD}`,
+                                                          background: isOverridden ? `${G}08` : "white",
+                                                          borderRadius: 4,
+                                                          fontSize: "0.74rem",
+                                                          color: product.categoryColor,
+                                                          fontWeight: 700,
+                                                          fontFamily: font,
+                                                        }}
+                                                        title="Edit endorsement premium"
+                                                      />
+                                                      {isOverridden && libDefault !== null && (
+                                                        <button
+                                                          onClick={() => updateAddedEndPremium(pid, optId, end.id, libDefault)}
+                                                          className="hover:bg-slate-100 transition-colors flex items-center justify-center"
+                                                          style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, padding: 0, border: "none", background: "none", cursor: "pointer", color: G, borderRadius: 3 }}
+                                                          title={`Reset to default (${fmt(libDefault)})`}>
+                                                          <RotateCcw size={10} strokeWidth={2.4} />
+                                                        </button>
+                                                      )}
+                                                    </div>
+                                                  </>
+                                                )}
+                                                {sIdx === 0 && (
+                                                  <button
+                                                    onClick={() => removeAddedEndorsement(pid, optId, end.id)}
+                                                    className="p-1 hover:bg-red-50 transition-colors"
+                                                    style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C", borderRadius: 6 }}
+                                                    title={`Remove from ${att.opt.label}`}>
+                                                    <X size={12} />
+                                                  </button>
+                                                )}
+                                                {sIdx > 0 && (
+                                                  <button
+                                                    onClick={() => removeAddedEndInstance(pid, optId, end.id, seq)}
+                                                    className="p-1 hover:bg-red-50 transition-colors"
+                                                    style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C", borderRadius: 6 }}
+                                                    title="Remove this instance">
+                                                    <X size={12} />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                        {end.multiUse && (
+                                          <div className="px-4 pb-2.5 pt-1">
+                                            <button
+                                              onClick={() => addAddedEndInstance(pid, optId, end.id)}
+                                              className="inline-flex items-center gap-1 transition-all hover:underline"
+                                              style={{ fontSize: "0.68rem", fontWeight: 700, color: N, background: "transparent", border: "none", cursor: "pointer", padding: "2px 0", fontFamily: font }}>
+                                              <Plus size={11} /> Add another instance on {att.opt.label}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <span style={{ fontSize: "0.82rem", fontWeight: end.included ? 700 : 500, color: end.included ? TD : TM }}>{end.label}</span>
-                                  <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{end.desc}</p>
-                                </div>
-                                <div className="flex items-start gap-2 shrink-0">
-                                  <div className="text-right" style={{ minWidth: 60 }}>
-                                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: end.included ? product.categoryColor : TM }}>{end.included ? fmt(end.premium) : `+${fmt(end.premium)}`}</div>
-                                    <div style={{ fontSize: "0.60rem", color: TT, marginTop: 1 }}>{end.included ? "Added" : "Add"}</div>
-                                  </div>
-                                  <button
-                                    onClick={e => { e.stopPropagation(); removeAddedEndorsement(pid, opt.id, end.id); }}
-                                    className="mt-0.5 p-1 hover:bg-red-50 transition-colors"
-                                    style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C" }}
-                                    title="Remove endorsement">
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           {addedEndTotal > 0 && (
-                            <div className="mt-3 flex items-center justify-between px-4 py-3" style={{ background: `${product.categoryColor}08`, border: `1px solid ${product.categoryColor}20` }}>
-                              <span style={{ fontSize: "0.76rem", fontWeight: 700, color: TM }}>Added Endorsement Subtotal</span>
+                            <div className="mt-3 flex items-center justify-between px-4 py-3" style={{ background: `${product.categoryColor}08`, border: `1px solid ${product.categoryColor}20`, borderRadius: 8 }}>
+                              <span style={{ fontSize: "0.76rem", fontWeight: 700, color: TM }}>Added Endorsement Subtotal · {opt.label}</span>
                               <span style={{ fontSize: "0.88rem", fontWeight: 800, color: product.categoryColor }}>+{fmt(addedEndTotal)}</span>
                             </div>
                           )}
                         </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Endorsements Library button */}
                       <button
                         onClick={() => setShowEndorsementsLibrary(true)}
                         disabled={libraryAvailableEnds.length === 0}
                         className="w-full flex items-center justify-center gap-2 py-2.5 transition-all hover:brightness-95 disabled:opacity-50"
-                        style={{ background: `${product.categoryColor}12`, border: `1.5px dashed ${product.categoryColor}50`, color: product.categoryColor, cursor: "pointer", fontSize: "0.76rem", fontWeight: 700, fontFamily: font }}>
+                        style={{ background: `${product.categoryColor}12`, border: `1.5px dashed ${product.categoryColor}50`, color: product.categoryColor, cursor: "pointer", fontSize: "0.76rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
                         <Library size={14} />
                         {libraryAvailableEnds.length === 0
                           ? "All library endorsements added"
@@ -1357,217 +2395,306 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   )}
 
                   {/* ════ SCHEDULES ════ */}
-                  {currentSubTab === "schedules" && (
+                  {currentSubTab === "schedules" && (() => {
+                    /* Aggregate every schedule (defaults + added) across every option
+                       of this product. Each row is one unique schedule with a list of
+                       option attachments. */
+                    type Attachment = { opt: ProductOption; isDefault: boolean };
+                    const productOpts = allOptions[pid] ?? [];
+                    const rows = new Map<string, { sched: LibrarySchedule; attachments: Attachment[] }>();
+                    productOpts.forEach(po => {
+                      DEFAULT_SCHEDULES.forEach(s => {
+                        const entry = rows.get(s.id) ?? { sched: s, attachments: [] };
+                        entry.attachments.push({ opt: po, isDefault: true });
+                        rows.set(s.id, entry);
+                      });
+                      (po.addedSchedules ?? []).forEach(s => {
+                        const entry = rows.get(s.id) ?? { sched: s, attachments: [] };
+                        entry.attachments.push({ opt: po, isDefault: false });
+                        rows.set(s.id, entry);
+                      });
+                    });
+                    const orderedSchedIds = [
+                      ...DEFAULT_SCHEDULES.map(s => s.id),
+                      ...SCHEDULES_LIBRARY.map(s => s.id),
+                    ];
+                    const rowList = Array.from(rows.values()).sort((a, b) =>
+                      orderedSchedIds.indexOf(a.sched.id) - orderedSchedIds.indexOf(b.sched.id),
+                    );
+
+                    /* Library availability for the active option only (matches the
+                       per-option Add flow the modal drives). */
+                    const alreadyOnActive       = new Set((opt.addedSchedules ?? []).map(s => s.id));
+                    const librarySchedAvailable = SCHEDULES_LIBRARY.filter(s => !alreadyOnActive.has(s.id));
+
+                    return (
                     <div className="space-y-5">
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Coverage Schedules</div>
-                            <div style={{ fontSize: "0.70rem", color: TT, marginTop: 2 }}>Scheduled items and locations for this policy option</div>
+                            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Added Schedules</div>
+                            <div style={{ fontSize: "0.70rem", color: TT, marginTop: 2 }}>Defaults and library schedules attached to any option of this product</div>
                           </div>
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                            style={{ background: N, color: "white", border: `1px solid ${N}`, fontSize: "0.72rem", fontWeight: 700 }}>
-                            <Plus size={12} /> Add Schedule
-                          </button>
                         </div>
-                        <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                          {/* Table header */}
-                          <div className="grid px-4 py-2" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", background: TH, borderBottom: `1px solid ${BDL}` }}>
-                            {["Schedule Name", "Effective Date", "Expiration Date", "Limit", "Status"].map(h => (
-                              <span key={h} style={{ fontSize: "0.60rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</span>
-                            ))}
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
+                          {rowList.map((row, rIdx) => {
+                            const sched = row.sched;
+                            return (
+                              <div key={sched.id}
+                                style={{ borderBottom: rIdx < rowList.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                                {row.attachments.map((att, aIdx) => {
+                                  const optLabel = att.opt.label;
+                                  const optId    = att.opt.id;
+                                  const count    = getScheduleInstanceCount(pid, optId, sched.id);
+                                  const seqs     = sched.multiUse ? Array.from({ length: count }, (_, i) => i + 1) : [1];
+                                  const libDefault   = sched.premium;
+                                  const currentPrem  = getSchedulePremium(pid, optId, sched.id, libDefault);
+                                  const isOverridden = currentPrem !== libDefault;
+
+                                  return (
+                                    <div key={`${sched.id}::${optId}`}
+                                      style={{
+                                        borderTop: aIdx > 0 ? `1px dashed ${BDL}` : "none",
+                                        background: att.isDefault ? "white" : `${product.categoryColor}04`,
+                                        borderLeft: att.isDefault ? "3px solid transparent" : `3px solid ${product.categoryColor}`,
+                                      }}>
+                                      {seqs.map((seq, sIdx) => {
+                                        const filled = isScheduleFilled(pid, optId, sched.id, seq);
+                                        return (
+                                          <div key={`${sched.id}::${optId}::${seq}`}
+                                            className="flex items-start gap-3 px-4 py-3"
+                                            style={{ borderTop: sIdx > 0 ? `1px dashed ${BDL}` : "none" }}>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                {sched.multiUse && (
+                                                  <span style={{
+                                                    fontSize: "0.58rem", fontWeight: 800, color: TM,
+                                                    background: TH, border: `1px solid ${BDL}`,
+                                                    padding: "1px 6px", borderRadius: 4,
+                                                    fontVariantNumeric: "tabular-nums",
+                                                  }}>#{String(seq).padStart(2, "0")}</span>
+                                                )}
+                                                {sched.fillIn ? (
+                                                  <a
+                                                    href="#"
+                                                    onClick={e => { e.preventDefault(); setScheduleFillInTarget({ pid, optId, sched, seq }); }}
+                                                    style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer" }}>
+                                                    {sched.label}
+                                                  </a>
+                                                ) : (
+                                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{sched.label}</span>
+                                                )}
+                                                {sIdx === 0 && att.isDefault && (
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>DEFAULT</span>
+                                                )}
+                                                {sched.fillIn && (
+                                                  filled ? (
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                                  ) : (
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                                  )
+                                                )}
+                                                {sched.multiUse && sIdx === 0 && (
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                                )}
+                                                {sIdx === 0 && isOverridden && (
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                                )}
+                                              </div>
+                                              {sIdx === 0 && (
+                                                <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{sched.desc}</p>
+                                              )}
+                                              {sIdx === 0 && (
+                                                <div className="flex items-center gap-1.5 flex-wrap" style={{ marginTop: 6 }}>
+                                                  <span style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em" }}>Attached to:</span>
+                                                  <span style={{
+                                                    fontSize: "0.62rem", fontWeight: 800, color: "white",
+                                                    background: att.opt.color, padding: "1px 7px",
+                                                    letterSpacing: "0.04em", borderRadius: 4,
+                                                  }}>{optLabel}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="shrink-0 flex items-center gap-1.5" style={{ minWidth: 130 }}>
+                                              {sIdx === 0 && (
+                                                <>
+                                                  <span style={{ fontSize: "0.72rem", color: TT, fontWeight: 600 }}>$</span>
+                                                  <div style={{ position: "relative", display: "inline-block" }}>
+                                                    <input
+                                                      type="number"
+                                                      min={0}
+                                                      value={currentPrem}
+                                                      onChange={e => {
+                                                        const v = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                                        updateSchedulePremium(pid, optId, sched.id, v);
+                                                      }}
+                                                      className="py-1 outline-none text-right"
+                                                      style={{
+                                                        width: 90,
+                                                        paddingLeft: 8,
+                                                        paddingRight: isOverridden ? 24 : 8,
+                                                        border: `1px solid ${isOverridden ? `${G}80` : BD}`,
+                                                        background: isOverridden ? `${G}08` : "white",
+                                                        borderRadius: 4,
+                                                        fontSize: "0.74rem",
+                                                        color: TD,
+                                                        fontWeight: 600,
+                                                        fontFamily: font,
+                                                      }}
+                                                      title="Edit schedule premium"
+                                                    />
+                                                    {isOverridden && (
+                                                      <button
+                                                        onClick={() => resetSchedulePremium(pid, optId, sched.id)}
+                                                        className="hover:bg-slate-100 transition-colors flex items-center justify-center"
+                                                        style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, padding: 0, border: "none", background: "none", cursor: "pointer", color: G, borderRadius: 3 }}
+                                                        title={`Reset to default (${fmt(libDefault)})`}>
+                                                        <RotateCcw size={10} strokeWidth={2.4} />
+                                                      </button>
+                                                    )}
+                                                  </div>
+                                                </>
+                                              )}
+                                              {sIdx === 0 && !att.isDefault && (
+                                                <button
+                                                  onClick={() => removeAddedSchedule(pid, optId, sched.id)}
+                                                  className="p-1 hover:bg-red-50 transition-colors"
+                                                  style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C", borderRadius: 6 }}
+                                                  title={`Remove from ${optLabel}`}>
+                                                  <X size={12} />
+                                                </button>
+                                              )}
+                                              {sIdx > 0 && (
+                                                <button
+                                                  onClick={() => removeScheduleInstance(pid, optId, sched.id, seq)}
+                                                  className="p-1 hover:bg-red-50 transition-colors"
+                                                  style={{ border: "none", background: "none", cursor: "pointer", color: "#B91C1C", borderRadius: 6 }}
+                                                  title="Remove this instance">
+                                                  <X size={12} />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                      {sched.multiUse && (
+                                        <div className="px-4 pb-2.5 pt-1">
+                                          <button
+                                            onClick={() => addScheduleInstance(pid, optId, sched.id)}
+                                            className="inline-flex items-center gap-1 transition-all hover:underline"
+                                            style={{ fontSize: "0.68rem", fontWeight: 700, color: N, background: "transparent", border: "none", cursor: "pointer", padding: "2px 0", fontFamily: font }}>
+                                            <Plus size={11} /> Add another instance on {optLabel}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setShowSchedulesLibrary(true)}
+                        disabled={librarySchedAvailable.length === 0}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 transition-all hover:brightness-95 disabled:opacity-50"
+                        style={{ background: `${product.categoryColor}12`, border: `1.5px dashed ${product.categoryColor}50`, color: product.categoryColor, cursor: "pointer", fontSize: "0.76rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
+                        <Library size={14} />
+                        {librarySchedAvailable.length === 0
+                          ? `All library schedules added to ${opt.label}`
+                          : `Schedules Library · ${librarySchedAvailable.length} available for ${opt.label}`}
+                      </button>
+                    </div>
+                    );
+                  })()}
+
+                  {/* ════ MEMBER BENEFITS ════ */}
+                  {currentSubTab === "memberBenefits" && (
+                    <div className="space-y-5">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Member Benefits</div>
+                            <div style={{ fontSize: "0.70rem", color: TT, marginTop: 2 }}>Risk management and value-added services attached to this option</div>
                           </div>
-                          {[
-                            { name: "Main District Campus", eff: "07/01/2026", exp: "07/01/2027", limit: "$5,000,000", status: "Active" },
-                            { name: "Athletic Facilities", eff: "07/01/2026", exp: "07/01/2027", limit: "$2,500,000", status: "Active" },
-                            { name: "Administration Building", eff: "07/01/2026", exp: "07/01/2027", limit: "$1,000,000", status: "Active" },
-                            { name: "Transportation Fleet", eff: "07/01/2026", exp: "07/01/2027", limit: "$750,000", status: "Pending" },
-                          ].map((row, i, arr) => (
-                            <div key={row.name} className="grid items-center px-4 py-3"
-                              style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", borderBottom: i < arr.length - 1 ? `1px solid ${BDL}` : "none" }}>
-                              <span style={{ fontSize: "0.80rem", fontWeight: 600, color: TD }}>{row.name}</span>
-                              <span style={{ fontSize: "0.78rem", color: TM }}>{row.eff}</span>
-                              <span style={{ fontSize: "0.78rem", color: TM }}>{row.exp}</span>
-                              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: N }}>{row.limit}</span>
-                              <span style={{ fontSize: "0.68rem", fontWeight: 700,
-                                color: row.status === "Active" ? "#1A7A4A" : "#B45309",
-                                background: row.status === "Active" ? "#E8F5E9" : "#FFF8E6",
-                                border: `1px solid ${row.status === "Active" ? "#81C784" : "#F0D88A"}`,
-                                padding: "2px 8px", display: "inline-block" }}>
-                                {row.status}
-                              </span>
-                            </div>
-                          ))}
+                        </div>
+
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
+                          {MEMBER_BENEFITS.map((svc, idx) => {
+                            const selected = !memberBenefitsExcluded.has(svc.id);
+                            return (
+                              <div key={svc.id}
+                                className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-all"
+                                style={{
+                                  borderBottom: idx < MEMBER_BENEFITS.length - 1 ? `1px solid ${BDL}` : "none",
+                                  background: selected ? `${product.categoryColor}04` : "white",
+                                  borderLeft: selected ? `3px solid ${product.categoryColor}` : "3px solid transparent",
+                                }}
+                                onClick={() => toggleMemberBenefit(svc.id)}>
+                                <div className="shrink-0 flex items-center justify-center mt-0.5"
+                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 3, transition: "all 0.12s" }}>
+                                  {selected && <Check size={9} color="white" strokeWidth={3} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div style={{ fontSize: "0.82rem", fontWeight: selected ? 700 : 500, color: selected ? TD : TM }}>
+                                    {svc.bundle} - {svc.name}
+                                  </div>
+                                  <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{svc.desc}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* ════ MEMBER BENEFITS ════ */}
-                  {currentSubTab === "memberBenefits" && (() => {
-                    const benefits = [
-                      {
-                        id: "proresponse", title: "ProResponse", selected: true,
-                        services: [
-                          { name: "Crisis Communications",             start: "7/1/2026", end: "7/1/2027" },
-                          { name: "Trauma/Grief Counseling",           start: "7/1/2026", end: "7/1/2027" },
-                          { name: "Threat Assessment Case Consultation", start: "7/1/2026", end: "7/1/2027" },
-                          { name: "Sexual Misconduct Investigation",   start: "7/1/2026", end: "7/1/2027" },
-                        ],
-                      },
-                    ];
-                    return (
-                      <div className="space-y-4">
-                        <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                          {/* Table header */}
-                          <div className="grid px-4 py-2" style={{ gridTemplateColumns: "40px 1fr 2fr 1fr 1fr", background: TH, borderBottom: `1px solid ${BDL}` }}>
-                            {["Select", "Benefit Title", "Included Services", "Benefit Start Date", "Benefit End Date"].map(h => (
-                              <span key={h} style={{ fontSize: "0.60rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</span>
-                            ))}
-                          </div>
-                          {benefits.map((b) => (
-                            <div key={b.id}>
-                              {/* Benefit parent row */}
-                              <div className="grid items-center px-4 py-2" style={{ gridTemplateColumns: "40px 1fr 2fr 1fr 1fr", borderBottom: `1px solid ${BDL}`, background: `${product.categoryColor}05` }}>
-                                <div className="flex items-center justify-center"
-                                  style={{ width: 16, height: 16, background: b.selected ? product.categoryColor : "white", border: `2px solid ${b.selected ? product.categoryColor : BD}` }}>
-                                  {b.selected && <Check size={9} color="white" strokeWidth={3} />}
-                                </div>
-                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{b.title}</span>
-                                <span />
-                                <span />
-                                <span />
-                              </div>
-                              {/* Service rows */}
-                              {b.services.map((svc, si) => (
-                                <div key={svc.name} className="grid items-center px-4 py-2"
-                                  style={{ gridTemplateColumns: "40px 1fr 2fr 1fr 1fr", borderBottom: si < b.services.length - 1 ? `1px solid ${BDL}` : "none", paddingLeft: 40 }}>
-                                  <span />
-                                  <span />
-                                  <span style={{ fontSize: "0.78rem", color: N, fontWeight: 500 }}>{svc.name}</span>
-                                  <span style={{ fontSize: "0.78rem", color: TM }}>{svc.start}</span>
-                                  <span style={{ fontSize: "0.78rem", color: TM }}>{svc.end}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Buttons */}
-                        <div className="flex items-center gap-2">
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                            style={{ background: TH, border: `1px solid ${BD}`, color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
-                            Fill in
-                          </button>
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                            style={{ background: TH, border: `1px solid ${BD}`, color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
-                            Modify Options
-                          </button>
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                            style={{ background: TH, border: `1px solid ${BD}`, color: "#B91C1C", fontSize: "0.72rem", fontWeight: 600 }}>
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
                   {/* ════ NOTIFICATIONS ════ */}
-                  {currentSubTab === "notifications" && (() => {
-                    const availableNotifications = [
-                      { id: "bids",   code: "BIDS",   product: "ALL", name: "BIDS",   desc: "Broker Information Disclosure Statement",          edition: "4/1/2015" },
-                      { id: "pmb",    code: "PMB",    product: "ALL", name: "PMB",    desc: "ProResponse Member Benefits",                       edition: "5/1/2022" },
-                      { id: "triads", code: "TRIADS", product: "ALL", name: "TRIADS", desc: "Terrorism Risk Insurance Act Disclosure Statement", edition: "4/1/2015" },
-                    ];
-                    const selectedNotifications = [
-                      { id: "triads", label: "TRIADS - Terrorism Risk Insurance Act Disclosure Statement", edition: "4/1/2015" },
-                      { id: "bids",   label: "BIDS - Broker Information Disclosure Statement",            edition: "4/1/2015" },
-                      { id: "pmb",    label: "PMB - ProResponse Member Benefits",                         edition: "5/1/2022" },
-                    ];
-                    return (
-                      <div className="space-y-6">
-
-                        {/* Available Notifications */}
-                        <div>
-                          <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "white", textTransform: "uppercase", letterSpacing: "0.10em", background: N, padding: "6px 12px", marginBottom: 0 }}>Available Notifications</div>
-                          <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                            <div className="grid px-4 py-2" style={{ gridTemplateColumns: "40px 80px 100px 1fr 100px", background: TH, borderBottom: `1px solid ${BDL}` }}>
-                              {["Select", "Product", "Notification Name", "Notification Description", "Edition Date"].map(h => (
-                                <span key={h} style={{ fontSize: "0.60rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
-                              ))}
-                            </div>
-                            {availableNotifications.map((n, i) => (
-                              <div key={n.id} className="grid items-center px-4 py-3"
-                                style={{ gridTemplateColumns: "40px 80px 100px 1fr 100px", borderBottom: i < availableNotifications.length - 1 ? `1px solid ${BDL}` : "none" }}>
-                                <div style={{ width: 16, height: 16, border: `2px solid ${BD}`, background: "white" }} />
-                                <span style={{ fontSize: "0.78rem", color: TM }}>{n.product}</span>
-                                <span style={{ fontSize: "0.78rem", color: N, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>{n.name}</span>
-                                <span style={{ fontSize: "0.78rem", color: TM }}>{n.desc}</span>
-                                <span style={{ fontSize: "0.78rem", color: TM }}>{n.edition}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3">
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                              style={{ background: TH, border: `1px solid ${BD}`, color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
-                              Add Notification
-                            </button>
+                  {currentSubTab === "notifications" && (
+                    <div className="space-y-5">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Notifications</div>
+                            <div style={{ fontSize: "0.70rem", color: TT, marginTop: 2 }}>Forms attached to this policy option</div>
                           </div>
                         </div>
-
-                        {/* Selected Notifications */}
-                        <div>
-                          <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "white", textTransform: "uppercase", letterSpacing: "0.10em", background: N, padding: "6px 12px", marginBottom: 0 }}>Selected Notifications</div>
-                          <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
-                            {/* Search */}
-                            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-                              <div className="relative flex-1" style={{ maxWidth: 260 }}>
-                                <input placeholder="Search notifications…"
-                                  className="w-full px-3 py-1.5 pl-8 outline-none"
-                                  style={{ border: `1px solid ${BD}`, fontSize: "0.76rem", color: TD, background: "white" }} />
-                                <Search size={12} color={TT} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
+                          {NOTIFICATIONS.map((n, idx) => {
+                            const selected = !notificationsExcluded.has(n.id);
+                            return (
+                              <div key={n.id}
+                                className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-all"
+                                style={{
+                                  borderBottom: idx < NOTIFICATIONS.length - 1 ? `1px solid ${BDL}` : "none",
+                                  background: selected ? `${product.categoryColor}04` : "white",
+                                  borderLeft: selected ? `3px solid ${product.categoryColor}` : "3px solid transparent",
+                                }}
+                                onClick={() => toggleNotification(n.id)}>
+                                <div className="shrink-0 flex items-center justify-center mt-0.5"
+                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 3, transition: "all 0.12s" }}>
+                                  {selected && <Check size={9} color="white" strokeWidth={3} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div style={{ fontSize: "0.82rem", fontWeight: selected ? 700 : 500, color: selected ? TD : TM }}>{n.code}</div>
+                                  <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{n.desc}</p>
+                                </div>
                               </div>
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                                style={{ background: TH, border: `1px solid ${BD}`, color: TM, fontSize: "0.72rem", fontWeight: 600 }}>
-                                <Search size={11} /> Search
-                              </button>
-                            </div>
-                            {/* Column headers */}
-                            <div className="grid px-4 py-2" style={{ gridTemplateColumns: "40px 1fr 120px", background: TH, borderBottom: `1px solid ${BDL}` }}>
-                              {["Select", "Form", "Edition Date"].map(h => (
-                                <span key={h} style={{ fontSize: "0.60rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
-                              ))}
-                            </div>
-                            {selectedNotifications.map((n, i) => (
-                              <div key={n.id} className="grid items-center px-4 py-3"
-                                style={{ gridTemplateColumns: "40px 1fr 120px", borderBottom: i < selectedNotifications.length - 1 ? `1px solid ${BDL}` : "none" }}>
-                                <div style={{ width: 16, height: 16, border: `2px solid ${BD}`, borderRadius: "50%", background: "white" }} />
-                                <span style={{ fontSize: "0.78rem", color: TM }}>{n.label}</span>
-                                <span style={{ fontSize: "0.78rem", color: TM }}>{n.edition}</span>
-                              </div>
-                            ))}
-                          </div>
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-2 mt-3">
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                              style={{ background: TH, border: `1px solid ${BD}`, color: "#B91C1C", fontSize: "0.72rem", fontWeight: 600 }}>
-                              <Trash2 size={11} /> Delete
-                            </button>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-                              style={{ background: N, border: `1px solid ${N}`, color: "white", fontSize: "0.72rem", fontWeight: 600 }}>
-                              Preview
-                            </button>
-                          </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
 
                   {/* ════ PREMIUM ════ */}
                   {currentSubTab === "premium" && (
                     <div className="space-y-5">
                       <div>
                         <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>Premium Breakdown — {opt.label}</div>
-                        <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
+                        <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
                           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${BDL}` }}>
                             <span style={{ fontSize: "0.78rem", color: TM }}>Base Premium</span>
                             <span style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{fmt(product.basePremium)}</span>
@@ -1590,12 +2717,12 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                               <span style={{ fontSize: "0.78rem", color: TM, fontWeight: 600 }}>Manual Adjustment</span>
                               <div className="flex items-center gap-2">
                                 <button onClick={() => updateManualPct(pid, opt.id, Math.max(-30, opt.manualPct - 1))}
-                                  style={{ width: 22, height: 22, border: `1px solid ${BD}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: TM }}>−</button>
+                                  style={{ width: 22, height: 22, border: `1px solid ${BD}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: TM, borderRadius: 6 }}>−</button>
                                 <span style={{ minWidth: 44, textAlign: "center", fontSize: "0.88rem", fontWeight: 800, color: opt.manualPct < 0 ? "#1A7A4A" : opt.manualPct > 0 ? "#B91C1C" : TD }}>
                                   {opt.manualPct > 0 ? "+" : ""}{opt.manualPct}%
                                 </span>
                                 <button onClick={() => updateManualPct(pid, opt.id, Math.min(30, opt.manualPct + 1))}
-                                  style={{ width: 22, height: 22, border: `1px solid ${BD}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: TM }}>+</button>
+                                  style={{ width: 22, height: 22, border: `1px solid ${BD}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: TM, borderRadius: 6 }}>+</button>
                               </div>
                             </div>
                             <input type="range" min={-30} max={30} step={1} value={opt.manualPct}
@@ -1616,7 +2743,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       {opts.length > 1 && (
                         <div>
                           <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Option Comparison</div>
-                          <div style={{ border: `1px solid ${BDL}`, background: "white" }}>
+                          <div style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8, overflow: "hidden" }}>
                             {opts.map((o, i) => {
                               const p = calcPremium(product, o);
                               const isAct = o.id === opt.id;
@@ -1638,7 +2765,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                         </div>
                       )}
 
-                      <div className="flex items-start gap-2 p-3" style={{ background: "#FFF8E6", border: "1px solid #F0D88A" }}>
+                      <div className="flex items-start gap-2 p-3" style={{ background: "#FFF8E6", border: "1px solid #F0D88A", borderRadius: 6 }}>
                         <Info size={12} color="#8A5C00" style={{ flexShrink: 0, marginTop: 1 }} />
                         <p style={{ fontSize: "0.70rem", color: "#7A4800", lineHeight: 1.5 }}>Indicative pricing only. Final premium subject to full underwriting review and actuarial sign-off.</p>
                       </div>
@@ -1651,50 +2778,52 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
         </div>
       </div>
 
-      {/* ── QUOTE SUMMARY BAR ──────────────────────────────────────────── */}
-      {selected.size >= 2 && (
-        <div className="mt-4" style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
-          <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-            <h3 style={{ fontSize: "0.72rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.08em" }}>Quote Summary — All Products</h3>
-            <span style={{ fontSize: "0.68rem", color: TT }}>{selected.size} lines selected</span>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-              {Array.from(selected).map(pid => {
-                const prod = getProduct(pid);
-                const opt  = getActiveOpt(pid);
-                if (!opt) return null;
-                const p = calcPremium(prod, opt);
-                return (
-                  <div key={pid}
-                    onClick={() => setActive(pid)}
-                    className="p-3 cursor-pointer hover:brightness-97 transition-all"
-                    style={{ border: `1.5px solid ${activeProductId === pid ? prod.categoryColor : BDL}`, background: activeProductId === pid ? `${prod.categoryColor}06` : TH }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div style={{ color: prod.categoryColor }}>{prod.icon}</div>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 800, color: prod.categoryColor, background: `${prod.categoryColor}12`, padding: "1px 5px" }}>{prod.abbr}</span>
-                    </div>
-                    <div style={{ fontSize: "0.76rem", fontWeight: 600, color: TD, marginBottom: 2 }}>{prod.label.replace(/ \(.*\)/, "")}</div>
-                    <div style={{ fontSize: "0.90rem", fontWeight: 800, color: prod.categoryColor }}>{fmt(p)}</div>
-                    <div style={{ fontSize: "0.60rem", color: TT, marginTop: 1 }}>{opt.label}{(allOptions[pid]?.length ?? 0) > 1 ? ` · ${allOptions[pid].length} options` : ""}</div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-between px-4 py-3" style={{ background: `${N}06`, border: `1px solid ${N}20` }}>
-              <span style={{ fontSize: "0.84rem", fontWeight: 800, color: TD }}>Grand Total Premium</span>
-              <div className="flex items-center gap-4">
-                <span style={{ fontSize: "1.30rem", fontWeight: 800, color: N }}>{fmt(totalSelectedPremium)}</span>
-                <button
-                  onClick={handlePreview}
-                  className="flex items-center gap-2 px-4 py-2 hover:brightness-95 transition-all"
-                  style={{ background: N, color: "white", border: `1.5px solid ${N}`, fontSize: "0.78rem", fontWeight: 700, fontFamily: font }}>
-                  <Eye size={14} /> Preview Full Quote <ExternalLink size={12} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ════════════════════════════════════════════════════════════════
+          FILL-IN MODAL — captures the underwriter's manual fields for a
+          default endorsement instance. Saving flips its chip to "Filled".
+      ════════════════════════════════════════════════════════════════ */}
+      {fillInTarget && (
+        <FillInModal
+          pid={fillInTarget.pid}
+          end={fillInTarget.end}
+          seq={fillInTarget.seq}
+          alreadyFilled={isFilled(fillInTarget.pid, fillInTarget.end.id, fillInTarget.seq)}
+          onClose={() => setFillInTarget(null)}
+          onSave={() => {
+            markFilled(fillInTarget.pid, fillInTarget.end.id, fillInTarget.seq);
+            setFillInTarget(null);
+          }}
+        />
+      )}
+
+      {/* Fill-in modal for an added-endorsement instance (option × endorsement × seq) */}
+      {addedEndFillInTarget && (
+        <FillInModal
+          pid={addedEndFillInTarget.pid}
+          end={addedEndFillInTarget.end}
+          seq={addedEndFillInTarget.seq}
+          alreadyFilled={isAddedEndFilled(addedEndFillInTarget.pid, addedEndFillInTarget.optId, addedEndFillInTarget.end.id, addedEndFillInTarget.seq)}
+          onClose={() => setAddedEndFillInTarget(null)}
+          onSave={() => {
+            markAddedEndFilled(addedEndFillInTarget.pid, addedEndFillInTarget.optId, addedEndFillInTarget.end.id, addedEndFillInTarget.seq);
+            setAddedEndFillInTarget(null);
+          }}
+        />
+      )}
+
+      {/* Fill-in modal for a scheduled instance (option × schedule × seq) */}
+      {scheduleFillInTarget && (
+        <FillInModal
+          pid={scheduleFillInTarget.pid}
+          end={scheduleFillInTarget.sched}
+          seq={scheduleFillInTarget.seq}
+          alreadyFilled={isScheduleFilled(scheduleFillInTarget.pid, scheduleFillInTarget.optId, scheduleFillInTarget.sched.id, scheduleFillInTarget.seq)}
+          onClose={() => setScheduleFillInTarget(null)}
+          onSave={() => {
+            markScheduleFilled(scheduleFillInTarget.pid, scheduleFillInTarget.optId, scheduleFillInTarget.sched.id, scheduleFillInTarget.seq);
+            setScheduleFillInTarget(null);
+          }}
+        />
       )}
 
       {/* ════════════════════════════════════════════════════════════════
@@ -1703,11 +2832,11 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
       {showProductsLibrary && (
         <Modal onClose={() => setShowProductsLibrary(false)} wide>
           {/* Header */}
-          <div style={{ height: 4, background: `linear-gradient(90deg,${G},#A8841C)` }} />
+          <div style={{ height: 4, background: N }} />
           <div className="flex items-center justify-between px-6 py-4" style={{ background: N, borderBottom: `1px solid ${BDL}` }}>
             <div className="flex items-center gap-3">
-              <div style={{ width: 32, height: 32, background: "rgba(201,162,39,0.18)", border: `1px solid ${G}50`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Library size={16} color={G} />
+              <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
+                <Library size={16} color="white" />
               </div>
               <div>
                 <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>Products Library</h2>
@@ -1715,7 +2844,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
               </div>
             </div>
             <button onClick={() => setShowProductsLibrary(false)}
-              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
+              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", borderRadius: 6 }}>
               <X size={14} />
             </button>
           </div>
@@ -1729,7 +2858,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                 if (!prod) return null;
                 return (
                   <span key={pid} className="flex items-center gap-1 px-2 py-0.5"
-                    style={{ background: `${prod.categoryColor}10`, border: `1px solid ${prod.categoryColor}25`, fontSize: "0.66rem", fontWeight: 700, color: prod.categoryColor }}>
+                    style={{ background: `${N}10`, border: `1px solid ${N}25`, fontSize: "0.66rem", fontWeight: 700, color: N, borderRadius: 4 }}>
                     <Check size={9} /> {prod.abbr}
                   </span>
                 );
@@ -1753,20 +2882,20 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   if (catProds.length === 0) return null;
                   return (
                     <div key={cat.id}>
-                      <div style={{ fontSize: "0.60rem", fontWeight: 800, color: cat.color, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>{cat.label}</div>
+                      <div style={{ fontSize: "0.60rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>{cat.label}</div>
                       <div className="grid grid-cols-1 gap-2">
                         {catProds.map(prod => (
                           <div key={prod.id}
                             className="flex items-start gap-4 p-4"
-                            style={{ border: `1px solid ${BDL}`, background: "white" }}>
+                            style={{ border: `1px solid ${BDL}`, background: "white", borderRadius: 8 }}>
                             <div className="flex items-center justify-center shrink-0"
-                              style={{ width: 40, height: 40, background: `${cat.color}10`, border: `1px solid ${cat.color}20`, color: cat.color }}>
+                              style={{ width: 40, height: 40, background: `${N}10`, border: `1px solid ${N}20`, color: N, borderRadius: 6 }}>
                               {prod.icon}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{prod.label}</span>
-                                <span style={{ fontSize: "0.60rem", fontWeight: 800, color: cat.color, background: `${cat.color}12`, border: `1px solid ${cat.color}25`, padding: "1px 6px" }}>{prod.abbr}</span>
+                                <span style={{ fontSize: "0.60rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "1px 6px", borderRadius: 4 }}>{prod.abbr}</span>
                               </div>
                               <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4 }}>{prod.desc}</p>
                               <p style={{ fontSize: "0.68rem", color: TM, fontWeight: 600, marginTop: 4 }}>Base: {fmt(prod.basePremium)}</p>
@@ -1776,7 +2905,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                 setVisibleProductIds(prev => [...prev, prod.id]);
                               }}
                               className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95 shrink-0"
-                              style={{ background: cat.color, color: "white", border: "none", cursor: "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font }}>
+                              style={{ background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
                               <Plus size={12} /> Add to Submission
                             </button>
                           </div>
@@ -1790,7 +2919,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           </div>
           <div className="px-6 py-4 flex justify-end" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
             <button onClick={() => setShowProductsLibrary(false)}
-              style={{ padding: "8px 20px", background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: font }}>
+              style={{ padding: "8px 20px", background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
               Done
             </button>
           </div>
@@ -1807,63 +2936,257 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
         const libEnds  = ENDORSEMENTS_LIBRARY[pid] ?? [];
         const alreadyAddedIds = new Set(opt.addedEndorsements.map(e => e.id));
         const available = libEnds.filter(e => !alreadyAddedIds.has(e.id));
+        const q = endorsementsLibraryQuery.trim().toLowerCase();
+        const visible = q
+          ? available.filter(e => e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q))
+          : available;
+        const closeLibrary = () => { setShowEndorsementsLibrary(false); setEndorsementsLibraryQuery(""); };
 
         return (
-          <Modal onClose={() => setShowEndorsementsLibrary(false)}>
-            <div style={{ height: 4, background: `linear-gradient(90deg,${product.categoryColor},${product.categoryColor}AA)` }} />
-            <div className="flex items-center justify-between px-6 py-4" style={{ background: product.categoryColor, borderBottom: `1px solid ${BDL}` }}>
-              <div className="flex items-center gap-3">
-                <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Library size={16} color="white" />
+          <Modal onClose={closeLibrary}>
+            {/* Sticky top: gradient + header + search */}
+            <div style={{ position: "sticky", top: 0, zIndex: 20, background: "white" }}>
+              <div style={{ height: 4, background: `linear-gradient(90deg,${product.categoryColor},${product.categoryColor}AA)` }} />
+              <div className="flex items-center justify-between px-6 py-4" style={{ background: product.categoryColor, borderBottom: `1px solid ${BDL}` }}>
+                <div className="flex items-center gap-3">
+                  <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
+                    <Library size={16} color="white" />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>Endorsements Library</h2>
+                    <p style={{ fontSize: "0.66rem", color: "rgba(255,255,255,0.55)", marginTop: 1 }}>
+                      {product.label} · {available.length} endorsement{available.length !== 1 ? "s" : ""} available to add
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>Endorsements Library</h2>
-                  <p style={{ fontSize: "0.66rem", color: "rgba(255,255,255,0.55)", marginTop: 1 }}>
-                    {product.label} · {available.length} endorsement{available.length !== 1 ? "s" : ""} available to add
-                  </p>
-                </div>
+                <button onClick={closeLibrary}
+                  style={{ width: 28, height: 28, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", borderRadius: 6 }}>
+                  <X size={14} />
+                </button>
               </div>
-              <button onClick={() => setShowEndorsementsLibrary(false)}
-                style={{ width: 28, height: 28, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
-                <X size={14} />
-              </button>
+              {available.length > 0 && (
+                <div className="px-5 py-3" style={{ borderBottom: `1px solid ${BDL}`, background: "white" }}>
+                  <div className="relative">
+                    <Search size={13} color={TT} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search endorsements by name or description…"
+                      value={endorsementsLibraryQuery}
+                      onChange={e => setEndorsementsLibraryQuery(e.target.value)}
+                      className="w-full pl-9 pr-9 py-2 outline-none"
+                      style={{ border: `1px solid ${BD}`, borderRadius: 8, background: "white", fontSize: "0.78rem", color: TD, fontFamily: font }}
+                    />
+                    {endorsementsLibraryQuery && (
+                      <button
+                        onClick={() => setEndorsementsLibraryQuery("")}
+                        className="hover:bg-slate-100 transition-colors flex items-center justify-center"
+                        style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", width: 22, height: 22, padding: 0, border: "none", background: "none", cursor: "pointer", color: TT, borderRadius: 4 }}
+                        title="Clear search">
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="p-5 space-y-3">
+            {/* Scrollable list */}
+            <div className="p-5 space-y-2">
               {available.length === 0 ? (
                 <div className="flex flex-col items-center py-10 gap-3" style={{ color: TT }}>
                   <CheckCircle2 size={32} color="#2E7D32" />
                   <p style={{ fontSize: "0.88rem", fontWeight: 700, color: TM }}>All available endorsements have been added</p>
                 </div>
-              ) : available.map(libEnd => {
-                const isAdded = alreadyAddedIds.has(libEnd.id);
+              ) : visible.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-3" style={{ color: TT }}>
+                  <Search size={28} color={BD} />
+                  <p style={{ fontSize: "0.84rem", fontWeight: 700, color: TM }}>No endorsements match “{endorsementsLibraryQuery}”</p>
+                </div>
+              ) : visible.map(libEnd => {
+                const isAdded   = alreadyAddedIds.has(libEnd.id);
+                const sampleUrl = libEnd.sampleUrl ?? `#endorsements/samples/${libEnd.id}`;
                 return (
                   <div key={libEnd.id}
-                    className="flex items-start gap-4 p-4"
-                    style={{ border: `1px solid ${isAdded ? product.categoryColor + "40" : BDL}`, background: isAdded ? `${product.categoryColor}04` : "white" }}>
+                    className="flex items-center gap-4 px-4 py-3"
+                    style={{ border: `1px solid ${isAdded ? product.categoryColor + "40" : BDL}`, background: isAdded ? `${product.categoryColor}04` : "white", borderRadius: 8 }}>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{libEnd.label}</span>
+                        {libEnd.fillIn && (
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                        )}
+                        {libEnd.multiUse && (
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                        )}
+                        {libEnd.premium > 0 && (
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}40`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Premium</span>
+                        )}
                       </div>
-                      <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4 }}>{libEnd.desc}</p>
-                      <p style={{ fontSize: "0.72rem", color: product.categoryColor, fontWeight: 700, marginTop: 5 }}>+{fmt(libEnd.premium)}</p>
+                      <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4, marginTop: 2 }}>{libEnd.desc}</p>
+                      <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 6 }}>
+                        {libEnd.premium > 0 && (
+                          <span style={{ fontSize: "0.72rem", color: product.categoryColor, fontWeight: 700 }}>+{fmt(libEnd.premium)}</span>
+                        )}
+                        <a
+                          href={sampleUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 hover:underline"
+                          style={{ fontSize: "0.68rem", fontWeight: 700, color: N, textDecoration: "none" }}
+                          title="Open the developer / static sample copy of this endorsement">
+                          <ExternalLink size={11} /> View sample
+                        </a>
+                      </div>
                     </div>
                     <button
-                      onClick={() => {
-                        addEndorsementFromLibrary(pid, opt.id, libEnd);
-                      }}
+                      onClick={() => addEndorsementFromLibrary(pid, opt.id, libEnd)}
                       disabled={isAdded}
                       className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95 disabled:opacity-60 shrink-0"
-                      style={{ background: isAdded ? `${product.categoryColor}20` : product.categoryColor, color: isAdded ? product.categoryColor : "white", border: isAdded ? `1px solid ${product.categoryColor}40` : "none", cursor: isAdded ? "default" : "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font }}>
+                      style={{ background: isAdded ? `${product.categoryColor}20` : product.categoryColor, color: isAdded ? product.categoryColor : "white", border: isAdded ? `1px solid ${product.categoryColor}40` : "none", cursor: isAdded ? "default" : "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
                       {isAdded ? <><Check size={12} /> Added</> : <><Plus size={12} /> Add</>}
                     </button>
                   </div>
                 );
               })}
             </div>
-            <div className="px-6 py-4 flex justify-end" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
-              <button onClick={() => setShowEndorsementsLibrary(false)}
-                style={{ padding: "8px 20px", background: product.categoryColor, color: "white", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: font }}>
+
+            {/* Sticky bottom: Done */}
+            <div className="px-6 py-4 flex justify-end" style={{ position: "sticky", bottom: 0, zIndex: 20, borderTop: `1px solid ${BDL}`, background: TH }}>
+              <button onClick={closeLibrary}
+                style={{ padding: "8px 20px", background: product.categoryColor, color: "white", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
+                Done
+              </button>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {/* ════════════════════════════════════════════════════════════════
+          SCHEDULES LIBRARY MODAL
+      ════════════════════════════════════════════════════════════════ */}
+      {showSchedulesLibrary && activeProduct && currentOpt && (() => {
+        const product   = activeProduct;
+        const pid       = product.id;
+        const opt       = currentOpt;
+        const added     = opt.addedSchedules ?? [];
+        const addedIds  = new Set(added.map(s => s.id));
+        const available = SCHEDULES_LIBRARY.filter(s => !addedIds.has(s.id));
+        const q = schedulesLibraryQuery.trim().toLowerCase();
+        const visible = q
+          ? available.filter(s => s.label.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
+          : available;
+        const closeLibrary = () => { setShowSchedulesLibrary(false); setSchedulesLibraryQuery(""); };
+
+        return (
+          <Modal onClose={closeLibrary}>
+            {/* Sticky top: gradient + header + search */}
+            <div style={{ position: "sticky", top: 0, zIndex: 20, background: "white" }}>
+              <div style={{ height: 4, background: `linear-gradient(90deg,${product.categoryColor},${product.categoryColor}AA)` }} />
+              <div className="flex items-center justify-between px-6 py-4" style={{ background: product.categoryColor, borderBottom: `1px solid ${BDL}` }}>
+                <div className="flex items-center gap-3">
+                  <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
+                    <Calendar size={16} color="white" />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>Schedules Library</h2>
+                    <p style={{ fontSize: "0.66rem", color: "rgba(255,255,255,0.55)", marginTop: 1 }}>
+                      {product.label} · {available.length} schedule{available.length !== 1 ? "s" : ""} available to add
+                    </p>
+                  </div>
+                </div>
+                <button onClick={closeLibrary}
+                  style={{ width: 28, height: 28, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", borderRadius: 6 }}>
+                  <X size={14} />
+                </button>
+              </div>
+              {available.length > 0 && (
+                <div className="px-5 py-3" style={{ borderBottom: `1px solid ${BDL}`, background: "white" }}>
+                  <div className="relative">
+                    <Search size={13} color={TT} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search schedules by name or description…"
+                      value={schedulesLibraryQuery}
+                      onChange={e => setSchedulesLibraryQuery(e.target.value)}
+                      className="w-full pl-9 pr-9 py-2 outline-none"
+                      style={{ border: `1px solid ${BD}`, borderRadius: 8, background: "white", fontSize: "0.78rem", color: TD, fontFamily: font }}
+                    />
+                    {schedulesLibraryQuery && (
+                      <button
+                        onClick={() => setSchedulesLibraryQuery("")}
+                        className="hover:bg-slate-100 transition-colors flex items-center justify-center"
+                        style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", width: 22, height: 22, padding: 0, border: "none", background: "none", cursor: "pointer", color: TT, borderRadius: 4 }}
+                        title="Clear search">
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Scrollable list */}
+            <div className="p-5 space-y-2">
+              {available.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-3" style={{ color: TT }}>
+                  <CheckCircle2 size={32} color="#2E7D32" />
+                  <p style={{ fontSize: "0.88rem", fontWeight: 700, color: TM }}>All available schedules have been added</p>
+                </div>
+              ) : visible.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-3" style={{ color: TT }}>
+                  <Search size={28} color={BD} />
+                  <p style={{ fontSize: "0.84rem", fontWeight: 700, color: TM }}>No schedules match “{schedulesLibraryQuery}”</p>
+                </div>
+              ) : visible.map(libSched => {
+                const isAdded = addedIds.has(libSched.id);
+                return (
+                  <div key={libSched.id}
+                    className="flex items-center gap-4 px-4 py-3"
+                    style={{ border: `1px solid ${isAdded ? product.categoryColor + "40" : BDL}`, background: isAdded ? `${product.categoryColor}04` : "white", borderRadius: 8 }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{libSched.label}</span>
+                        {libSched.fillIn && (
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                        )}
+                        {libSched.multiUse && (
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4, marginTop: 2 }}>{libSched.desc}</p>
+                      <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 6 }}>
+                        <span style={{ fontSize: "0.72rem", color: TM, fontWeight: 700 }}>{fmt(libSched.premium)}</span>
+                        {libSched.sampleUrl && (
+                          <a
+                            href={libSched.sampleUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 hover:underline"
+                            style={{ fontSize: "0.68rem", fontWeight: 700, color: N, textDecoration: "none" }}
+                            title="Open the developer / static sample copy of this schedule">
+                            <ExternalLink size={11} /> View sample
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => addScheduleFromLibrary(pid, opt.id, libSched)}
+                      disabled={isAdded}
+                      className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95 disabled:opacity-60 shrink-0"
+                      style={{ background: isAdded ? `${product.categoryColor}20` : product.categoryColor, color: isAdded ? product.categoryColor : "white", border: isAdded ? `1px solid ${product.categoryColor}40` : "none", cursor: isAdded ? "default" : "pointer", fontSize: "0.74rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
+                      {isAdded ? <><Check size={12} /> Added</> : <><Plus size={12} /> Add</>}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Sticky bottom: Done */}
+            <div className="px-6 py-4 flex justify-end" style={{ position: "sticky", bottom: 0, zIndex: 20, borderTop: `1px solid ${BDL}`, background: TH }}>
+              <button onClick={closeLibrary}
+                style={{ padding: "8px 20px", background: product.categoryColor, color: "white", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: font, borderRadius: 6 }}>
                 Done
               </button>
             </div>
@@ -1880,7 +3203,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: N }}>
             <h3 style={{ fontSize: "0.90rem", fontWeight: 800, color: "white" }}>Issue Quote</h3>
             <button onClick={() => { setShowIssueModal(false); setIssueDone(false); }}
-              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: 6 }}>
               <X size={14} color="white" />
             </button>
           </div>
@@ -1904,7 +3227,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   return (
                     <div key={optIdx} className="px-4 py-3" style={{ background: TH, border: `1px solid ${BDL}` }}>
                       <div style={{ fontSize: "0.64rem", fontWeight: 700, color: TT, textTransform: "uppercase", marginBottom: 6 }}>
-                        {(() => { const refPid = Array.from(selected).find(pid => (allOptions[pid]?.length ?? 0) > optIdx); return refPid ? (allOptions[refPid][optIdx]?.label ?? `Option ${optIdx + 1}`) : `Option ${optIdx + 1}`; })()}
+                        {`Set ${String(optIdx + 1).padStart(2, "0")}`}
                       </div>
                       <div style={{ fontSize: "1.10rem", fontWeight: 800, color: N }}>{fmt(total)}</div>
                     </div>
@@ -1912,7 +3235,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                 })}
                 <button onClick={handleIssueQuote}
                   className="w-full flex items-center justify-center gap-2 py-3 transition-all hover:brightness-95"
-                  style={{ background: G, color: "white", border: "none", cursor: "pointer", fontSize: "0.84rem", fontWeight: 800, fontFamily: font }}>
+                  style={{ background: G, color: "white", border: "none", cursor: "pointer", fontSize: "0.84rem", fontWeight: 800, fontFamily: font, borderRadius: 6 }}>
                   <FileText size={15} /> Issue Quote
                 </button>
               </>
@@ -1930,7 +3253,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: N }}>
             <h3 style={{ fontSize: "0.90rem", fontWeight: 800, color: "white" }}>Send Quote to Broker</h3>
             <button onClick={() => { setShowSendModal(false); setSendDone(false); }}
-              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: 6 }}>
               <X size={14} color="white" />
             </button>
           </div>
@@ -1952,18 +3275,18 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     <div className="relative">
                       {f.icon && <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: TT, pointerEvents: "none" }}>{f.icon}</div>}
                       <input type={(f as any).type ?? "text"} value={f.value} onChange={e => f.setter(e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", paddingLeft: f.icon ? 34 : 11, paddingRight: 11, paddingTop: 9, paddingBottom: 9, border: `1px solid ${BD}`, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD }} />
+                        style={{ width: "100%", boxSizing: "border-box", paddingLeft: f.icon ? 34 : 11, paddingRight: 11, paddingTop: 9, paddingBottom: 9, border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD }} />
                     </div>
                   </div>
                 ))}
                 <div>
                   <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 5 }}>Message</label>
                   <textarea value={sendMsg} onChange={e => setSendMsg(e.target.value)} rows={4}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 11px", border: `1px solid ${BD}`, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, resize: "vertical" }} />
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 11px", border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, resize: "vertical" }} />
                 </div>
                 <button onClick={handleSend}
                   className="w-full flex items-center justify-center gap-2 py-3 transition-all hover:brightness-95"
-                  style={{ background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.84rem", fontWeight: 800, fontFamily: font }}>
+                  style={{ background: N, color: "white", border: "none", cursor: "pointer", fontSize: "0.84rem", fontWeight: 800, fontFamily: font, borderRadius: 6 }}>
                   <Send size={15} /> Send Quote
                 </button>
               </>
@@ -1981,7 +3304,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: "#7A4800" }}>
             <h3 style={{ fontSize: "0.90rem", fontWeight: 800, color: "white" }}>Refer Quote</h3>
             <button onClick={() => { setShowReferModal(false); setReferDone(false); }}
-              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              style={{ width: 28, height: 28, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: 6 }}>
               <X size={14} color="white" />
             </button>
           </div>
@@ -2002,7 +3325,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 5 }}>{f.label}</label>
                     <div className="relative">
                       <select value={f.value} onChange={e => f.setter(e.target.value)}
-                        style={{ width: "100%", padding: "9px 11px", border: `1px solid ${BD}`, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, background: "white", appearance: "none", cursor: "pointer" }}>
+                        style={{ width: "100%", padding: "9px 11px", border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, background: "white", appearance: "none", cursor: "pointer" }}>
                         {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                       <ChevronDown size={13} color={TT} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -2012,18 +3335,85 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                 <div>
                   <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 5 }}>Notes <span style={{ color: "#B91C1C" }}>*</span></label>
                   <textarea value={referNotes} onChange={e => setReferNotes(e.target.value)} rows={4} placeholder="Explain the reason for referral…"
-                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 11px", border: `1px solid ${BD}`, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, resize: "vertical" }} />
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 11px", border: `1px solid ${BD}`, borderRadius: 6, fontSize: "0.82rem", fontFamily: font, outline: "none", color: TD, resize: "vertical" }} />
                   {!referNotes.trim() && <p style={{ fontSize: "0.62rem", color: "#B91C1C", marginTop: 4 }}>Notes are required for referral</p>}
                 </div>
                 <button onClick={handleRefer} disabled={!referNotes.trim()}
                   className="w-full flex items-center justify-center gap-2 py-3 transition-all hover:brightness-95 disabled:opacity-50"
-                  style={{ background: G, color: "white", border: "none", cursor: referNotes.trim() ? "pointer" : "default", fontSize: "0.84rem", fontWeight: 800, fontFamily: font }}>
+                  style={{ background: G, color: "white", border: "none", cursor: referNotes.trim() ? "pointer" : "default", fontSize: "0.84rem", fontWeight: 800, fontFamily: font, borderRadius: 6 }}>
                   <GitBranch size={15} /> Submit Referral
                 </button>
               </>
             )}
           </div>
         </Modal>
+      )}
+
+      {/* ── Delete option confirmation modal ─────────────────────────────── */}
+      {deleteConfirm && (
+        <Modal onClose={() => setDeleteConfirm(null)}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "#FEF2F2", borderBottom: `1px solid #FEE2E2` }}>
+            <div className="flex items-center justify-center shrink-0"
+              style={{ width: 36, height: 36, background: "#FEE2E2", borderRadius: 8 }}>
+              <AlertTriangle size={18} color="#B91C1C"/>
+            </div>
+            <div className="flex-1">
+              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#7F1D1D" }}>Delete rating option?</div>
+              <div style={{ fontSize: "0.74rem", color: "#991B1B", marginTop: 2 }}>This action cannot be undone.</div>
+            </div>
+            <button onClick={() => setDeleteConfirm(null)}
+              className="flex items-center justify-center p-1.5 hover:bg-red-100 transition-colors"
+              style={{ background: "transparent", border: "none", cursor: "pointer", borderRadius: 4 }}>
+              <X size={14} color="#7F1D1D"/>
+            </button>
+          </div>
+          <div className="p-5">
+            <p style={{ fontSize: "0.84rem", color: TD, lineHeight: 1.55 }}>
+              Are you sure you want to delete <strong>{deleteConfirm.label}</strong>?
+              Any sublimit settings and added endorsements specific to this option will also be removed.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 transition-colors hover:bg-slate-50"
+                style={{
+                  border: `1px solid ${BD}`, background: "white", color: TM,
+                  fontSize: "0.78rem", fontWeight: 700, borderRadius: 6, cursor: "pointer", fontFamily: font,
+                }}>
+                Cancel
+              </button>
+              <button onClick={commitDeleteOption}
+                className="flex items-center gap-1.5 px-4 py-2 transition-all active:scale-95"
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 14px rgba(185,28,28,0.40)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(185,28,28,0.30)"; }}
+                style={{
+                  background: "#B91C1C", color: "white", border: "none", cursor: "pointer",
+                  fontSize: "0.78rem", fontWeight: 700, borderRadius: 6, fontFamily: font,
+                  boxShadow: "0 2px 8px rgba(185,28,28,0.30)",
+                }}>
+                <Trash2 size={13}/> Delete option
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Toast / snackbar ─────────────────────────────────────────────── */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed flex items-center gap-2 px-4 py-2.5"
+          style={{
+            bottom: 24, right: 24, zIndex: 100,
+            background: toast.tone === "error" ? "#B91C1C" : toast.tone === "info" ? N : "#15803D",
+            color: "white",
+            borderRadius: 8,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            fontSize: "0.80rem", fontWeight: 600, fontFamily: font,
+          }}>
+          {toast.tone === "error" ? <AlertTriangle size={14}/> : <CheckCircle2 size={14}/>}
+          <span>{toast.msg}</span>
+        </div>
       )}
     </div>
   );

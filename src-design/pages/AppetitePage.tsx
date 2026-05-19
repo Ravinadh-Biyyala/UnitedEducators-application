@@ -7,6 +7,9 @@ import {
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
+import { PageRegister } from "../components/companion/PageRegister";
+import { newId, now } from "../components/companion/CompanionContext";
+import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
 
 const N   = "#0123D4";
 const G   = "#C9A227";
@@ -77,7 +80,7 @@ function SectionCard({ title, icon, accent = N, action, children, noPad = false 
   action?: React.ReactNode; children: React.ReactNode; noPad?: boolean;
 }) {
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}` }}>
+    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}`, borderRadius: 8, overflow: "hidden" }}>
       <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2"
         style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
         <div className="flex items-center gap-2">
@@ -114,6 +117,52 @@ export function AppetitePage() {
     <AppShell activePage="appetite" role={role} onRoleChange={() => {}}>
       <div style={{ fontFamily: font, color: TD }}>
 
+        <PageRegister
+          routeKey="page:appetite"
+          title="Appetite Rules"
+          subtitle={`${filteredRules.length} rules · ${inAppetite} in / ${watch} watch / ${outOfAppetite} out`}
+          greeting={`Appetite snapshot: ${filteredRules.length} rules in view — ${inAppetite} in appetite, ${watch} on watch, ${outOfAppetite} out. Want a summary or a drift check?`}
+          suggestions={[
+            { id: "summary", label: "Summarize the rule book", tone: "blue", icon: "Sparkles" },
+            { id: "drift", label: "Rules to watch", tone: "red", icon: "AlertTriangle" },
+            { id: "out", label: "Out-of-appetite rules", tone: "red", icon: "AlertTriangle" },
+            { id: "status-cut", label: "Status breakdown", tone: "violet", icon: "ChartPie" },
+          ]}
+          respond={(sid) => {
+            if (sid === "status-cut") return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+              kind: "donut", title: "Rules by status",
+              segments: [
+                { label: "In Appetite",     value: inAppetite,    color: "#15803D" },
+                { label: "Watch",           value: watch,         color: "#B45309" },
+                { label: "Out of Appetite", value: outOfAppetite, color: "#B91C1C" },
+              ],
+            } }];
+            if (sid === "drift") {
+              const w = filteredRules.filter(r => r.status === "Watch");
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: w.length ? `${w.length} rule${w.length === 1 ? "" : "s"} on watch: ${w.slice(0, 3).map(r => r.rule).join("; ")}.` : "No rules currently on watch — clean book." }];
+            }
+            if (sid === "out") {
+              const o = filteredRules.filter(r => r.status === "Out of Appetite");
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: o.length ? `${o.length} out of appetite: ${o.map(r => r.rule).join("; ")}.` : "Nothing currently out of appetite." }];
+            }
+            if (sid === "summary") return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+              text: `${filteredRules.length} rules visible. ${inAppetite} in appetite, ${watch} on watch, ${outOfAppetite} out. The book is mostly inside the lines.` }];
+          }}
+          freeText={(text) => {
+            const t = text.toLowerCase();
+            if (/\b(how many|count|total)\b/.test(t)) {
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${filteredRules.length} rules in the current view (${inAppetite}/${watch}/${outOfAppetite} in/watch/out).` }];
+            }
+          }}
+          facts={() => [
+            `Appetite rules · ${filteredRules.length} visible`,
+            `Status: ${inAppetite} in appetite · ${watch} watch · ${outOfAppetite} out of appetite`,
+          ].join("\n")}
+        />
+
         {/* Page header */}
         <div style={{ background: N }}>
           <div style={{ height: 4, background: `linear-gradient(90deg,${G} 0%,#A8841C 100%)` }} />
@@ -127,7 +176,7 @@ export function AppetitePage() {
             <div className="flex items-center gap-2">
               {isAdmin ? (
                 <button className="flex items-center gap-2 px-4 py-2 hover:brightness-95 transition-all"
-                  style={{ background: G, color: "white", fontSize: "0.78rem", fontWeight: 700 }}>
+                  style={{ background: G, color: "white", fontSize: "0.78rem", fontWeight: 700, borderRadius: 6 }}>
                   <Edit2 size={13} /> Edit Rules
                 </button>
               ) : (
@@ -166,7 +215,7 @@ export function AppetitePage() {
               {([{ id: "rules" as const, label: "Appetite Rules", icon: <ShieldCheck size={12}/> }, { id: "scoring" as const, label: "Score Model", icon: <Sliders size={12}/> }]).map(v => (
                 <button key={v.id} onClick={() => setViewMode(v.id)}
                   className="flex items-center gap-1.5 px-4 py-2 transition-all"
-                  style={{ background: viewMode === v.id ? N : "white", color: viewMode === v.id ? "white" : TM, border: `1px solid ${viewMode === v.id ? N : BD}`, fontSize: "0.78rem", fontWeight: 600 }}>
+                  style={{ background: viewMode === v.id ? N : "white", color: viewMode === v.id ? "white" : TM, border: `1px solid ${viewMode === v.id ? N : BD}`, fontSize: "0.78rem", fontWeight: 600, borderRadius: 6 }}>
                   {v.icon}{v.label}
                 </button>
               ))}
@@ -177,7 +226,7 @@ export function AppetitePage() {
                   <button key={cat}
                     onClick={() => setActiveCategory(cat)}
                     className="px-3 py-1.5 transition-all"
-                    style={{ fontSize: "0.68rem", fontWeight: activeCategory === cat ? 700 : 500, background: activeCategory === cat ? N : "white", color: activeCategory === cat ? "white" : TM, border: `1px solid ${activeCategory === cat ? N : BDL}` }}>
+                    style={{ fontSize: "0.68rem", fontWeight: activeCategory === cat ? 700 : 500, background: activeCategory === cat ? N : "white", color: activeCategory === cat ? "white" : TM, border: `1px solid ${activeCategory === cat ? N : BDL}`, borderRadius: 6 }}>
                     {cat}
                   </button>
                 ))}

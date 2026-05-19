@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   ArrowLeft, Printer, Download, Shield, Layers, Calendar,
   Star, Bell, ChevronDown, ChevronRight, Check, DollarSign,
-  AlertCircle, FileText, BookOpen,
+  AlertCircle, FileText, BookOpen, Pencil, CheckCircle2, Send, Plus, FileCheck2,
 } from "lucide-react";
 
 /* ── Design tokens ──────────────────────────────────────────────────────── */
@@ -274,69 +274,216 @@ function NotificationsSection() {
 /* ═══════════════════════════════════════════════════════════════════════════
    OPTION PREVIEW CARD
 ═══════════════════════════════════════════════════════════════════════════ */
-function OptionCard({ opt, product }: { opt: OptionPayload; product: ProductPayload }) {
-  const [openSections, setOpenSections] = useState<Set<SectionKey>>(
-    new Set(["policy", "endorsements", "schedules", "memberBenefits", "notifications"])
+function DetailHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 8 }}>{children}</div>
   );
-  const color = product.categoryColor;
+}
 
-  const toggle = (key: SectionKey) => {
-    setOpenSections(prev => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  };
+function OptionCard({
+  opt, product, selected, onToggleSelect, onEdit,
+}: {
+  opt: OptionPayload;
+  product: ProductPayload;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onEdit: () => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  // First three coverage fields shown inline under the label
+  const inlineFields = opt.coverageFields.slice(0, 3);
+  const includedEnds = [
+    ...product.endorsements.map(e => ({ ...e, kind: "Default" as const })),
+    ...opt.addedEndorsements.filter(e => e.included).map(e => ({ ...e, kind: "Added" as const })),
+  ];
 
   return (
-    <div style={{ border: `1.5px solid ${opt.color}40`, background: "white", overflow: "hidden" }}>
-      {/* Option header bar */}
-      <div className="flex items-center justify-between px-5 py-3"
-        style={{ background: opt.color, color: "white" }}>
-        <div className="flex items-center gap-3">
-          <span style={{ width: 10, height: 10, background: "rgba(255,255,255,0.5)", borderRadius: "50%", display: "inline-block" }} />
-          <span style={{ fontSize: "0.88rem", fontWeight: 800, letterSpacing: "0.04em" }}>{opt.label}</span>
+    <div
+      style={{
+        border: `1px solid ${selected ? `${N}40` : BDL}`,
+        background: "white",
+        borderRadius: 8,
+        borderLeft: selected ? `3px solid ${N}` : `1px solid ${selected ? `${N}40` : BDL}`,
+        overflow: "hidden",
+      }}>
+      {/* Row */}
+      <div
+        onClick={onToggleSelect}
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-all"
+        style={{ background: selected ? `${N}06` : "white" }}>
+        {/* Checkbox */}
+        <div
+          onClick={e => { e.stopPropagation(); onToggleSelect(); }}
+          className="shrink-0 flex items-center justify-center"
+          style={{ width: 18, height: 18, background: selected ? N : "white", border: `2px solid ${selected ? N : BD}`, transition: "all 0.12s", borderRadius: 3 }}
+          role="checkbox"
+          aria-checked={selected}>
+          {selected && <Check size={10} color="white" strokeWidth={3} />}
         </div>
-        <div className="text-right">
-          <div style={{ fontSize: "0.58rem", fontWeight: 700, opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.10em" }}>Total Premium</div>
-          <div style={{ fontSize: "1.30rem", fontWeight: 800, lineHeight: 1.1 }}>{fmt(opt.premium)}</div>
-        </div>
-      </div>
-
-      {/* Sections */}
-      <div>
-        {SECTIONS.map((sec, si) => {
-          const isOpen = openSections.has(sec.key);
-          return (
-            <div key={sec.key} style={{ borderTop: si === 0 ? "none" : `1px solid ${BDL}` }}>
-              {/* Section header — clickable */}
-              <button
-                onClick={() => toggle(sec.key)}
-                className="w-full flex items-center justify-between px-5 py-3 hover:brightness-97 transition-all"
-                style={{ background: isOpen ? `${opt.color}06` : TH, border: "none", cursor: "pointer", fontFamily: font }}>
-                <div className="flex items-center gap-2.5">
-                  <span style={{ color: isOpen ? opt.color : TT }}>{sec.icon}</span>
-                  <span style={{ fontSize: "0.80rem", fontWeight: isOpen ? 700 : 600, color: isOpen ? opt.color : TM }}>{sec.label}</span>
-                </div>
-                <span style={{ color: TT }}>
-                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {/* Title + SELECTED badge + inline coverage fields */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "0.02em" }}>{opt.label}</span>
+            {selected && (
+              <span className="inline-flex items-center gap-1" style={{ fontSize: "0.56rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}30`, padding: "1px 8px", letterSpacing: "0.08em", borderRadius: 4, textTransform: "uppercase" }}>
+                <CheckCircle2 size={9} /> Selected
+              </span>
+            )}
+          </div>
+          {inlineFields.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+              {inlineFields.map(f => (
+                <span key={f.label} style={{ fontSize: "0.70rem", color: TT }}>
+                  <span>{f.label}: </span>
+                  <span style={{ color: TM, fontWeight: 600 }}>{f.value}</span>
                 </span>
-              </button>
-
-              {/* Section content */}
-              {isOpen && (
-                <div className="px-5 py-5" style={{ background: "#FAFBFE", borderTop: `1px solid ${BDL}` }}>
-                  {sec.key === "policy"         && <PolicySection opt={opt} color={color} />}
-                  {sec.key === "endorsements"   && <EndorsementsSection opt={opt} product={product} />}
-                  {sec.key === "schedules"      && <SchedulesSection color={color} />}
-                  {sec.key === "memberBenefits" && <MemberBenefitsSection color={color} />}
-                  {sec.key === "notifications"  && <NotificationsSection />}
-                </div>
-              )}
+              ))}
             </div>
-          );
-        })}
+          )}
+        </div>
+        {/* Premium */}
+        <div className="text-right shrink-0">
+          <div style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.10em" }}>Premium</div>
+          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: selected ? N : TD, lineHeight: 1.1, marginTop: 2 }}>{fmt(opt.premium)}</div>
+        </div>
+        {/* Edit */}
+        <button
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+          className="shrink-0 flex items-center gap-1 px-2 py-1.5 hover:bg-slate-200 transition-colors"
+          style={{ background: "transparent", border: `1px solid ${BD}`, color: TM, fontSize: "0.70rem", fontWeight: 600, fontFamily: font, borderRadius: 6, cursor: "pointer" }}
+          title="Edit this option in Underwriting">
+          <Pencil size={11} /> Edit
+        </button>
+        {/* Expand chevron */}
+        <button
+          onClick={e => { e.stopPropagation(); setIsExpanded(v => !v); }}
+          className="shrink-0 flex items-center justify-center hover:bg-slate-200 transition-colors"
+          style={{ width: 28, height: 28, background: "transparent", border: "none", color: TT, cursor: "pointer", borderRadius: 6 }}
+          aria-expanded={isExpanded}
+          title={isExpanded ? "Collapse details" : "Expand details"}>
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
       </div>
+
+      {/* Expanded detail */}
+      {isExpanded && (() => {
+        const selectedItems = opt.coverageItems.filter(ci => ci.checked || ci.required);
+        return (
+        <div className="px-5 py-4 space-y-5" style={{ borderTop: `1px solid ${BDL}`, background: "#FAFBFE" }}>
+          {/* Coverage Terms — all fields */}
+          <div>
+            <DetailHeader>Coverage Terms</DetailHeader>
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+              {opt.coverageFields.map(f => (
+                <div key={f.label} className="px-3 py-2.5"
+                  style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8 }}>
+                  <div style={{ fontSize: "0.56rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{f.label}</div>
+                  <div style={{ fontSize: "0.80rem", fontWeight: 700, color: TD }}>{f.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected Coverage */}
+          <div>
+            <DetailHeader>Selected Coverage</DetailHeader>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8, overflow: "hidden" }}>
+              {selectedItems.length === 0 ? (
+                <div className="px-3 py-3" style={{ fontSize: "0.72rem", color: TT, fontStyle: "italic" }}>No coverage selected.</div>
+              ) : selectedItems.map((ci, i) => (
+                <div key={ci.id} className="flex items-center gap-3 px-3 py-2.5"
+                  style={{ borderBottom: i < selectedItems.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                  <span style={{ fontSize: "0.78rem", color: TD, fontWeight: 600, flex: 1 }}>{ci.label}</span>
+                  {ci.required && (
+                    <span style={{ fontSize: "0.54rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>REQUIRED</span>
+                  )}
+                  {!ci.required && ci.price > 0 && (
+                    <span style={{ fontSize: "0.70rem", fontWeight: 700, color: "#B45309" }}>+{fmt(ci.price)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Endorsements */}
+          <div>
+            <DetailHeader>Endorsements</DetailHeader>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8, overflow: "hidden" }}>
+              {includedEnds.length === 0 ? (
+                <div className="px-3 py-3" style={{ fontSize: "0.72rem", color: TT, fontStyle: "italic" }}>No endorsements attached.</div>
+              ) : includedEnds.map((e, i) => (
+                <div key={e.id} className="flex items-center gap-3 px-3 py-2.5"
+                  style={{ borderBottom: i < includedEnds.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                  <span style={{ fontSize: "0.78rem", color: TD, fontWeight: 600, flex: 1 }}>{e.label}</span>
+                  <span style={{
+                    fontSize: "0.54rem",
+                    fontWeight: 800,
+                    color: e.kind === "Default" ? product.categoryColor : N,
+                    background: e.kind === "Default" ? `${product.categoryColor}12` : `${N}12`,
+                    border: `1px solid ${e.kind === "Default" ? `${product.categoryColor}30` : `${N}30`}`,
+                    padding: "1px 6px",
+                    letterSpacing: "0.08em",
+                    borderRadius: 4,
+                    textTransform: "uppercase",
+                  }}>{e.kind}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Schedules */}
+          <div>
+            <DetailHeader>Schedules</DetailHeader>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8, overflow: "hidden" }}>
+              {MOCK_SCHEDULES.map((s, i) => (
+                <div key={s.name} className="flex items-center gap-3 px-3 py-2.5"
+                  style={{ borderBottom: i < MOCK_SCHEDULES.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                  <span style={{ fontSize: "0.78rem", color: TD, fontWeight: 600, flex: 1 }}>{s.name}</span>
+                  <span style={{ fontSize: "0.70rem", color: TT }}>{s.eff} → {s.exp}</span>
+                  <span style={{ fontSize: "0.78rem", color: N, fontWeight: 700, minWidth: 100, textAlign: "right" }}>{s.limit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Member Benefits */}
+          <div>
+            <DetailHeader>Member Benefits</DetailHeader>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8, overflow: "hidden" }}>
+              {MOCK_BENEFITS.map(b => (
+                <div key={b.title}>
+                  <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${BDL}`, background: `${product.categoryColor}06` }}>
+                    <span style={{ fontSize: "0.80rem", color: TD, fontWeight: 700 }}>{b.title}</span>
+                  </div>
+                  {b.services.map((svc, si) => (
+                    <div key={svc} className="flex items-center gap-2 px-3 py-2"
+                      style={{ borderBottom: si < b.services.length - 1 ? `1px solid ${BDL}` : "none", paddingLeft: 28 }}>
+                      <Star size={10} color={product.categoryColor} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.76rem", color: TM }}>{svc}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notifications */}
+          <div>
+            <DetailHeader>Notifications</DetailHeader>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 8, overflow: "hidden" }}>
+              {MOCK_NOTIFICATIONS.map((n, i) => (
+                <div key={n.code} className="flex items-center gap-3 px-3 py-2.5"
+                  style={{ borderBottom: i < MOCK_NOTIFICATIONS.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}25`, padding: "1px 7px", letterSpacing: "0.06em", borderRadius: 4, minWidth: 64, textAlign: "center" }}>{n.code}</span>
+                  <span style={{ fontSize: "0.76rem", color: TM, flex: 1 }}>{n.label.replace(`${n.code} - `, "")}</span>
+                  <span style={{ fontSize: "0.68rem", color: TT }}>{n.edition}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
@@ -351,13 +498,17 @@ export function QuotePreviewPage() {
 
   const [products, setProducts] = useState<ProductPayload[]>([]);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated]   = useState(false);
+  const [sending, setSending]   = useState(false);
+  const [sent, setSent]         = useState(false);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("ratingPreview");
     if (raw) {
       const data: ProductPayload[] = JSON.parse(raw);
       setProducts(data);
-      setExpandedProducts(new Set(data.map(p => p.id)));
     }
   }, []);
 
@@ -373,6 +524,65 @@ export function QuotePreviewPage() {
     });
   };
 
+  const optionKey = (pid: string, oid: string) => `${pid}::${oid}`;
+  const isOptionSelected = (pid: string, oid: string) => selectedOptions.has(optionKey(pid, oid));
+  const toggleOptionSelected = (pid: string, oid: string) => {
+    setSelectedOptions(prev => {
+      const next = new Set(prev);
+      const key = optionKey(pid, oid);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+  const productSelectionState = (p: ProductPayload): "all" | "some" | "none" => {
+    const total = p.options.length;
+    if (total === 0) return "none";
+    const sel = p.options.filter(o => isOptionSelected(p.id, o.id)).length;
+    if (sel === 0) return "none";
+    if (sel === total) return "all";
+    return "some";
+  };
+  const toggleProductSelection = (p: ProductPayload) => {
+    const state = productSelectionState(p);
+    setSelectedOptions(prev => {
+      const next = new Set(prev);
+      if (state === "all") {
+        p.options.forEach(o => next.delete(optionKey(p.id, o.id)));
+      } else {
+        p.options.forEach(o => next.add(optionKey(p.id, o.id)));
+      }
+      return next;
+    });
+  };
+  const handleEditOption = (pid: string, oid: string) => {
+    navigate(`/submission/${id}?tab=rating&focus=${pid}::${oid}`);
+  };
+
+  const productsWithSelection = products.filter(p => p.options.some(o => isOptionSelected(p.id, o.id))).length;
+  const allProductsHaveSelection = products.length > 0 && productsWithSelection === products.length;
+  const selectedTotal = products.reduce((sum, p) => {
+    const sel = p.options.filter(o => isOptionSelected(p.id, o.id));
+    return sum + sel.reduce((s, o) => s + o.premium, 0);
+  }, 0);
+
+  const handleCreateQuote = () => {
+    if (!allProductsHaveSelection || creating || created) return;
+    setCreating(true);
+    setTimeout(() => {
+      setCreating(false);
+      setCreated(true);
+    }, 900);
+  };
+
+  const handleSendQuote = () => {
+    if (!created || sending || sent) return;
+    setSending(true);
+    setTimeout(() => {
+      setSending(false);
+      setSent(true);
+    }, 900);
+  };
+
   return (
     <AppShell role={(user?.role ?? "underwriter") as RoleId}>
       <div style={{ fontFamily: font, color: TD }}>
@@ -384,17 +594,17 @@ export function QuotePreviewPage() {
           <div className="flex items-center justify-between px-8 py-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate(`/submission/${id}`)}
+                onClick={() => navigate(`/submission/${id}?tab=rating`)}
                 className="flex items-center gap-2 hover:opacity-70 transition-opacity"
                 style={{ color: N, fontSize: "0.78rem", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: font }}>
-                <ArrowLeft size={15} /> Back to Submission
+                <ArrowLeft size={15} /> Back to Underwriting
               </button>
               <span style={{ color: BDL }}>|</span>
               <div>
                 <div className="flex items-center gap-3">
                   <h1 style={{ fontSize: "1.10rem", fontWeight: 800, color: TD }}>Quote Preview</h1>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "2px 10px", letterSpacing: "0.06em" }}>{quoteNum}</span>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1A7A4A", background: "#E8F5E9", border: "1px solid #81C784", padding: "2px 8px" }}>DRAFT</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "2px 10px", letterSpacing: "0.06em", borderRadius: 4 }}>{quoteNum}</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1A7A4A", background: "#E8F5E9", border: "1px solid #81C784", padding: "2px 8px", borderRadius: 4 }}>DRAFT</span>
                 </div>
                 <p style={{ fontSize: "0.72rem", color: TT, marginTop: 3 }}>
                   Generated {today} · {products.length} product{products.length !== 1 ? "s" : ""} ·&nbsp;
@@ -405,12 +615,12 @@ export function QuotePreviewPage() {
             <div className="flex items-center gap-2">
               <button
                 className="flex items-center gap-2 px-4 py-2 hover:brightness-95 transition-all"
-                style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.76rem", fontWeight: 600, fontFamily: font }}>
+                style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.76rem", fontWeight: 600, fontFamily: font, borderRadius: 8 }}>
                 <Printer size={14} /> Print
               </button>
               <button
                 className="flex items-center gap-2 px-4 py-2 hover:brightness-95 transition-all"
-                style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.76rem", fontWeight: 600, fontFamily: font }}>
+                style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.76rem", fontWeight: 600, fontFamily: font, borderRadius: 8 }}>
                 <Download size={14} /> Download PDF
               </button>
             </div>
@@ -437,72 +647,94 @@ export function QuotePreviewPage() {
             </div>
           )}
 
-          {/* Grand total summary bar */}
-          {products.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4"
-              style={{ background: N, border: `1px solid ${N}`, color: "white" }}>
-              <div>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, opacity: 0.65, textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 4 }}>Indicative Grand Total (Option 01 Basis)</div>
-                <div className="flex items-center gap-6 flex-wrap">
-                  {products.map(p => (
-                    <div key={p.id} className="flex items-center gap-2">
-                      <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G, background: "rgba(201,162,39,0.18)", border: `1px solid ${G}40`, padding: "1px 6px" }}>{p.abbr}</span>
-                      <span style={{ fontSize: "0.80rem", fontWeight: 700, opacity: 0.9 }}>{fmt(p.options[0]?.premium ?? 0)}</span>
+          {/* Quote summary card */}
+          {products.length > 0 && (() => {
+            const broker = { name: "Karen Hollis", firm: "Gallagher Education, Inc." };
+            const insured = "Brookfield Day School";
+            const summaryFields = [
+              { label: "Quote No.",  value: quoteNum },
+              { label: "Insured",    value: insured },
+              { label: "Effective",  value: "07/01/2026 → 07/01/2027" },
+              { label: "Broker",     value: `${broker.name} · ${broker.firm}` },
+              { label: "Generated",  value: today },
+              { label: "Products",   value: `${products.length} line${products.length !== 1 ? "s" : ""}` },
+            ];
+            return (
+              <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 10, overflow: "hidden" }}>
+                <div className="grid gap-x-8 gap-y-4 px-6 py-5"
+                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                  {summaryFields.map(f => (
+                    <div key={f.label}>
+                      <div style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 4 }}>{f.label}</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{f.value}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="text-right">
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, opacity: 0.65, textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 3 }}>Grand Total</div>
-                <div style={{ fontSize: "2rem", fontWeight: 800, lineHeight: 1 }}>{fmt(grandTotal)}</div>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Product sections */}
           {products.map(product => {
             const isExpanded = expandedProducts.has(product.id);
+            const selState   = productSelectionState(product);
             return (
-              <div key={product.id} style={{ border: `1px solid ${BD}`, background: "white", overflow: "hidden" }}>
+              <div key={product.id} style={{ border: `1px solid ${BD}`, background: "white", overflow: "hidden", borderRadius: 10 }}>
                 {/* Product header */}
                 <div style={{ borderTop: `4px solid ${product.categoryColor}` }}>
-                  <button
+                  <div
                     onClick={() => toggleProduct(product.id)}
-                    className="w-full flex items-center justify-between px-6 py-4 hover:brightness-97 transition-all"
-                    style={{ background: "white", border: "none", cursor: "pointer", fontFamily: font }}>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <span style={{ fontSize: "0.64rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "3px 10px", letterSpacing: "0.08em" }}>{product.abbr}</span>
-                        <span style={{ fontSize: "1.0rem", fontWeight: 800, color: TD }}>{product.label}</span>
-                        <span style={{ fontSize: "0.62rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 8px" }}>{product.category}</span>
-                      </div>
+                    className="w-full flex items-center justify-between gap-3 px-6 py-4 cursor-pointer hover:bg-slate-50 transition-all"
+                    style={{ background: "white", fontFamily: font }}>
+                    {/* Master checkbox — select / deselect all options for this product */}
+                    <div
+                      onClick={e => { e.stopPropagation(); toggleProductSelection(product); }}
+                      className="shrink-0 flex items-center justify-center"
+                      style={{
+                        width: 18, height: 18,
+                        background: selState === "none" ? "white" : N,
+                        border: `2px solid ${selState === "none" ? BD : N}`,
+                        transition: "all 0.12s",
+                        borderRadius: 3,
+                        cursor: "pointer",
+                      }}
+                      role="checkbox"
+                      aria-checked={selState === "all" ? "true" : selState === "some" ? "mixed" : "false"}
+                      title={selState === "all" ? "Deselect all options" : "Select all options"}>
+                      {selState === "all"  && <Check size={10} color="white" strokeWidth={3} />}
+                      {selState === "some" && <span style={{ width: 8, height: 2, background: "white", display: "block" }} />}
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-3">
-                        {product.options.map(o => (
-                          <div key={o.id} className="flex items-center gap-1.5" title={o.label}>
-                            <span style={{ width: 8, height: 8, background: o.color, borderRadius: "50%", display: "inline-block" }} />
-                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: o.color }}>{fmt(o.premium)}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+                      <span style={{ fontSize: "0.64rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "3px 10px", letterSpacing: "0.08em", borderRadius: 4 }}>{product.abbr}</span>
+                      <span style={{ fontSize: "1.0rem", fontWeight: 800, color: TD }}>{product.label}</span>
+                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 8px", borderRadius: 4 }}>{product.category}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span style={{ fontSize: "0.72rem", color: TT }}>
+                        {product.options.length} option{product.options.length !== 1 ? "s" : ""} · select one or more
+                      </span>
                       <span style={{ color: TT }}>
                         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </span>
                     </div>
-                  </button>
+                  </div>
                 </div>
 
                 {/* Options */}
                 {isExpanded && (
-                  <div className="space-y-0" style={{ borderTop: `1px solid ${BDL}` }}>
+                  <div className="space-y-2 px-4 py-4" style={{ borderTop: `1px solid ${BDL}`, background: "#FAFBFE" }}>
                     {product.options.length === 0 && (
-                      <div className="px-6 py-6" style={{ color: TT, fontSize: "0.80rem" }}>No options configured for this product.</div>
+                      <div className="px-2 py-3" style={{ color: TT, fontSize: "0.80rem" }}>No options configured for this product.</div>
                     )}
-                    {product.options.map((opt, oi) => (
-                      <div key={opt.id} style={{ borderTop: oi > 0 ? `2px dashed ${BDL}` : "none", padding: "24px 24px" }}>
-                        <OptionCard opt={opt} product={product} />
-                      </div>
+                    {product.options.map(opt => (
+                      <OptionCard
+                        key={opt.id}
+                        opt={opt}
+                        product={product}
+                        selected={isOptionSelected(product.id, opt.id)}
+                        onToggleSelect={() => toggleOptionSelected(product.id, opt.id)}
+                        onEdit={() => handleEditOption(product.id, opt.id)}
+                      />
                     ))}
                   </div>
                 )}
@@ -510,19 +742,98 @@ export function QuotePreviewPage() {
             );
           })}
 
-          {/* Disclaimer footer */}
+          {/* Create Quote action */}
           {products.length > 0 && (
-            <div className="flex items-start gap-3 p-4" style={{ background: "#FFF8E6", border: "1px solid #F0D88A" }}>
-              <AlertCircle size={14} color="#8A5C00" style={{ flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <p style={{ fontSize: "0.76rem", fontWeight: 700, color: "#7A4800", marginBottom: 4 }}>Indicative Pricing Disclaimer</p>
-                <p style={{ fontSize: "0.70rem", color: "#7A4800", lineHeight: 1.6 }}>
-                  All premiums shown are indicative only and subject to full underwriting review, actuarial sign-off, and final approval.
-                  This preview does not constitute a binding quote or commitment to insure. Final terms may vary.
-                </p>
+            <div style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 10, overflow: "hidden" }}>
+              {!allProductsHaveSelection && (
+                <div className="flex items-start gap-3 px-5 py-3"
+                  style={{ background: "#FFF8E6", borderBottom: "1px solid #F0D88A" }}>
+                  <AlertCircle size={14} color="#8A5C00" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <p style={{ fontSize: "0.76rem", fontWeight: 700, color: "#7A4800", marginBottom: 2 }}>Select at least one option for every product</p>
+                    <p style={{ fontSize: "0.70rem", color: "#7A4800", lineHeight: 1.5 }}>
+                      {productsWithSelection} of {products.length} product{products.length !== 1 ? "s" : ""} ready — pick an option in the remaining {products.length - productsWithSelection} to enable quote creation.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <div>
+                  <p style={{ fontSize: "0.86rem", fontWeight: 800, color: TD, lineHeight: 1.25 }}>
+                    {sent     ? "Quote sent to broker"
+                     : created ? "Quote created — ready to send"
+                     :           "Ready to create this quote?"}
+                  </p>
+                  <p style={{ fontSize: "0.72rem", color: TT, marginTop: 3 }}>
+                    {created
+                      ? <>Quote record <strong style={{ color: TM }}>{quoteNum}</strong></>
+                      : selectedOptions.size === 0
+                        ? "No options selected yet."
+                        : <>Selected: <strong style={{ color: TM }}>{selectedOptions.size}</strong> option{selectedOptions.size !== 1 ? "s" : ""} across <strong style={{ color: TM }}>{productsWithSelection}</strong> product{productsWithSelection !== 1 ? "s" : ""}</>
+                    }
+                  </p>
+                </div>
+                {sent ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      disabled
+                      className="flex items-center gap-2 px-4 py-2.5"
+                      style={{ border: "1.5px solid #93C8A0", background: "#E8F5EC", color: "#15803D", fontSize: "0.78rem", fontWeight: 800, fontFamily: font, borderRadius: 8, cursor: "default" }}>
+                      <CheckCircle2 size={14} /> Sent
+                    </button>
+                    <button
+                      onClick={() => navigate(`/submission/${id}?tab=rating`)}
+                      className="flex items-center gap-2 px-4 py-2.5 transition-all hover:bg-slate-50 active:scale-95"
+                      style={{ border: `1.5px solid ${BD}`, background: "white", color: TM, fontSize: "0.78rem", fontWeight: 700, fontFamily: font, borderRadius: 8, cursor: "pointer" }}>
+                      <Plus size={14} /> Add Option
+                    </button>
+                    <button
+                      onClick={() => navigate(`/submission/${id}/bind`)}
+                      className="flex items-center gap-2 px-4 py-2.5 transition-all active:scale-95"
+                      style={{ border: "none", background: N, color: "white", fontSize: "0.78rem", fontWeight: 800, fontFamily: font, borderRadius: 8, cursor: "pointer", boxShadow: `0 2px 10px ${N}35` }}>
+                      <FileCheck2 size={14} /> Bind Quote
+                    </button>
+                  </div>
+                ) : created ? (
+                  <button
+                    onClick={handleSendQuote}
+                    disabled={sending}
+                    className="flex items-center gap-2 px-5 py-2.5 transition-all active:scale-95 shrink-0"
+                    style={{
+                      border: "none",
+                      background: sending ? `${N}90` : N,
+                      color: "white",
+                      fontSize: "0.82rem", fontWeight: 800, fontFamily: font, borderRadius: 8,
+                      cursor: sending ? "default" : "pointer",
+                      boxShadow: `0 2px 10px ${N}35`,
+                    }}>
+                    {sending
+                      ? <>Sending…</>
+                      : <><Send size={15} /> Send to Broker</>}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCreateQuote}
+                    disabled={!allProductsHaveSelection || creating}
+                    className="flex items-center gap-2 px-5 py-2.5 transition-all active:scale-95 shrink-0"
+                    style={{
+                      border: "none",
+                      background: !allProductsHaveSelection ? BD : (creating ? `${N}90` : N),
+                      color: "white",
+                      fontSize: "0.82rem", fontWeight: 800, fontFamily: font, borderRadius: 8,
+                      cursor: !allProductsHaveSelection ? "not-allowed" : (creating ? "default" : "pointer"),
+                      boxShadow: !allProductsHaveSelection ? "none" : `0 2px 10px ${N}35`,
+                      opacity: !allProductsHaveSelection ? 0.7 : 1,
+                    }}>
+                    {creating
+                      ? <>Creating…</>
+                      : <><FileText size={15} /> Create Quote</>}
+                  </button>
+                )}
               </div>
             </div>
           )}
+
         </div>
       </div>
     </AppShell>

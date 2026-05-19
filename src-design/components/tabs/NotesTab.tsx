@@ -1,5 +1,7 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router";
 import { Search, Pin, Plus, X } from "lucide-react";
+import { useSubmissionWorkspaceOptional } from "../../context/SubmissionWorkspaceContext";
 
 /* ── Design tokens ────────────────────────────────────────────────────────── */
 const N   = "#0123D4";
@@ -81,10 +83,36 @@ const SEED_NOTES: NoteEntry[] = [
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 export function NotesTab() {
-  const [notes, setNotes]         = useState<NoteEntry[]>(SEED_NOTES);
+  const location = useLocation();
+  const workspace = useSubmissionWorkspaceOptional();
+  const freshFromInbox = (location.state as { freshFromInbox?: boolean } | null)?.freshFromInbox === true;
+  const [notes, setNotes]         = useState<NoteEntry[]>(freshFromInbox ? [] : SEED_NOTES);
   const [search, setSearch]       = useState("");
   const [filter, setFilter]       = useState<"All" | "Mine" | "Pinned">("All");
   const [showModal, setShowModal] = useState(false);
+
+  // Drain any notes pushed from other tabs (e.g. UW Review approve modal).
+  // Runs on mount and whenever the pending-note queue grows.
+  useEffect(() => {
+    if (!workspace || workspace.pendingNotes.length === 0) return;
+    const drained = workspace.drainPendingNotes();
+    if (drained.length === 0) return;
+    setNotes(prev => {
+      const baseId = 1000 + prev.length;
+      const converted: NoteEntry[] = drained.map((p, i) => ({
+        id:          `N-${baseId + i + 1}`,
+        author:      p.author,
+        initials:    p.initials,
+        avatarColor: p.avatarColor,
+        timeAgo:     "Just now",
+        pinned:      false,
+        mine:        true,
+        tags:        p.tags,
+        content:     p.content,
+      }));
+      return [...converted.reverse(), ...prev];
+    });
+  }, [workspace, workspace?.pendingNotes.length]);
 
   /* modal state */
   const [mNote,    setMNote]    = useState("");
@@ -109,6 +137,10 @@ export function NotesTab() {
       n.tags.some(t => t.toLowerCase().includes(q));
     return matchesFilter && matchesSearch;
   });
+
+  /* pin/unpin a note */
+  const togglePin = (id: string) =>
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n));
 
   /* tag input helpers */
   const addTag = (tag: string) => {
@@ -145,15 +177,22 @@ export function NotesTab() {
   return (
     <>
       {/* ── Main panel ─────────────────────────────────────────────────── */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+      <div style={{
+        background: "white",
+        border: `1px solid ${BDL}`,
+        borderTop: `3px solid ${N}`,
+        borderRadius: 8,
+        overflow: "hidden",
+        boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+      }}>
 
         {/* Toolbar */}
         <div className="px-5 py-3 flex flex-wrap items-center gap-3"
-          style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
+          style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
 
           {/* Search */}
           <div className="flex items-center gap-2 flex-1 min-w-[180px] px-3 py-2"
-            style={{ background: "white", border: `1px solid ${BD}` }}>
+            style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
             <Search size={13} color={TT} />
             <input
               value={search}
@@ -180,6 +219,7 @@ export function NotesTab() {
                     background: active ? N : "white",
                     color: active ? "white" : TM,
                     border: `1px solid ${active ? N : BD}`,
+                    borderRadius: 6,
                   }}>
                   {f.key}
                   <span style={{
@@ -197,7 +237,7 @@ export function NotesTab() {
           {/* New note */}
           <button onClick={() => setShowModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 hover:brightness-95 transition-all ml-auto"
-            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+            style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
             <Plus size={13} /> New note
           </button>
         </div>
@@ -205,72 +245,82 @@ export function NotesTab() {
         {/* Notes list */}
         {visible.length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <p style={{ fontSize: "0.84rem", color: TT }}>No notes match your search or filter.</p>
+            <p style={{ fontSize: "0.84rem", color: TT }}>
+              {notes.length === 0
+                ? "No notes yet. Add the first note for this submission."
+                : "No notes match your search or filter."}
+            </p>
           </div>
         ) : (
           <div>
             {visible.map((note, idx) => {
               return (
                 <div key={note.id}
-                  className="px-5 py-5 hover:bg-slate-50/50 transition-colors"
+                  className="px-5 py-3 hover:bg-slate-50/50 transition-colors"
                   style={{ borderBottom: idx < visible.length - 1 ? `1px solid ${BDL}` : "none" }}>
 
                   {/* Row 1: avatar + meta + note ID */}
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-4 mb-1.5">
+                    <div className="flex items-center gap-2.5">
                       {/* Avatar */}
                       <div className="flex items-center justify-center shrink-0"
                         style={{
-                          width: 36, height: 36,
+                          width: 30, height: 30,
                           borderRadius: "50%",
                           background: note.avatarColor,
                           color: "white",
-                          fontSize: "0.68rem", fontWeight: 800,
+                          fontSize: "0.64rem", fontWeight: 800,
                           letterSpacing: "0.02em",
                           flexShrink: 0,
                         }}>
                         {note.initials}
                       </div>
 
-                      {/* Author · time · pinned */}
+                      {/* Author · time · tags */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <span style={{ fontSize: "0.875rem", fontWeight: 700, color: TD }}>{note.author}</span>
                         <span style={{ fontSize: "0.72rem", color: TT }}>·</span>
                         <span style={{ fontSize: "0.72rem", color: TT }}>{note.timeAgo}</span>
-                        {note.pinned && (
-                          <span className="flex items-center gap-1 px-2 py-0.5"
-                            style={{ fontSize: "0.60rem", fontWeight: 700, background: "#FFF8E6", color: "#8A5C00", border: "1px solid #F0D88A" }}>
-                            <Pin size={9} color="#C9A227" />
-                            Pinned
-                          </span>
-                        )}
+                        {note.tags.map(tag => {
+                          const tc = TAG_COLORS[tag] ?? fallbackTag;
+                          return (
+                            <span key={tag}
+                              style={{ fontSize: "0.65rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, padding: "1px 8px", borderRadius: 4 }}>
+                              {tag}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Note ID */}
-                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TT, whiteSpace: "nowrap", marginTop: 2 }}>
-                      {note.id}
-                    </span>
+                    {/* Note ID + Pin toggle */}
+                    <div className="flex items-center gap-2 shrink-0" style={{ marginTop: 2 }}>
+                      <button
+                        onClick={() => togglePin(note.id)}
+                        title={note.pinned ? "Click to unpin" : "Click to pin"}
+                        aria-pressed={note.pinned}
+                        className="flex items-center gap-1 px-2 py-1 transition-all hover:brightness-97"
+                        style={{
+                          fontSize: "0.66rem", fontWeight: 700,
+                          background: note.pinned ? "#FFF8E6" : "white",
+                          color: note.pinned ? "#8A5C00" : TM,
+                          border: `1px solid ${note.pinned ? "#F0D88A" : BD}`,
+                          borderRadius: 4,
+                          cursor: "pointer",
+                          fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                        }}>
+                        <Pin size={11} color={note.pinned ? "#C9A227" : TT}
+                          style={{ fill: note.pinned ? "#C9A227" : "none" }}/>
+                        {note.pinned ? "Pinned" : "Pin"}
+                      </button>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TT, whiteSpace: "nowrap" }}>
+                        {note.id}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Row 2: tags */}
-                  {note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2.5 pl-12">
-                      {note.tags.map(tag => {
-                        const tc = TAG_COLORS[tag] ?? fallbackTag;
-                        return (
-                          <span key={tag}
-                            style={{ fontSize: "0.65rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, padding: "1px 8px" }}>
-                            {tag}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Row 3: content */}
-                  <p className="pl-12"
-                    style={{ fontSize: "0.84rem", color: TM, lineHeight: 1.65 }}>
+                  {/* Row 2: content */}
+                  <p style={{ fontSize: "0.82rem", color: TM, lineHeight: 1.5, paddingLeft: 40 }}>
                     {note.content}
                   </p>
                 </div>
@@ -292,6 +342,7 @@ export function NotesTab() {
               maxWidth: 680,
               background: "white",
               border: `1px solid ${BD}`,
+              borderRadius: 8,
               boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
             }}>
 
@@ -306,7 +357,7 @@ export function NotesTab() {
               </div>
               <button onClick={() => setShowModal(false)}
                 className="flex items-center justify-center hover:bg-slate-100 transition-colors"
-                style={{ width: 28, height: 28, color: TT }}>
+                style={{ width: 28, height: 28, color: TT, borderRadius: 6 }}>
                 <X size={16} />
               </button>
             </div>
@@ -324,7 +375,7 @@ export function NotesTab() {
                   <input
                     defaultValue="Brookfield Day School"
                     className="w-full px-3 py-2.5 outline-none"
-                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
+                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
                   />
                 </div>
                 <div>
@@ -335,7 +386,7 @@ export function NotesTab() {
                   <input
                     defaultValue="SUB-10428"
                     className="w-full px-3 py-2.5 outline-none"
-                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
+                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
                   />
                 </div>
               </div>
@@ -349,7 +400,7 @@ export function NotesTab() {
                   placeholder="What did you learn, decide, or need to follow up on?"
                   rows={5}
                   className="w-full outline-none resize-y px-3 py-3"
-                  style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white", boxSizing: "border-box" }}
+                  style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white", boxSizing: "border-box" }}
                 />
               </div>
 
@@ -359,15 +410,15 @@ export function NotesTab() {
 
                 {/* Tag input */}
                 <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 mb-2"
-                  style={{ border: `1px solid ${BD}`, background: "white", minHeight: 40, cursor: "text" }}
+                  style={{ border: `1px solid ${BD}`, borderRadius: 6, background: "white", minHeight: 40, cursor: "text" }}
                   onClick={() => tagInputRef.current?.focus()}>
                   {mTags.map(tag => {
                     const tc = TAG_COLORS[tag] ?? fallbackTag;
                     return (
                       <span key={tag} className="flex items-center gap-1 px-2 py-0.5"
-                        style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>
+                        style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, borderRadius: 4 }}>
                         {tag}
-                        <button onClick={() => removeTag(tag)} style={{ color: tc.text, display: "flex", alignItems: "center" }}>
+                        <button onClick={() => removeTag(tag)} style={{ color: tc.text, display: "flex", alignItems: "center", borderRadius: 6 }}>
                           <X size={9} />
                         </button>
                       </span>
@@ -389,7 +440,7 @@ export function NotesTab() {
                   {QUICK_TAGS.filter(t => !mTags.includes(t)).map(tag => (
                     <button key={tag} onClick={() => addTag(tag)}
                       className="flex items-center gap-1 px-2.5 py-1 hover:brightness-97 transition-all"
-                      style={{ fontSize: "0.70rem", fontWeight: 600, background: TH, color: TM, border: `1px solid ${BD}` }}>
+                      style={{ fontSize: "0.70rem", fontWeight: 600, background: TH, color: TM, border: `1px solid ${BD}`, borderRadius: 6 }}>
                       <Plus size={9} />
                       {tag}
                     </button>
@@ -407,14 +458,14 @@ export function NotesTab() {
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowModal(false)}
                   className="px-4 py-2 hover:brightness-97 transition-all"
-                  style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}` }}>
+                  style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
                   Cancel
                 </button>
                 <button
                   onClick={handleAddNote}
                   disabled={!mNote.trim()}
                   className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700 }}>
+                  style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
                   <Plus size={13} /> Add note
                 </button>
               </div>

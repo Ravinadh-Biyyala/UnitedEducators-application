@@ -12,6 +12,9 @@ import {
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
+import { PageRegister } from "../components/companion/PageRegister";
+import { newId, now } from "../components/companion/CompanionContext";
+import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 const N   = "#0123D4";
@@ -405,7 +408,7 @@ function SendToBrokerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:"rgba(0,0,0,0.45)"}}>
-      <div style={{width:560, background:"white", boxShadow:"0 20px 60px rgba(0,0,0,0.25)", fontFamily:font, maxHeight:"90vh", overflowY:"auto"}}>
+      <div style={{width:560, background:"white", borderRadius:8, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.25)", fontFamily:font, maxHeight:"90vh", overflowY:"auto"}}>
         {/* Header */}
         <div style={{background:N, height:4, backgroundImage:`linear-gradient(90deg,${G} 0%,${GD} 100%)`}}/>
         <div className="flex items-start justify-between px-6 py-5" style={{borderBottom:`1px solid ${BDL}`}}>
@@ -437,7 +440,7 @@ function SendToBrokerModal({
               Broker / Agency
             </label>
             <input value={brokerName} onChange={e=>setBrokerName(e.target.value)}
-              style={{width:"100%",padding:"8px 12px",border:`1px solid ${BD}`,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
+              style={{width:"100%",padding:"8px 12px",border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
           </div>
 
           {/* Broker email */}
@@ -448,7 +451,7 @@ function SendToBrokerModal({
             <div className="relative">
               <Mail size={14} color={TT} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}/>
               <input value={brokerEmail} onChange={e=>setBrokerEmail(e.target.value)} type="email"
-                style={{width:"100%",paddingLeft:32,paddingRight:12,paddingTop:8,paddingBottom:8,border:`1px solid ${BD}`,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
+                style={{width:"100%",paddingLeft:32,paddingRight:12,paddingTop:8,paddingBottom:8,border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
             </div>
           </div>
 
@@ -460,7 +463,7 @@ function SendToBrokerModal({
             <div className="relative">
               <Calendar size={14} color={TT} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}/>
               <input type="date" value={expiryDate} onChange={e=>setExpiryDate(e.target.value)}
-                style={{width:"100%",paddingLeft:32,paddingRight:12,paddingTop:8,paddingBottom:8,border:`1px solid ${BD}`,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
+                style={{width:"100%",paddingLeft:32,paddingRight:12,paddingTop:8,paddingBottom:8,border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.82rem",fontFamily:font,outline:"none",color:TD}}/>
             </div>
           </div>
 
@@ -470,12 +473,12 @@ function SendToBrokerModal({
               Cover Message
             </label>
             <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={4}
-              style={{width:"100%",padding:"8px 12px",border:`1px solid ${BD}`,fontSize:"0.78rem",fontFamily:font,outline:"none",color:TD,resize:"vertical",lineHeight:1.6}}/>
+              style={{width:"100%",padding:"8px 12px",border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.78rem",fontFamily:font,outline:"none",color:TD,resize:"vertical",lineHeight:1.6}}/>
           </div>
 
           {/* Negotiation notice */}
           <div className="flex items-start gap-2.5 p-3"
-            style={{background:"#FFF8E6",border:`1px solid #F0D88A`,borderLeft:`3px solid ${G}`}}>
+            style={{background:"#FFF8E6",border:`1px solid #F0D88A`,borderLeft:`3px solid ${G}`,borderRadius:6}}>
             <MessageSquare size={13} color="#8A5C00" style={{marginTop:1,flexShrink:0}}/>
             <div>
               <p style={{fontSize:"0.72rem",fontWeight:700,color:"#8A5C00"}}>Open for Negotiation</p>
@@ -491,12 +494,12 @@ function SendToBrokerModal({
           style={{borderTop:`1px solid ${BDL}`,background:TH}}>
           <button onClick={onClose}
             className="px-5 py-2.5 hover:bg-slate-100 transition-colors"
-            style={{border:`1px solid ${BD}`,fontSize:"0.80rem",fontWeight:600,color:TM}}>
+            style={{border:`1px solid ${BD}`,fontSize:"0.80rem",fontWeight:600,color:TM,borderRadius:6}}>
             Cancel
           </button>
           <button onClick={handleSend} disabled={sending}
             className="flex items-center gap-2 px-6 py-2.5 transition-all hover:brightness-95 active:scale-95"
-            style={{background:N,color:"white",fontSize:"0.80rem",fontWeight:700,opacity:sending?0.7:1}}>
+            style={{background:N,color:"white",fontSize:"0.80rem",fontWeight:700,opacity:sending?0.7:1,borderRadius:6}}>
             {sending
               ? <><RefreshCw size={14} className="animate-spin"/> Sending…</>
               : <><Send size={14}/> Send to Broker</>}
@@ -549,14 +552,14 @@ function NegotiationBanner({
           {isSent && (
             <button onClick={onOpenNegotiation}
               className="flex items-center gap-2 px-4 py-2 transition-all hover:brightness-95"
-              style={{background:"#00427A",color:"white",fontSize:"0.75rem",fontWeight:700}}>
+              style={{background:"#00427A",color:"white",fontSize:"0.75rem",fontWeight:700,borderRadius:6}}>
               <MessageSquare size={12}/> Open for Negotiation
             </button>
           )}
           {isNegotiating && (
             <button onClick={onEditQuote}
               className="flex items-center gap-2 px-4 py-2 transition-all hover:brightness-95 active:scale-95"
-              style={{background:G,color:"white",fontSize:"0.75rem",fontWeight:700,boxShadow:"0 2px 8px rgba(201,162,39,0.35)"}}>
+              style={{background:G,color:"white",fontSize:"0.75rem",fontWeight:700,boxShadow:"0 2px 8px rgba(201,162,39,0.35)",borderRadius:6}}>
               <Edit3 size={12}/> Edit Quote
             </button>
           )}
@@ -696,7 +699,7 @@ export function QuoteBuilder() {
                     const updated=opt.coverageFields.map((f,i)=>i===fi?{...f,value:e.target.value}:f);
                     updateOption(pid,opt.id,{coverageFields:updated});
                   }}
-                  style={{width:"100%",padding:"7px 10px",border:`1px solid ${BD}`,fontSize:"0.80rem",color:TD,background:isLocked?"#F9FAFB":"white",fontFamily:font,outline:"none"}}>
+                  style={{width:"100%",padding:"7px 10px",border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.80rem",color:TD,background:isLocked?"#F9FAFB":"white",fontFamily:font,outline:"none"}}>
                   {field.options!.map(o=><option key={o} value={o}>{o}</option>)}
                 </select>
               ):(
@@ -706,7 +709,7 @@ export function QuoteBuilder() {
                     const updated=opt.coverageFields.map((f,i)=>i===fi?{...f,value:e.target.value}:f);
                     updateOption(pid,opt.id,{coverageFields:updated});
                   }}
-                  style={{width:"100%",padding:"7px 10px",border:`1px solid ${BD}`,fontSize:"0.80rem",color:TD,background:isLocked?"#F9FAFB":"white",fontFamily:font,outline:"none"}}/>
+                  style={{width:"100%",padding:"7px 10px",border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.80rem",color:TD,background:isLocked?"#F9FAFB":"white",fontFamily:font,outline:"none"}}/>
               )}
             </div>
           ))}
@@ -731,12 +734,12 @@ export function QuoteBuilder() {
           {!isLocked && (
             <div className="flex items-center gap-2">
               <button onClick={()=>updateOption(pid,opt.id,{coverageItems:opt.coverageItems.map(c=>({...c,checked:true}))})}
-                style={{fontSize:"0.65rem",color:N,fontWeight:700}} className="hover:underline">
+                style={{fontSize:"0.65rem",color:N,fontWeight:700,borderRadius:6}} className="hover:underline">
                 Select all
               </button>
               <span style={{color:BD}}>·</span>
               <button onClick={()=>updateOption(pid,opt.id,{coverageItems:opt.coverageItems.map(c=>c.required?c:{...c,checked:false})})}
-                style={{fontSize:"0.65rem",color:TM,fontWeight:600}} className="hover:underline">
+                style={{fontSize:"0.65rem",color:TM,fontWeight:600,borderRadius:6}} className="hover:underline">
                 Required only
               </button>
             </div>
@@ -808,14 +811,14 @@ export function QuoteBuilder() {
                                 updateOption(pid,opt.id,{coverageItems:updated});
                               }
                             }}
-                            style={{width:72,padding:"2px 5px",border:`1px solid ${N}`,fontSize:"0.75rem",fontFamily:font,outline:"none",textAlign:"right"}}
+                            style={{width:72,padding:"2px 5px",border:`1px solid ${N}`,borderRadius:6,fontSize:"0.75rem",fontFamily:font,outline:"none",textAlign:"right"}}
                           />
                           <button onClick={e=>{
                             e.stopPropagation();
                             const updated=opt.coverageItems.map((c,i)=>i===ci?{...c,editingPrice:false}:c);
                             updateOption(pid,opt.id,{coverageItems:updated});
                           }} className="flex items-center justify-center hover:opacity-70"
-                            style={{width:20,height:20,background:`${N}15`,border:`1px solid ${N}30`}}>
+                            style={{width:20,height:20,background:`${N}15`,border:`1px solid ${N}30`,borderRadius:6}}>
                             <Save size={10} color={N}/>
                           </button>
                         </div>
@@ -835,7 +838,7 @@ export function QuoteBuilder() {
                                 updateOption(pid,opt.id,{coverageItems:updated});
                               }}
                               className="flex items-center justify-center hover:opacity-70 transition-opacity"
-                              style={{width:20,height:20,background:TH,border:`1px solid ${BDL}`}}
+                              style={{width:20,height:20,background:TH,border:`1px solid ${BDL}`,borderRadius:6}}
                               title="Edit price">
                               <Edit3 size={10} color={TT}/>
                             </button>
@@ -941,7 +944,7 @@ export function QuoteBuilder() {
     return (
       <div className="space-y-5">
         {/* Breakdown */}
-        <div style={{border:`1px solid ${BD}`,background:"white"}}>
+        <div style={{border:`1px solid ${BD}`,borderRadius:8,background:"white",overflow:"hidden"}}>
           <div className="px-5 py-3" style={{background:TH,borderBottom:`1px solid ${BDL}`}}>
             <p style={{fontSize:"0.62rem",fontWeight:700,color:TT,textTransform:"uppercase",letterSpacing:"0.09em"}}>Premium Breakdown</p>
           </div>
@@ -962,13 +965,13 @@ export function QuoteBuilder() {
         </div>
 
         {/* Adjustments */}
-        <div style={{border:`1px solid ${BD}`,background:"white"}}>
+        <div style={{border:`1px solid ${BD}`,borderRadius:8,background:"white",overflow:"hidden"}}>
           <div className="flex items-center justify-between px-5 py-3" style={{background:TH,borderBottom:`1px solid ${BDL}`}}>
             <p style={{fontSize:"0.62rem",fontWeight:700,color:TT,textTransform:"uppercase",letterSpacing:"0.09em"}}>UW Adjustments</p>
             {!isLocked && (
               <button onClick={()=>updateOption(pid,opt.id,{editingPremium:!opt.editingPremium})}
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-                style={{fontSize:"0.68rem",fontWeight:700,color:N}}>
+                style={{fontSize:"0.68rem",fontWeight:700,color:N,borderRadius:6}}>
                 {opt.editingPremium?<><Save size={11}/> Save</>:<><Edit3 size={11}/> Edit</>}
               </button>
             )}
@@ -984,7 +987,7 @@ export function QuoteBuilder() {
               <div className="flex items-center gap-3">
                 <button disabled={!opt.editingPremium||opt.adjustmentPct<=-30}
                   onClick={()=>updateOption(pid,opt.id,{adjustmentPct:Math.max(-30,opt.adjustmentPct-5)})}
-                  style={{width:30,height:30,background:opt.editingPremium?"#FBEAEA":TH,border:`1px solid ${opt.editingPremium?"#E8A8A8":BDL}`,cursor:opt.editingPremium?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  style={{width:30,height:30,background:opt.editingPremium?"#FBEAEA":TH,border:`1px solid ${opt.editingPremium?"#E8A8A8":BDL}`,cursor:opt.editingPremium?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6}}>
                   <Minus size={13} color={opt.editingPremium?"#B91C1C":TT}/>
                 </button>
                 <div className="flex-1">
@@ -995,13 +998,13 @@ export function QuoteBuilder() {
                 </div>
                 <button disabled={!opt.editingPremium||opt.adjustmentPct>=30}
                   onClick={()=>updateOption(pid,opt.id,{adjustmentPct:Math.min(30,opt.adjustmentPct+5)})}
-                  style={{width:30,height:30,background:opt.editingPremium?"#E8F5EC":TH,border:`1px solid ${opt.editingPremium?"#93C8A0":BDL}`,cursor:opt.editingPremium?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  style={{width:30,height:30,background:opt.editingPremium?"#E8F5EC":TH,border:`1px solid ${opt.editingPremium?"#93C8A0":BDL}`,cursor:opt.editingPremium?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6}}>
                   <Plus size={13} color={opt.editingPremium?"#2E7D32":TT}/>
                 </button>
                 {opt.editingPremium && (
                   <input type="number" min={-30} max={30} value={opt.adjustmentPct}
                     onChange={e=>updateOption(pid,opt.id,{adjustmentPct:Math.max(-30,Math.min(30,Number(e.target.value)))})}
-                    style={{width:60,padding:"5px 8px",border:`1px solid ${BD}`,fontSize:"0.80rem",fontFamily:font,textAlign:"center",outline:"none"}}/>
+                    style={{width:60,padding:"5px 8px",border:`1px solid ${BD}`,borderRadius:6,fontSize:"0.80rem",fontFamily:font,textAlign:"center",outline:"none"}}/>
                 )}
               </div>
               <div className="flex justify-between mt-1">
@@ -1016,14 +1019,14 @@ export function QuoteBuilder() {
                 <input type="number" disabled={!opt.editingPremium||isLocked} value={opt.manualAdjustment}
                   onChange={e=>updateOption(pid,opt.id,{manualAdjustment:Number(e.target.value)})}
                   placeholder="e.g. -500 or 1200"
-                  style={{flex:1,padding:"7px 10px",border:`1px solid ${opt.editingPremium?BD:BDL}`,fontSize:"0.80rem",fontFamily:font,outline:"none",background:opt.editingPremium?"white":"#F9FAFB",color:TD}}/>
+                  style={{flex:1,padding:"7px 10px",border:`1px solid ${opt.editingPremium?BD:BDL}`,borderRadius:6,fontSize:"0.80rem",fontFamily:font,outline:"none",background:opt.editingPremium?"white":"#F9FAFB",color:TD}}/>
               </div>
             </div>
           </div>
         </div>
 
         {/* Final */}
-        <div style={{border:`2px solid ${N}`,background:`${N}08`}}>
+        <div style={{border:`2px solid ${N}`,borderRadius:8,background:`${N}08`}}>
           <div className="flex items-center justify-between px-5 py-4">
             <div>
               <p style={{fontSize:"0.62rem",fontWeight:700,color:N,textTransform:"uppercase",letterSpacing:"0.09em"}}>Final Quoted Premium</p>
@@ -1040,6 +1043,49 @@ export function QuoteBuilder() {
 
   return (
     <AppShell activePage="submissions" role={user?.roleId ?? "sr-uw"} onRoleChange={() => {}}>
+      <PageRegister
+        routeKey={`page:quote-builder:${id ?? "current"}`}
+        title="Quote Builder"
+        subtitle={`${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"} · $${Math.round(totalPremium).toLocaleString()}`}
+        greeting={`Building the quote — ${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"} selected, total ${"$" + Math.round(totalPremium).toLocaleString()}. I can validate the factor band, check authority triggers, or draft an indication letter.`}
+        suggestions={[
+          { id: "validate", label: "Validate factor band", tone: "blue", icon: "ShieldCheck" },
+          { id: "authority", label: "Any authority triggers?", tone: "red", icon: "AlertTriangle" },
+          { id: "indication", label: "Draft indication letter", tone: "violet", icon: "Mail" },
+          { id: "summary", label: "Summarize the quote", tone: "gold", icon: "Sparkles" },
+          { id: "preview", label: "Preview quote", tone: "gold", icon: "FileText" },
+        ]}
+        respond={(sid) => {
+          if (sid === "summary") return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+            text: `Quote in progress: ${selectedIds.length} line${selectedIds.length === 1 ? "" : "s"}, total ${"$" + Math.round(totalPremium).toLocaleString()}. Status: ${quoteStatus}. ${selectedIds.length === 0 ? "Add products to begin." : ""}` }];
+          if (sid === "authority") {
+            const above750 = totalPremium > 750_000;
+            return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+              text: above750
+                ? `Heads up: total premium ${"$" + Math.round(totalPremium).toLocaleString()} crosses the $750K referral trigger. I can route to Robert Chen (Director of UW) with a one-line rationale.`
+                : `No authority triggers fired at this premium level (${"$" + Math.round(totalPremium).toLocaleString()}). Standard authority covers it — keep going.` }];
+          }
+          if (sid === "validate") return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+            text: `Factors per line live inside each product card. UE's standard band is roughly 0.85×–1.30×; anything > 1.20× usually needs a rationale memo. Want me to scan the active option?` }];
+        }}
+        freeText={(text) => {
+          const t = text.toLowerCase();
+          if (/\b(total|premium|how much|price)\b/.test(t)) {
+            return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+              text: `Current total: ${"$" + Math.round(totalPremium).toLocaleString()} across ${selectedIds.length} line${selectedIds.length === 1 ? "" : "s"}.` }];
+          }
+          if (/\b(send|issue|broker|email)\b/.test(t)) {
+            return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+              text: `When you're ready to send, use the broker dialog at the top right. I'll draft the email if you tap "Draft indication letter".` }];
+          }
+        }}
+        facts={() => [
+          `Quote Builder · submission ${id ?? "—"}`,
+          `Selected products: ${selectedIds.length} (${selectedIds.join(", ") || "none"})`,
+          `Total premium: $${Math.round(totalPremium).toLocaleString()}`,
+          `Quote status: ${quoteStatus}${brokerSend ? ` · sent to ${brokerSend.brokerName}` : ""}`,
+        ].join("\n")}
+      />
       <div style={{fontFamily:font,color:TD,minHeight:"100%",background:BG}}>
 
         {/* Modal */}
@@ -1056,10 +1102,10 @@ export function QuoteBuilder() {
         <div className="flex items-center justify-between px-8 py-4"
           style={{background:N,borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
           <div className="flex items-center gap-4">
-            <button onClick={()=>navigate("/submission/"+id)}
+            <button onClick={()=>navigate("/submission/"+id+"?tab=rating")}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.65)",fontWeight:500}}>
-              <ArrowLeft size={14}/> Back to Submission
+              style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.65)",fontWeight:500,borderRadius:6}}>
+              <ArrowLeft size={14}/> Back to Underwriting
             </button>
             <span style={{color:"rgba(255,255,255,0.2)"}}>|</span>
             <div className="flex items-center gap-2.5">
@@ -1178,7 +1224,7 @@ export function QuoteBuilder() {
                 {selectedIds.length>0 && !isLocked && (
                   <button onClick={()=>{setSelectedIds([]);setActiveProductId(null);}}
                     className="flex items-center gap-1 hover:opacity-70 transition-opacity"
-                    style={{fontSize:"0.65rem",color:"#B91C1C",fontWeight:600}}>
+                    style={{fontSize:"0.65rem",color:"#B91C1C",fontWeight:600,borderRadius:6}}>
                     <X size={10}/> Clear
                   </button>
                 )}
@@ -1243,7 +1289,7 @@ export function QuoteBuilder() {
                         <div key={opt.id} className="flex items-center">
                           <button onClick={()=>setActiveOption(activeProductId!,opt.id)}
                             className="flex items-center gap-2 px-3 py-1.5 transition-all"
-                            style={{background:isActive?color:"white",border:`1.5px solid ${isActive?color:BD}`,color:isActive?"white":TM,fontSize:"0.76rem",fontWeight:isActive?700:500}}>
+                            style={{background:isActive?color:"white",border:`1.5px solid ${isActive?color:BD}`,color:isActive?"white":TM,fontSize:"0.76rem",fontWeight:isActive?700:500,borderRadius:6}}>
                             <span style={{width:8,height:8,borderRadius:"50%",background:isActive?"rgba(255,255,255,0.6)":color,display:"inline-block",flexShrink:0}}/>
                             {opt.name}
                             <span style={{fontSize:"0.60rem",fontWeight:700,background:isActive?"rgba(255,255,255,0.2)":`${color}18`,color:isActive?"white":color,padding:"0 5px",borderRadius:8}}>
@@ -1253,7 +1299,7 @@ export function QuoteBuilder() {
                           {activeState.options.length>1 && !isLocked && (
                             <button onClick={()=>removeOption(activeProductId!,opt.id)}
                               className="flex items-center justify-center hover:opacity-80"
-                              style={{width:16,height:16,background:"#FBEAEA",border:"1px solid #E8A8A8",marginLeft:2}}>
+                              style={{width:16,height:16,background:"#FBEAEA",border:"1px solid #E8A8A8",marginLeft:2,borderRadius:6}}>
                               <X size={8} color="#B91C1C"/>
                             </button>
                           )}
@@ -1264,12 +1310,12 @@ export function QuoteBuilder() {
                       <>
                         <button onClick={()=>addOption(activeProductId!)}
                           className="flex items-center gap-1.5 px-3 py-1.5 transition-all hover:brightness-95"
-                          style={{border:`1.5px dashed ${BD}`,background:TH,fontSize:"0.72rem",fontWeight:600,color:TM}}>
+                          style={{border:`1.5px dashed ${BD}`,background:TH,fontSize:"0.72rem",fontWeight:600,color:TM,borderRadius:6}}>
                           <Plus size={11}/> New Option
                         </button>
                         <button onClick={()=>duplicateOption(activeProductId!,activeState.activeOptionId)}
                           className="flex items-center gap-1.5 px-3 py-1.5 transition-all hover:brightness-95"
-                          style={{border:`1.5px solid ${BDL}`,background:"white",fontSize:"0.72rem",fontWeight:600,color:TM}}>
+                          style={{border:`1.5px solid ${BDL}`,background:"white",fontSize:"0.72rem",fontWeight:600,color:TM,borderRadius:6}}>
                           <Copy size={11}/> Duplicate
                         </button>
                       </>
@@ -1297,7 +1343,7 @@ export function QuoteBuilder() {
                       <button key={tab}
                         onClick={()=>updateOption(activeProductId!,activeOption.id,{subTab:tab})}
                         className="relative flex items-center gap-2 px-5 py-3 transition-all whitespace-nowrap"
-                        style={{fontSize:"0.80rem",fontWeight:isActive?700:400,color:isActive?N:TM,background:isActive?"white":"transparent",border:"none",outline:"none"}}>
+                        style={{fontSize:"0.80rem",fontWeight:isActive?700:400,color:isActive?N:TM,background:isActive?"white":"transparent",border:"none",outline:"none",borderRadius:6}}>
                         <span style={{color:isActive?N:TT}}>{icons[tab]}</span>
                         {labels[tab]}
                         {endoBadge && (
@@ -1326,7 +1372,7 @@ export function QuoteBuilder() {
                 {/* Comparison table */}
                 {activeState.options.length>1 && (
                   <div className="px-8 pb-8">
-                    <div style={{border:`1px solid ${BDL}`,background:"white"}}>
+                    <div style={{border:`1px solid ${BDL}`,borderRadius:8,background:"white",overflow:"hidden"}}>
                       <div className="px-5 py-3" style={{background:TH,borderBottom:`1px solid ${BDL}`}}>
                         <p style={{fontSize:"0.62rem",fontWeight:700,color:TT,textTransform:"uppercase",letterSpacing:"0.09em"}}>Option Comparison</p>
                       </div>
@@ -1383,7 +1429,7 @@ export function QuoteBuilder() {
                       return (
                         <button key={pid} onClick={()=>setActiveProductId(pid)}
                           className="flex items-center gap-1.5 px-3 py-1.5 transition-all"
-                          style={{fontSize:"0.68rem",fontWeight:700,background:pid===activeProductId?N:"white",color:pid===activeProductId?"white":TM,border:`1px solid ${pid===activeProductId?N:BD}`}}>
+                          style={{fontSize:"0.68rem",fontWeight:700,background:pid===activeProductId?N:"white",color:pid===activeProductId?"white":TM,border:`1px solid ${pid===activeProductId?N:BD}`,borderRadius:6}}>
                           {p.abbr}
                           {opt && <span style={{color:pid===activeProductId?"rgba(255,255,255,0.65)":TT,fontWeight:400}}>{fmt(calcOptionPremium(opt))}</span>}
                         </button>
@@ -1441,7 +1487,7 @@ export function QuoteBuilder() {
             )}
             <button onClick={()=>navigate("/submission/"+id)}
               className="px-5 py-2.5 transition-colors hover:bg-slate-50"
-              style={{border:`1px solid ${BD}`,fontSize:"0.80rem",fontWeight:600,color:TM}}>
+              style={{border:`1px solid ${BD}`,fontSize:"0.80rem",fontWeight:600,color:TM,borderRadius:6}}>
               Cancel
             </button>
 
@@ -1449,7 +1495,7 @@ export function QuoteBuilder() {
             {quoteStatus==="negotiating" && (
               <button onClick={handleEditQuote}
                 className="flex items-center gap-2 px-6 py-2.5 transition-all hover:brightness-95 active:scale-95"
-                style={{background:G,color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:"0 2px 8px rgba(201,162,39,0.35)"}}>
+                style={{background:G,color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:"0 2px 8px rgba(201,162,39,0.35)",borderRadius:6}}>
                 <Edit3 size={14}/> Edit Quote
               </button>
             )}
@@ -1470,7 +1516,7 @@ export function QuoteBuilder() {
                   onClick={handleIssueQuote}
                   disabled={selectedIds.length===0}
                   className="flex items-center gap-2 px-6 py-2.5 transition-all hover:brightness-95 active:scale-95"
-                  style={{background:selectedIds.length>0?G:"#E5DFC0",color:selectedIds.length>0?"white":"#A09060",fontSize:"0.80rem",fontWeight:700,boxShadow:selectedIds.length>0?"0 2px 8px rgba(201,162,39,0.35)":"none",cursor:selectedIds.length>0?"pointer":"not-allowed"}}>
+                  style={{background:selectedIds.length>0?G:"#E5DFC0",color:selectedIds.length>0?"white":"#A09060",fontSize:"0.80rem",fontWeight:700,boxShadow:selectedIds.length>0?"0 2px 8px rgba(201,162,39,0.35)":"none",cursor:selectedIds.length>0?"pointer":"not-allowed",borderRadius:6}}>
                   {issued?<><CheckCircle2 size={14} color="#2E7D32"/> Quote Issued!</>:<><FileText size={14}/> Issue Quote</>}
                 </button>
 
@@ -1480,19 +1526,19 @@ export function QuoteBuilder() {
                     onClick={()=>setShowSendModal(true)}
                     disabled={selectedIds.length===0}
                     className="flex items-center gap-2 px-6 py-2.5 transition-all hover:brightness-95 active:scale-95"
-                    style={{background:N,color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:"0 2px 8px rgba(1,35,212,0.30)",cursor:selectedIds.length>0?"pointer":"not-allowed"}}>
+                    style={{background:N,color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:"0 2px 8px rgba(1,35,212,0.30)",cursor:selectedIds.length>0?"pointer":"not-allowed",borderRadius:6}}>
                     <Send size={14}/> Send to Broker
                   </button>
                 )}
 
-                {/* Bind Policy */}
+                {/* Bind Quote */}
                 {quoteStatus==="draft" && (
                   <button
-                    onClick={()=>navigate("/submission/"+id)}
+                    onClick={()=>navigate(`/submission/${id}/bind`)}
                     disabled={selectedIds.length===0}
                     className="flex items-center gap-2 px-6 py-2.5 transition-all hover:brightness-95 active:scale-95"
-                    style={{background:selectedIds.length>0?N:"#B0BEC5",color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:selectedIds.length>0?"0 2px 8px rgba(1,35,212,0.30)":"none",cursor:selectedIds.length>0?"pointer":"not-allowed"}}>
-                    <ClipboardCheck size={14}/> Bind Policy
+                    style={{background:selectedIds.length>0?N:"#B0BEC5",color:"white",fontSize:"0.80rem",fontWeight:700,boxShadow:selectedIds.length>0?"0 2px 8px rgba(1,35,212,0.30)":"none",cursor:selectedIds.length>0?"pointer":"not-allowed",borderRadius:6}}>
+                    <ClipboardCheck size={14}/> Bind Quote
                   </button>
                 )}
               </>

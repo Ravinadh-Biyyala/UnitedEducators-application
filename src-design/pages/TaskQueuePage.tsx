@@ -9,16 +9,101 @@ import {
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
+import { PrimaryWhiteButton } from "../components/DashboardCards";
+import { PageRegister } from "../components/companion/PageRegister";
+import { newId, now } from "../components/companion/CompanionContext";
+import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
 
 const N   = "#0123D4";
 const G   = "#C9A227";
-const TH  = "#F0F3F8";
-const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
 const TT  = "#7A8FA3";
 const font = "'Source Sans 3', system-ui, sans-serif";
+
+// ─── KPI Tile (Dashboard hover effect, click-to-filter) ──────────────────────
+function KPITile({ label, value, sub, accent, icon, onClick, selected = false }: {
+  label: string; value: string; sub: string; accent: string; icon: React.ReactNode;
+  onClick?: () => void; selected?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const clickable = !!onClick;
+  const active    = selected;
+  const showActive = active || hovered;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      disabled={!clickable}
+      aria-pressed={clickable ? active : undefined}
+      aria-label={`${label}: ${value}, ${sub}${clickable ? (active ? " (filter active)" : " (click to filter)") : ""}`}
+      style={{
+        textAlign: "left", width: "100%", fontFamily: "inherit",
+        background: active
+          ? `linear-gradient(135deg, ${accent}12 0%, ${accent}06 100%)`
+          : hovered
+          ? `linear-gradient(135deg, white 0%, ${accent}08 100%)`
+          : "white",
+        border: `${active ? 1.5 : 1}px solid ${active ? accent : hovered ? `${accent}40` : BDL}`,
+        borderRadius: 10,
+        padding: "14px 16px",
+        boxShadow: active
+          ? `0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
+          : hovered
+          ? `0 2px 6px ${accent}14, 0 1px 2px rgba(15,23,42,0.04)`
+          : "0 1px 2px rgba(15,23,42,0.04)",
+        transform: hovered && !active ? "translateY(-1px)" : "translateY(0)",
+        transition: "background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease",
+        position: "relative",
+        overflow: "hidden",
+        outline: "none",
+        cursor: clickable ? "pointer" : "default",
+      }}>
+      <span aria-hidden style={{
+        position: "absolute", inset: "0 0 auto 0",
+        height: showActive ? 4 : 3,
+        background: showActive ? accent : `linear-gradient(90deg, ${accent}, ${accent}66)`,
+        transition: "height 0.2s ease, background 0.2s ease",
+      }}/>
+      <div className="flex items-start justify-between gap-2">
+        <p style={{
+          fontSize: "0.6rem", fontWeight: 700, color: active ? accent : TT,
+          textTransform: "uppercase", letterSpacing: "0.09em", lineHeight: 1.3,
+        }}>
+          {label}
+        </p>
+        <span className="inline-flex items-center justify-center"
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: showActive ? `${accent}1F` : `${accent}10`,
+            color: accent,
+            transform: showActive ? "scale(1.08)" : "scale(1)",
+            transition: "background 0.2s ease, transform 0.2s ease",
+          }}>
+          {icon}
+        </span>
+      </div>
+      <p style={{
+        fontSize: "1.7rem", fontWeight: 800,
+        color: showActive ? accent : TD,
+        lineHeight: 1.1, marginTop: 6,
+        fontVariantNumeric: "tabular-nums",
+        transition: "color 0.2s ease",
+      }}>
+        {value}
+      </p>
+      <div className="inline-flex items-center gap-1 mt-2"
+        style={{ fontSize: "0.66rem", color: TT, fontWeight: 600 }}>
+        <span>{sub}</span>
+      </div>
+    </button>
+  );
+}
 
 type Priority   = "Critical" | "High" | "Medium" | "Low";
 type TaskStatus = "Open" | "In Progress" | "Done" | "Overdue";
@@ -56,26 +141,6 @@ const ALL_TASKS: Task[] = [
   { id: "T-1050", title: "Bind policy confirmation — Denver Public Schools",       submission: "SUB-7833", member: "Denver Public Schools",             assignee: "Tom Lee",         assigneeInitials: "TL", team: "Team Beta",  due: "Apr 26, 2024", daysUntilDue: 6,  priority: "Low",      status: "Done",        type: "Decision",         slaHours: 48,  slaUsedPct: 100 },
 ];
 
-const priorityStyle = (p: Priority) => {
-  const m: Record<Priority, { bg: string; text: string; border: string }> = {
-    Critical: { bg: "#FBEAEA", text: "#7A1F1F", border: "#E8A8A8" },
-    High:     { bg: "#FFF8E6", text: "#8A5C00", border: "#F0D88A" },
-    Medium:   { bg: "#E8F0F9", text: "#00427A", border: "#9ABCD6" },
-    Low:      { bg: TH,        text: TT,         border: BDL       },
-  };
-  return m[p];
-};
-
-const statusStyle = (s: TaskStatus) => {
-  const m: Record<TaskStatus, { bg: string; text: string; border: string; icon: React.ReactNode }> = {
-    Overdue:     { bg: "#FBEAEA", text: "#7A1F1F", border: "#E8A8A8", icon: <AlertCircle size={12} color="#B91C1C" /> },
-    Open:        { bg: TH,        text: TM,         border: BD,         icon: <Clock size={12} color={TT} />           },
-    "In Progress":{ bg: "#E8F0F9", text: "#00427A", border: "#9ABCD6", icon: <Clock size={12} color={N} />            },
-    Done:        { bg: "#E8F5EC", text: "#1A5C30", border: "#93C8A0", icon: <CheckCircle2 size={12} color="#2E7D32" />},
-  };
-  return m[s];
-};
-
 export function TaskQueuePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -84,6 +149,7 @@ export function TaskQueuePage() {
   const [tab, setTab]           = useState<"my" | "team" | "unassigned" | "overdue">("my");
   const [priority, setPriority] = useState<Priority | "All">("All");
   const [typeFilter, setTypeFilter] = useState<Task["type"] | "All">("All");
+  const [kpiKey, setKpiKey]     = useState<"myOpen" | "overdue" | "dueToday" | "inProgress" | "completed" | "slaRisk" | null>(null);
   const [page, setPage]         = useState(1);
   const PER_PAGE = 8;
 
@@ -91,14 +157,28 @@ export function TaskQueuePage() {
 
   const filtered = useMemo(() => {
     let list = [...ALL_TASKS];
-    if (tab === "my")         list = list.filter(t => t.assignee === myName);
-    if (tab === "team")       list = list.filter(t => t.team === "Team Alpha");
-    if (tab === "unassigned") list = list.filter(t => !t.assignee);
-    if (tab === "overdue")    list = list.filter(t => t.status === "Overdue");
+    if (kpiKey) {
+      if (kpiKey === "myOpen")          list = list.filter(t => t.assignee === myName && t.status !== "Done");
+      else if (kpiKey === "overdue")    list = list.filter(t => t.status === "Overdue");
+      else if (kpiKey === "dueToday")   list = list.filter(t => t.daysUntilDue === 0 && t.status !== "Done");
+      else if (kpiKey === "inProgress") list = list.filter(t => t.status === "In Progress");
+      else if (kpiKey === "completed")  list = list.filter(t => t.status === "Done");
+      else if (kpiKey === "slaRisk")    list = list.filter(t => t.slaUsedPct >= 80 && t.status !== "Done");
+    } else {
+      if (tab === "my")         list = list.filter(t => t.assignee === myName);
+      if (tab === "team")       list = list.filter(t => t.team === "Team Alpha");
+      if (tab === "unassigned") list = list.filter(t => !t.assignee);
+      if (tab === "overdue")    list = list.filter(t => t.status === "Overdue");
+    }
     if (priority !== "All")   list = list.filter(t => t.priority === priority);
     if (typeFilter !== "All") list = list.filter(t => t.type === typeFilter);
     return list;
-  }, [tab, priority, typeFilter, myName]);
+  }, [tab, priority, typeFilter, kpiKey, myName]);
+
+  const onKpiClick = (key: NonNullable<typeof kpiKey>) => {
+    setKpiKey(prev => prev === key ? null : key);
+    setPage(1);
+  };
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -111,108 +191,209 @@ export function TaskQueuePage() {
   };
 
   const kpis = [
-    { label: "My Open Tasks",    value: ALL_TASKS.filter(t => t.assignee === myName && t.status !== "Done").length,                       color: N,        icon: <CheckSquare size={18} color={N} />             },
-    { label: "Overdue",          value: ALL_TASKS.filter(t => t.status === "Overdue").length,                                              color: "#B91C1C",icon: <AlertCircle size={18} color="#B91C1C" />       },
-    { label: "Due Today",        value: ALL_TASKS.filter(t => t.daysUntilDue === 0 && t.status !== "Done").length,                         color: "#B45309",icon: <AlertTriangle size={18} color="#B45309" />     },
-    { label: "In Progress",      value: ALL_TASKS.filter(t => t.status === "In Progress").length,                                          color: "#005B99",icon: <Clock size={18} color="#005B99" />             },
-    { label: "Completed (MTD)",  value: ALL_TASKS.filter(t => t.status === "Done").length,                                                 color: "#2E7D32",icon: <CheckCircle2 size={18} color="#2E7D32" />     },
-    { label: "SLA at Risk",      value: ALL_TASKS.filter(t => t.slaUsedPct >= 80 && t.status !== "Done").length,                           color: G,        icon: <SlidersHorizontal size={18} color={G} />      },
+    { key: "myOpen"     as const, label: "My Open Tasks",    value: String(ALL_TASKS.filter(t => t.assignee === myName && t.status !== "Done").length), sub: "Active",          accent: N,         icon: <CheckSquare size={16}/>       },
+    { key: "overdue"    as const, label: "Overdue",          value: String(ALL_TASKS.filter(t => t.status === "Overdue").length),                       sub: "Past due",        accent: "#B91C1C", icon: <AlertCircle size={16}/>       },
+    { key: "dueToday"   as const, label: "Due Today",        value: String(ALL_TASKS.filter(t => t.daysUntilDue === 0 && t.status !== "Done").length),  sub: "Today",           accent: "#B45309", icon: <AlertTriangle size={16}/>     },
+    { key: "inProgress" as const, label: "In Progress",      value: String(ALL_TASKS.filter(t => t.status === "In Progress").length),                   sub: "Active work",     accent: "#005B99", icon: <Clock size={16}/>             },
+    { key: "completed"  as const, label: "Completed (MTD)",  value: String(ALL_TASKS.filter(t => t.status === "Done").length),                          sub: "This month",      accent: "#15803D", icon: <CheckCircle2 size={16}/>      },
+    { key: "slaRisk"    as const, label: "SLA at Risk",      value: String(ALL_TASKS.filter(t => t.slaUsedPct >= 80 && t.status !== "Done").length),    sub: "≥80% SLA used",   accent: G,         icon: <SlidersHorizontal size={16}/> },
   ];
 
   return (
     <AppShell activePage="tasks" role={role} onRoleChange={() => {}}>
-      <div style={{ fontFamily: font, color: TD }}>
+      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+        style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
-        {/* Page header */}
-        <div style={{ background: N, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ height: 4, background: `linear-gradient(90deg,${G} 0%,#A8841C 100%)` }} />
-          <div className="px-4 sm:px-8 py-4 sm:py-5 flex items-start justify-between gap-3 flex-wrap">
+        <PageRegister
+          routeKey="page:tasks"
+          title="Tasks"
+          subtitle={`${ALL_TASKS.filter(t => t.status !== "Done").length} active · ${ALL_TASKS.filter(t => t.status === "Overdue").length} overdue`}
+          greeting={`Task queue: ${ALL_TASKS.filter(t => t.status !== "Done").length} active, ${ALL_TASKS.filter(t => t.status === "Overdue").length} overdue, ${ALL_TASKS.filter(t => t.priority === "Critical").length} critical. Want a playbook on one?`}
+          suggestions={[
+            { id: "overdue", label: "Show overdue", tone: "red", icon: "AlertTriangle" },
+            { id: "critical", label: "Critical only", tone: "blue", icon: "Flag" },
+            { id: "next", label: "What's next?", tone: "violet", icon: "ArrowRight" },
+            { id: "sla", label: "SLA at risk", tone: "gold", icon: "Clock" },
+          ]}
+          respond={(sid) => {
+            if (sid === "overdue") {
+              const od = ALL_TASKS.filter(t => t.status === "Overdue");
+              return [{ id: newId(), role: "agent", kind: "viz", ts: now(), viz: {
+                kind: "checklist", title: `${od.length} overdue task${od.length === 1 ? "" : "s"}`,
+                items: od.slice(0, 5).map(t => ({ ok: false, label: t.title, sub: `${t.member} · due ${t.due}`, href: `/submission/${t.submission}?tab=tasks` })),
+              } }];
+            }
+            if (sid === "critical") {
+              const c = ALL_TASKS.filter(t => t.priority === "Critical");
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${c.length} critical task${c.length === 1 ? "" : "s"}: ${c.map(t => t.title).slice(0, 3).join("; ")}.` }];
+            }
+            if (sid === "next") {
+              const open = ALL_TASKS.filter(t => t.status !== "Done").sort((a, b) => b.slaUsedPct - a.slaUsedPct)[0];
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: open ? `Start with "${open.title}" on ${open.member} — SLA at ${open.slaUsedPct}%. Ask "walk me through this" for the specialist playbook.` : "Queue is empty — good place to be." }];
+            }
+            if (sid === "sla") {
+              const risky = ALL_TASKS.filter(t => t.slaUsedPct >= 80 && t.status !== "Done");
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${risky.length} task${risky.length === 1 ? "" : "s"} at ≥80% SLA. Top: "${risky[0]?.title ?? "—"}" (${risky[0]?.slaUsedPct ?? 0}%).` }];
+            }
+          }}
+          freeText={(text) => {
+            const t = text.toLowerCase();
+            if (/\b(how many|count|total)\b/.test(t)) {
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${ALL_TASKS.length} total, ${ALL_TASKS.filter(x => x.status !== "Done").length} active, ${ALL_TASKS.filter(x => x.status === "Overdue").length} overdue.` }];
+            }
+            if (/\b(done|finished|completed)\b/.test(t)) {
+              return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+                text: `${ALL_TASKS.filter(x => x.status === "Done").length} task${ALL_TASKS.filter(x => x.status === "Done").length === 1 ? "" : "s"} done so far.` }];
+            }
+          }}
+          facts={() => [
+            `Tasks · ${ALL_TASKS.length} total`,
+            `Active: ${ALL_TASKS.filter(t => t.status !== "Done").length} · Overdue: ${ALL_TASKS.filter(t => t.status === "Overdue").length} · Done: ${ALL_TASKS.filter(t => t.status === "Done").length}`,
+            `Critical: ${ALL_TASKS.filter(t => t.priority === "Critical").length} · SLA ≥80%: ${ALL_TASKS.filter(t => t.slaUsedPct >= 80 && t.status !== "Done").length}`,
+          ].join("\n")}
+        />
+
+        {/* ── HERO (Dashboard structure, original Task Queue content) ──────── */}
+        <div className="relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${N} 0%, #0E3CE0 50%, #2547F4 100%)`,
+            borderRadius: 12, color: "white",
+            boxShadow: `0 4px 16px ${N}25`,
+          }}>
+          <div aria-hidden style={{
+            position: "absolute", top: -40, right: -40, width: 180, height: 180,
+            background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
+            borderRadius: "50%",
+          }}/>
+          <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Task Queue</h1>
-              <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.5)", marginTop: 4 }}>
+              <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
                 Master task queue · SLA tracking · {ALL_TASKS.filter(t => t.status !== "Done").length} active tasks
               </p>
             </div>
-            <button
-              className="flex items-center gap-2 px-4 py-2 transition-all hover:brightness-95 shrink-0"
-              style={{ background: G, color: "white", fontSize: "0.78rem", fontWeight: 700 }}>
-              <Plus size={13} /> New Task
-            </button>
-          </div>
-
-          {/* KPI strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            {kpis.map((k, i) => (
-              <div key={i} className="px-4 sm:px-5 py-3 flex flex-col gap-0.5"
-                style={{ borderRight: "1px solid rgba(255,255,255,0.1)" }}>
-                <span style={{ fontSize: "0.58rem", fontWeight: 600, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  {k.label}
-                </span>
-                <span style={{ fontSize: "1.10rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>{k.value}</span>
-              </div>
-            ))}
+            <PrimaryWhiteButton>
+              <Plus size={14}/>
+              New Task
+            </PrimaryWhiteButton>
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-4 sm:px-8 py-3 gap-3 flex-wrap"
-          style={{ background: "white", borderBottom: `1px solid ${BDL}` }}>
-          {/* Tabs */}
-          <div className="flex items-center">
-            {([
-              { id: "my" as const,         label: "My Tasks",    count: counts.my         },
-              { id: "team" as const,        label: "Team Tasks",  count: counts.team       },
-              { id: "unassigned" as const,  label: "Unassigned",  count: counts.unassigned },
-              { id: "overdue" as const,     label: "Overdue",     count: counts.overdue    },
-            ]).map(t => (
-              <button key={t.id}
-                onClick={() => { setTab(t.id); setPage(1); }}
-                className="px-3 sm:px-4 py-2 flex items-center gap-2 transition-all"
+        {/* ── KPI STRIP — modern tiles with Dashboard hover effect ─────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {kpis.map((k, i) => (
+            <KPITile key={i} label={k.label} value={k.value} sub={k.sub} accent={k.accent} icon={k.icon}
+              onClick={() => onKpiClick(k.key)}
+              selected={kpiKey === k.key}/>
+          ))}
+        </div>
+
+        {/* ── TASK QUEUE CARD (Dashboard-style chrome) ─────────────────────── */}
+        <div
+          style={{
+            background: "white",
+            border: `1px solid ${BDL}`,
+            borderTop: `3px solid ${N}`,
+            borderRadius: 8,
+            overflow: "hidden",
+            boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+          }}>
+
+          {/* Card header — icon chip + title + count chip */}
+          <div className="flex items-center justify-between px-5 py-3 flex-wrap gap-2"
+            style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center"
+                style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
+                <CheckSquare size={13} />
+              </span>
+              <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Task Queue
+              </h3>
+            </div>
+            <span style={{
+              fontSize: "0.68rem", fontWeight: 800, background: `${N}10`, color: N,
+              padding: "2px 9px", borderRadius: 10, letterSpacing: "0.02em",
+            }}>
+              {filtered.length}
+            </span>
+          </div>
+
+          {/* Toolbar — pill tabs + filter dropdowns */}
+          <div className="flex items-center justify-between px-5 py-2.5 gap-3 flex-wrap"
+            style={{ borderBottom: `1px solid ${BDL}` }}>
+            <div className="flex items-center gap-1">
+              {([
+                { id: "my" as const,          label: "My Tasks",    count: counts.my         },
+                { id: "team" as const,        label: "Team Tasks",  count: counts.team       },
+                { id: "unassigned" as const,  label: "Unassigned",  count: counts.unassigned },
+                { id: "overdue" as const,     label: "Overdue",     count: counts.overdue    },
+              ]).map(t => (
+                <button key={t.id}
+                  onClick={() => { setTab(t.id); setKpiKey(null); setPage(1); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 transition-all"
+                  style={{
+                    fontSize: "0.74rem", fontWeight: !kpiKey && tab === t.id ? 700 : 500,
+                    background: !kpiKey && tab === t.id ? `${N}10` : "transparent",
+                    color: !kpiKey && tab === t.id ? N : TM,
+                    border: "none", borderRadius: 6, cursor: "pointer", fontFamily: font,
+                  }}>
+                  {t.label}
+                  {t.count > 0 && (
+                    <span style={{
+                      fontSize: "0.55rem", fontWeight: 800,
+                      background: t.id === "overdue" ? "#B91C1C" : !kpiKey && tab === t.id ? N : "#E2E8F0",
+                      color: t.id === "overdue" || (!kpiKey && tab === t.id) ? "white" : TM,
+                      padding: "1px 6px", borderRadius: 8,
+                    }}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter dropdowns — rounded, soft borders */}
+            <div className="flex items-center gap-2">
+              <select
+                value={priority}
+                onChange={e => { setPriority(e.target.value as Priority | "All"); setPage(1); }}
                 style={{
-                  fontSize: "0.78rem", fontWeight: tab === t.id ? 700 : 400,
-                  color: tab === t.id ? N : TM,
-                  borderBottom: `2px solid ${tab === t.id ? G : "transparent"}`,
-                  marginBottom: -1,
+                  fontSize: "0.72rem", border: `1px solid ${BDL}`, borderRadius: 5,
+                  padding: "6px 10px", color: TM, background: "white", fontFamily: font,
+                  cursor: "pointer", outline: "none",
                 }}>
-                {t.label}
-                {t.count > 0 && (
-                  <span style={{
-                    fontSize: "0.58rem", fontWeight: 800,
-                    background: t.id === "overdue" && t.count > 0 ? "#B91C1C" : tab === t.id ? N : BDL,
-                    color: t.id === "overdue" && t.count > 0 ? "white" : tab === t.id ? "white" : TT,
-                    padding: "1px 6px",
-                  }}>{t.count}</span>
-                )}
-              </button>
-            ))}
+                {["All", "Critical", "High", "Medium", "Low"].map(p => <option key={p}>{p}</option>)}
+              </select>
+              <select
+                value={typeFilter}
+                onChange={e => { setTypeFilter(e.target.value as Task["type"] | "All"); setPage(1); }}
+                style={{
+                  fontSize: "0.72rem", border: `1px solid ${BDL}`, borderRadius: 5,
+                  padding: "6px 10px", color: TM, background: "white", fontFamily: font,
+                  cursor: "pointer", outline: "none",
+                }}>
+                {["All", "Document Request", "Review", "Communication", "Analysis", "Decision"].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-2">
-            <select
-              value={priority}
-              onChange={e => { setPriority(e.target.value as Priority | "All"); setPage(1); }}
-              style={{ fontSize: "0.72rem", border: `1px solid ${BD}`, padding: "6px 10px", color: TM, background: "white", fontFamily: font }}>
-              {["All", "Critical", "High", "Medium", "Low"].map(p => <option key={p}>{p}</option>)}
-            </select>
-            <select
-              value={typeFilter}
-              onChange={e => { setTypeFilter(e.target.value as Task["type"] | "All"); setPage(1); }}
-              style={{ fontSize: "0.72rem", border: `1px solid ${BD}`, padding: "6px 10px", color: TM, background: "white", fontFamily: font }}>
-              {["All", "Document Request", "Review", "Communication", "Analysis", "Decision"].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div style={{ background: "white", margin: "16px", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, overflow: "hidden" }}>
+          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: TH }}>
+                <tr style={{ background: "#FAFBFD" }}>
                   {["Priority", "Task", "Submission", "Assignee", "Type", "SLA", "Due Date", "Status", ""].map(h => (
-                    <th key={h} className="px-4 py-3 text-left whitespace-nowrap"
-                      style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: `1px solid ${BDL}` }}>
+                    <th key={h} className="px-4 py-2.5 text-left whitespace-nowrap"
+                      style={{
+                        fontSize: "0.58rem", fontWeight: 700, color: TT,
+                        textTransform: "uppercase", letterSpacing: "0.09em",
+                        borderBottom: `1px solid ${BDL}`,
+                      }}>
                       {h}
                     </th>
                   ))}
@@ -225,78 +406,119 @@ export function TaskQueuePage() {
                       No tasks match the current filters.
                     </td>
                   </tr>
-                ) : paginated.map((task, i) => {
-                  const ps = priorityStyle(task.priority);
-                  const ss = statusStyle(task.status);
+                ) : paginated.map((task, idx) => {
                   const slaColor = task.slaUsedPct >= 100 ? "#B91C1C" : task.slaUsedPct >= 80 ? "#B45309" : "#2E7D32";
+                  const priorityDot =
+                    task.priority === "Critical" ? "#B91C1C" :
+                    task.priority === "High" ? "#B45309" :
+                    task.priority === "Medium" ? "#005B99" : TT;
+                  const statusBg =
+                    task.status === "Overdue" ? "#FEE2E2" :
+                    task.status === "Done" ? "#E8F5EC" :
+                    task.status === "In Progress" ? "#E0E7FF" : "#F1F5F9";
+                  const statusColor =
+                    task.status === "Overdue" ? "#B91C1C" :
+                    task.status === "Done" ? "#15803D" :
+                    task.status === "In Progress" ? N : TM;
+                  const isLast = idx === paginated.length - 1;
                   return (
                     <tr key={task.id}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
-                      style={{ borderBottom: `1px solid ${BDL}` }}>
+                      onClick={() => navigate(`/submission/${task.submission}`)}
+                      className="cursor-pointer hover:bg-slate-50 transition-colors group"
+                      style={{ borderBottom: isLast ? "none" : `1px solid #EEF1F5` }}>
                       <td className="px-4 py-3">
-                        <span style={{ fontSize: "0.60rem", fontWeight: 800, background: ps.bg, color: ps.text, border: `1px solid ${ps.border}`, padding: "1px 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        <span className="inline-flex items-center gap-1.5"
+                          style={{ fontSize: "0.62rem", fontWeight: 700, color: priorityDot }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: priorityDot }} />
                           {task.priority}
                         </span>
                       </td>
                       <td className="px-4 py-3" style={{ maxWidth: 280 }}>
-                        <p style={{ fontSize: "0.78rem", fontWeight: 600, color: TD, lineHeight: 1.35 }}>{task.title}</p>
-                        <p style={{ fontSize: "0.65rem", color: TT, marginTop: 1 }}>{task.member}</p>
+                        <p style={{ fontSize: "0.8rem", fontWeight: 600, color: TD, lineHeight: 1.35 }}
+                          className="group-hover:underline">
+                          {task.title}
+                        </p>
+                        <p style={{ fontSize: "0.64rem", color: TT, marginTop: 1 }}>{task.member}</p>
                       </td>
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => navigate(`/submission/${task.submission}`)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/submission/${task.submission}`); }}
                           className="hover:underline"
-                          style={{ fontSize: "0.72rem", fontWeight: 700, color: "#005B99", fontFamily: "monospace" }}>
+                          style={{
+                            fontSize: "0.72rem", fontWeight: 700, color: N,
+                            fontFamily: "ui-monospace, monospace",
+                            background: "none", border: "none", cursor: "pointer", padding: 0, borderRadius: 6,
+                          }}>
                           {task.submission}
                         </button>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <div className="flex items-center justify-center shrink-0"
-                            style={{ width: 22, height: 22, background: BDL, color: TM, fontSize: "0.55rem", fontWeight: 800 }}>
+                          <span className="inline-flex items-center justify-center rounded-full shrink-0"
+                            style={{
+                              width: 22, height: 22,
+                              background: `${N}15`, color: N,
+                              fontSize: "0.55rem", fontWeight: 800,
+                            }}>
                             {task.assigneeInitials}
-                          </div>
-                          <span style={{ fontSize: "0.70rem", color: TM, whiteSpace: "nowrap" }}>
+                          </span>
+                          <span style={{ fontSize: "0.72rem", color: TD, fontWeight: 500, whiteSpace: "nowrap" }}>
                             {task.assignee.split(" ")[0]}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span style={{ fontSize: "0.66rem", background: TH, color: TM, border: `1px solid ${BDL}`, padding: "2px 6px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "0.66rem", color: TM, fontWeight: 500, whiteSpace: "nowrap" }}>
                           {task.type}
                         </span>
                       </td>
-                      <td className="px-4 py-3" style={{ minWidth: 100 }}>
-                        <div className="flex items-center gap-1.5">
-                          <div style={{ flex: 1, height: 5, background: BDL, minWidth: 60 }}>
-                            <div style={{ height: "100%", width: `${Math.min(task.slaUsedPct, 100)}%`, background: slaColor }} />
+                      <td className="px-4 py-3" style={{ minWidth: 110 }}>
+                        <div className="flex items-center gap-2">
+                          <div style={{ flex: 1, height: 4, background: "#EEF1F5", minWidth: 50, borderRadius: 2, overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%", width: `${Math.min(task.slaUsedPct, 100)}%`,
+                              background: slaColor, borderRadius: 2,
+                              transition: "width 0.4s ease",
+                            }} />
                           </div>
-                          <span style={{ fontSize: "0.66rem", fontWeight: 700, color: slaColor, whiteSpace: "nowrap" }}>
+                          <span style={{
+                            fontSize: "0.66rem", fontWeight: 800, color: slaColor,
+                            whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums",
+                          }}>
                             {task.slaUsedPct}%
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3" style={{ whiteSpace: "nowrap" }}>
-                        <div className="flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5">
                           {task.daysUntilDue < 0
                             ? <AlertCircle size={11} color="#B91C1C" />
                             : task.daysUntilDue <= 2
                             ? <AlertTriangle size={11} color="#B45309" />
                             : <Calendar size={11} color={TT} />}
-                          <span style={{ fontSize: "0.70rem", color: task.daysUntilDue < 0 ? "#B91C1C" : task.daysUntilDue <= 2 ? "#B45309" : TM, fontWeight: task.daysUntilDue <= 2 ? 700 : 400 }}>
+                          <span style={{
+                            fontSize: "0.72rem",
+                            color: task.daysUntilDue < 0 ? "#B91C1C" : task.daysUntilDue <= 2 ? "#B45309" : TM,
+                            fontWeight: task.daysUntilDue <= 2 ? 700 : 500,
+                          }}>
                             {task.due}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5 px-2 py-0.5"
-                          style={{ background: ss.bg, border: `1px solid ${ss.border}`, whiteSpace: "nowrap" }}>
-                          {ss.icon}
-                          <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ss.text }}>{task.status}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5"
+                          style={{
+                            background: statusBg, padding: "2px 8px", borderRadius: 4,
+                            whiteSpace: "nowrap",
+                          }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor }} />
+                          <span style={{ fontSize: "0.66rem", fontWeight: 700, color: statusColor }}>
+                            {task.status}
+                          </span>
+                        </span>
                       </td>
                       <td className="px-4 py-3">
-                        <ChevronRight size={13} color={TT} />
+                        <ChevronRight size={13} color={BDL} className="transition-colors group-hover:text-blue-600" />
                       </td>
                     </tr>
                   );
@@ -305,12 +527,11 @@ export function TaskQueuePage() {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination — Dashboard style */}
           <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-3"
-            style={{ borderTop: `2px solid ${BDL}`, background: "white" }}>
+            style={{ borderTop: `1px solid ${BDL}`, background: "#FAFBFD" }}>
             <span style={{ fontSize: "0.72rem", color: TT }}>
-              Showing{" "}
-              <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
+              Showing <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
               {" – "}
               <span style={{ fontWeight: 700, color: TD }}>{Math.min(page * PER_PAGE, filtered.length)}</span>
               {" of "}
@@ -318,23 +539,38 @@ export function TaskQueuePage() {
             </span>
             <div className="flex items-center gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-all"
-                style={{ border: `1px solid ${BD}`, fontSize: "0.72rem", fontWeight: 600, color: TM }}>
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
+                style={{
+                  border: `1px solid ${BDL}`, background: "white", borderRadius: 6,
+                  fontSize: "0.7rem", fontWeight: 600, color: page === 1 ? TT : TM,
+                  cursor: page === 1 ? "not-allowed" : "pointer", fontFamily: font,
+                }}>
                 <ChevronLeft size={12} /> Prev
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
+                  className="hover:brightness-95 transition-all"
                   style={{
-                    width: 30, height: 30, border: `1.5px solid ${p === page ? N : BDL}`,
-                    background: p === page ? N : "white", color: p === page ? "white" : TM,
-                    fontSize: "0.72rem", fontWeight: p === page ? 800 : 400, fontFamily: font,
+                    width: 30, height: 30, borderRadius: 6,
+                    background: p === page ? N : "white",
+                    color: p === page ? "white" : TM,
+                    border: `1px solid ${p === page ? N : BDL}`,
+                    fontSize: "0.72rem", fontWeight: p === page ? 800 : 500,
+                    cursor: "pointer", fontFamily: font,
+                    boxShadow: p === page ? `0 2px 6px ${N}30` : "none",
                   }}>
                   {p}
                 </button>
               ))}
               <button disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}
-                className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-all"
-                style={{ border: `1px solid ${page === totalPages ? BDL : N}`, background: page === totalPages ? "white" : `${N}08`, fontSize: "0.72rem", fontWeight: 600, color: page === totalPages ? TT : N }}>
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
+                style={{
+                  border: `1px solid ${BDL}`, background: "white", borderRadius: 6,
+                  fontSize: "0.7rem", fontWeight: 600,
+                  color: page === totalPages || totalPages === 0 ? TT : N,
+                  cursor: page === totalPages || totalPages === 0 ? "not-allowed" : "pointer",
+                  fontFamily: font,
+                }}>
                 Next <ChevronRight size={12} />
               </button>
             </div>

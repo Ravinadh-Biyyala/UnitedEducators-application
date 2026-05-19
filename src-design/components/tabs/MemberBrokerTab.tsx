@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, CheckCircle2, MapPin } from "lucide-react";
+import { Building2, CheckCircle2, MapPin, GraduationCap, FileText } from "lucide-react";
 
 const N   = "#0123D4";
 const G   = "#C9A227";
@@ -22,17 +22,32 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
 }
 
 /* ── Section card ───────────────────────────────────────────────────────── */
-function Section({ title, accent = N, badge, children }: {
-  title: string; accent?: string; badge?: string; children: React.ReactNode;
+function Section({ title, accent = N, badge, icon, children }: {
+  title: string; accent?: string; badge?: string; icon?: React.ReactNode; children: React.ReactNode;
 }) {
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}` }}>
+    <div style={{
+      background: "white",
+      border: `1px solid ${BDL}`,
+      borderTop: `3px solid ${accent}`,
+      borderRadius: 8,
+      overflow: "hidden",
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+    }}>
       <div className="flex items-center justify-between px-5 py-3"
-        style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-        <h3 style={{ fontSize: "0.80rem", fontWeight: 700, color: accent === N ? N : TM,
-          textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          {title}
-        </h3>
+        style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
+        <div className="flex items-center gap-2">
+          {icon && (
+            <span className="inline-flex items-center justify-center"
+              style={{ width: 24, height: 24, borderRadius: 6, background: `${accent}12`, color: accent }}>
+              {icon}
+            </span>
+          )}
+          <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD,
+            textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {title}
+          </h3>
+        </div>
         {badge && (
           <span style={{ fontSize: "0.70rem", color: TM, fontWeight: 500 }}>{badge}</span>
         )}
@@ -72,7 +87,7 @@ function MemberView() {
     <div className="space-y-4">
       {/* Quick stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5"
-        style={{ background: "white", border: `1px solid ${BD}` }}>
+        style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
         <StatCell label="Account Record Type" value="Institution" />
         <StatCell label="Member Number"       value="473" />
         <StatCell label="Physical City"       value="Westport, CT" />
@@ -81,7 +96,7 @@ function MemberView() {
       </div>
 
       {/* Account Information */}
-      <Section title="Account Information">
+      <Section title="Account Information" icon={<FileText size={13}/>}>
         <TwoColGrid>
           <div>
             <Row label="Account Name"           value="Brookfield Day School" />
@@ -102,7 +117,7 @@ function MemberView() {
       </Section>
 
       {/* Institution Profile */}
-      <Section title="Institution Profile">
+      <Section title="Institution Profile" icon={<GraduationCap size={13}/>}>
         <TwoColGrid>
           <div>
             <Row label="Institution Type"         value="K-12" />
@@ -122,7 +137,7 @@ function MemberView() {
       </Section>
 
       {/* Address Information */}
-      <Section title="Address Information">
+      <Section title="Address Information" icon={<MapPin size={13}/>}>
         <TwoColGrid>
           <div>
             <Row label="Physical Address 1"       value="32 Riverside Avenue" />
@@ -191,7 +206,7 @@ function BrokerageView() {
     <div className="space-y-4">
       {/* Quick stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5"
-        style={{ background: "white", border: `1px solid ${BD}` }}>
+        style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
         <StatCell label="Account Record Type" value="Agency · Brokerage" />
         <StatCell label="Account ID"          value="10591" />
         <StatCell label="Physical City"       value="New York" />
@@ -200,7 +215,7 @@ function BrokerageView() {
       </div>
 
       {/* Account Information */}
-      <Section title="Account Information">
+      <Section title="Account Information" icon={<Building2 size={13}/>}>
         <TwoColGrid>
           <div>
             <Row label="Account Name"           value="Marsh McLennan Agency" />
@@ -219,7 +234,7 @@ function BrokerageView() {
       </Section>
 
       {/* Address Information */}
-      <Section title="Address Information">
+      <Section title="Address Information" icon={<MapPin size={13}/>}>
         <TwoColGrid>
           <div>
             <Row label="Physical Address 1"       value="1166 Ave of the Americas" />
@@ -315,10 +330,11 @@ export function MemberBrokerTab() {
             borderTop: `3px solid ${N}`,
             outline: "none",
             boxShadow: activeView === "member" ? `0 0 0 2px ${N}22` : "none",
+            borderRadius: 6,
           }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center shrink-0"
-              style={{ width: 38, height: 38, background: "#E8EFF9", border: `1px solid #B8CCE8` }}>
+              style={{ width: 38, height: 38, background: "#E8EFF9", border: `1px solid #B8CCE8`, borderRadius: 6 }}>
               <Building2 size={18} color={N} />
             </div>
             <div>
@@ -345,10 +361,11 @@ export function MemberBrokerTab() {
             borderTop: `3px solid ${G}`,
             outline: "none",
             boxShadow: activeView === "brokerage" ? `0 0 0 2px ${N}22` : "none",
+            borderRadius: 6,
           }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center shrink-0"
-              style={{ width: 38, height: 38, background: "#FBF6E8", border: `1px solid #E5D08A` }}>
+              style={{ width: 38, height: 38, background: "#FBF6E8", border: `1px solid #E5D08A`, borderRadius: 6 }}>
               <MapPin size={18} color={G} />
             </div>
             <div>

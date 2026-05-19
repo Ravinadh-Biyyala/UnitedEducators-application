@@ -11,6 +11,9 @@ import {
   BookOpen, ZapIcon,
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { PageRegister } from "../components/companion/PageRegister";
+import { newId, now } from "../components/companion/CompanionContext";
+import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const N    = "#0123D4";
@@ -185,6 +188,7 @@ function AttachIcon({ type }: { type: Attachment["type"] }) {
       width: 28, height: 28, background: `${colors[type] ?? TT}15`,
       border: `1px solid ${colors[type] ?? TT}30`,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      borderRadius: 6,
     }}>
       <FileText size={13} color={colors[type] ?? TT} />
     </div>
@@ -262,6 +266,36 @@ export function Inbox() {
 
   return (
     <AppShell activePage="inbox" search="" onSearchChange={() => {}}>
+      <PageRegister
+        routeKey="page:inbox"
+        title="Inbox"
+        subtitle={`Broker correspondence · ${unreadCount} unread`}
+        greeting={`Inbox check: ${unreadCount} unread thread${unreadCount === 1 ? "" : "s"}. I can summarize what's waiting on a broker response or draft a reply.`}
+        suggestions={[
+          { id: "summarize", label: "Summarize unread", tone: "blue", icon: "Sparkles" },
+          { id: "draft-reply", label: "Draft reply", tone: "violet", icon: "Mail" },
+          { id: "waiting", label: "What's waiting on broker?", tone: "red", icon: "AlertTriangle" },
+          { id: "open-submissions", label: "Open Submissions", tone: "violet", icon: "InboxIcon", navigateTo: "/submissions" },
+        ]}
+        respond={(sid) => {
+          if (sid === "summarize") return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+            text: `${unreadCount} unread thread${unreadCount === 1 ? "" : "s"} in the inbox. Open one and ask "summarize this thread" — I'll pull the asks and the next move.` }];
+          if (sid === "waiting") return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+            text: `Filter to flagged or unread to surface threads still waiting on a broker. I can draft a follow-up nudge for any of them.` }];
+        }}
+        freeText={(text) => {
+          const t = text.toLowerCase();
+          if (/\b(unread|how many|count)\b/.test(t)) {
+            return [{ id: newId(), role: "agent", kind: "text", ts: now(),
+              text: `${unreadCount} unread message${unreadCount === 1 ? "" : "s"} in the current folder.` }];
+          }
+        }}
+        facts={() => [
+          `Inbox · ${emails.length} total emails`,
+          `Unread (inbox folder): ${unreadCount}`,
+          `Flagged: ${emails.filter(e => e.flagged).length}`,
+        ].join("\n")}
+      />
       {/* ── Three-column email layout ──────────────────────────────────────── */}
       <div style={{ display: "flex", height: "100%", background: "#EEF1F6", fontFamily: font, overflow: "hidden" }}>
 
@@ -278,10 +312,10 @@ export function Inbox() {
                 Inbox
               </span>
               <div style={{ display: "flex", gap: 4 }}>
-                <button style={{ width: 26, height: 26, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button style={{ width: 26, height: 26, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <RefreshCw size={12} color={TT} />
                 </button>
-                <button style={{ width: 26, height: 26, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button style={{ width: 26, height: 26, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <Filter size={12} color={TT} />
                 </button>
               </div>
@@ -297,6 +331,7 @@ export function Inbox() {
                     color: folder === f.id ? "white" : TM,
                     border: `1px solid ${folder === f.id ? N : BDL}`,
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                    borderRadius: 6,
                   }}>
                   <f.icon size={10} />
                   {f.label}
@@ -320,7 +355,7 @@ export function Inbox() {
                 placeholder="Search emails…"
                 style={{
                   width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
-                  border: `1px solid ${BDL}`, fontSize: "0.74rem", color: "#1A2530",
+                  border: `1px solid ${BDL}`, borderRadius: 6, fontSize: "0.74rem", color: "#1A2530",
                   background: "#F4F6FA", outline: "none", fontFamily: font,
                   boxSizing: "border-box",
                 }}
@@ -364,6 +399,7 @@ export function Inbox() {
                     width: 32, height: 32, background: email.from.color,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, fontSize: "0.60rem", fontWeight: 800, color: "white",
+                    borderRadius: 6,
                   }}>
                     {email.from.initials}
                   </div>
@@ -376,7 +412,7 @@ export function Inbox() {
                       </span>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                         <span style={{ fontSize: "0.60rem", color: TT }}>{formatDate(email.date)}</span>
-                        <button onClick={e => toggleFlag(email.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1 }}>
+                        <button onClick={e => toggleFlag(email.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, borderRadius: 6 }}>
                           <Star size={11} fill={email.flagged ? G : "none"} color={email.flagged ? G : BD} />
                         </button>
                       </div>
@@ -409,6 +445,7 @@ export function Inbox() {
                           color: tag === "new-submission" ? N : tag === "follow-up" ? "#B45309" : TT,
                           border: `1px solid ${tag === "new-submission" ? `${N}30` : tag === "follow-up" ? "#B4530930" : BDL}`,
                           textTransform: "uppercase", letterSpacing: "0.05em",
+                          borderRadius: 4,
                         }}>{tag}</span>
                       ))}
                     </div>
@@ -433,13 +470,13 @@ export function Inbox() {
                 {selected.subject}
               </h2>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <Archive size={13} color={TT} />
                 </button>
-                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <Trash2 size={13} color={TT} />
                 </button>
-                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <MoreHorizontal size={13} color={TT} />
                 </button>
               </div>
@@ -451,6 +488,7 @@ export function Inbox() {
                 width: 34, height: 34, background: selected.from.color, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "0.62rem", fontWeight: 800, color: "white",
+                borderRadius: 6,
               }}>
                 {selected.from.initials}
               </div>
@@ -477,6 +515,7 @@ export function Inbox() {
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "5px 10px 5px 7px",
                     border: `1px solid ${BDL}`, background: "#F8FAFC", cursor: "pointer",
+                    borderRadius: 6,
                   }}>
                     <AttachIcon type={att.type} />
                     <div>
@@ -543,7 +582,7 @@ export function Inbox() {
             {activePanel !== "none" && (
               <button
                 onClick={() => setActivePanel("none")}
-                style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: "0.64rem", color: TT, background: "none", border: "none", cursor: "pointer" }}>
+                style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: "0.64rem", color: TT, background: "none", border: "none", cursor: "pointer", borderRadius: 6 }}>
                 <X size={11} /> Close panel
               </button>
             )}
@@ -555,7 +594,18 @@ export function Inbox() {
               panel={activePanel !== "none" ? activePanel : aiLoading}
               loading={aiLoading !== "none"}
               email={selected}
-              onCreateSubmission={() => navigate("/submissions")}
+              onCreateSubmission={() => navigate("/submissions/new", {
+                state: {
+                  freshFromInbox: true,
+                  prefill: selected.extracted ?? null,
+                  sourceEmail: {
+                    subject: selected.subject,
+                    fromName: selected.from.name,
+                    fromCompany: selected.from.company,
+                    attachments: selected.attachments,
+                  },
+                },
+              })}
               onClose={() => setActivePanel("none")}
             />
           )}
@@ -563,7 +613,7 @@ export function Inbox() {
           {/* Email body */}
           <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
             <div style={{
-              background: "white", border: `1px solid ${BDL}`,
+              background: "white", border: `1px solid ${BDL}`, borderRadius: 8,
               padding: "24px 28px", fontSize: "0.82rem", color: "#1A2530",
               lineHeight: 1.75, whiteSpace: "pre-wrap", fontFamily: font,
             }}>
@@ -598,6 +648,7 @@ function AIActionButton({
           fontSize: "0.72rem", fontWeight: 700, fontFamily: font,
           opacity: disabled ? 0.5 : 1,
           transition: "all 0.15s",
+          borderRadius: 6,
         }}
         onMouseEnter={e => { if (!disabled && !active && !loading) (e.currentTarget as HTMLElement).style.background = `${color}10`; }}
         onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "white"; }}
@@ -667,10 +718,10 @@ function CreateSubmissionPanel({ email, onCreate, onClose }: { email: Email; onC
           <Plus size={12} color="white" />
         </div>
         <div>
-          <span style={{ fontSize: "0.72rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Create Submission</span>
+          <span style={{ fontSize: "0.72rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Open Submission</span>
           <span style={{ fontSize: "0.62rem", color: TT, marginLeft: 8 }}>· AI extracted {fields.length} fields with high confidence</span>
         </div>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT }}>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT, borderRadius: 6 }}>
           <X size={13} />
         </button>
       </div>
@@ -724,6 +775,7 @@ function CreateSubmissionPanel({ email, onCreate, onClose }: { email: Email; onC
               display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
               background: N, color: "white", border: "none", cursor: "pointer",
               fontSize: "0.75rem", fontWeight: 700, fontFamily: font,
+              borderRadius: 6,
             }}>
             <Plus size={14} /> Create Submission
             <ArrowRight size={13} />
@@ -731,6 +783,7 @@ function CreateSubmissionPanel({ email, onCreate, onClose }: { email: Email; onC
           <button style={{
             padding: "8px 14px", background: "white", border: `1px solid ${BDL}`,
             cursor: "pointer", fontSize: "0.72rem", color: TM, fontFamily: font,
+            borderRadius: 6,
           }}>
             Edit Fields First
           </button>
@@ -812,7 +865,7 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
         </div>
         <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#7B2FBE", textTransform: "uppercase", letterSpacing: "0.06em" }}>Parse Attachments</span>
         <span style={{ fontSize: "0.62rem", color: TT, marginLeft: 4 }}>· {email.attachments.length} documents processed via OCR</span>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT }}>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT, borderRadius: 6 }}>
           <X size={13} />
         </button>
       </div>
@@ -827,6 +880,7 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
                 background: selected === i ? "#7B2FBE10" : "transparent",
                 borderLeft: `3px solid ${selected === i ? "#7B2FBE" : "transparent"}`,
                 border: "none", borderBottom: `1px solid ${BDL}`, fontFamily: font,
+                borderRadius: 6,
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                 <FileText size={11} color={doc.color} />
@@ -852,6 +906,7 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
               display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
               background: "#7B2FBE", color: "white", border: "none", cursor: "pointer",
               fontSize: "0.68rem", fontWeight: 700, fontFamily: font,
+              borderRadius: 6,
             }}>
               <Download size={11} /> Export Parsed Data
             </button>
@@ -859,6 +914,7 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
               display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
               background: "white", color: TM, border: `1px solid ${BDL}`, cursor: "pointer",
               fontSize: "0.68rem", fontFamily: font,
+              borderRadius: 6,
             }}>
               <Eye size={11} /> View Raw Document
             </button>
@@ -895,7 +951,7 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
         <span style={{ fontSize: "0.62rem", color: TT, marginLeft: 4 }}>
           · {hasDuplicates ? `${email.potentialDuplicates!.length} potential match${email.potentialDuplicates!.length > 1 ? "es" : ""} found` : "No duplicates found"}
         </span>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT }}>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT, borderRadius: 6 }}>
           <X size={13} />
         </button>
       </div>
@@ -965,6 +1021,7 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
                     display: "flex", alignItems: "center", gap: 4, padding: "5px 9px",
                     border: `1px solid ${BDL}`, background: "white", cursor: "pointer",
                     fontSize: "0.64rem", color: N, fontFamily: font, fontWeight: 600,
+                    borderRadius: 6,
                   }}>
                     <ExternalLink size={10} /> View
                   </button>
@@ -975,6 +1032,7 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
                   display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
                   background: "#1A7A4A", color: "white", border: "none", cursor: "pointer",
                   fontSize: "0.68rem", fontWeight: 700, fontFamily: font,
+                  borderRadius: 6,
                 }}>
                   <Plus size={11} /> Proceed as New Submission
                 </button>
@@ -982,6 +1040,7 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
                   display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
                   background: "white", color: TM, border: `1px solid ${BDL}`, cursor: "pointer",
                   fontSize: "0.68rem", fontFamily: font,
+                  borderRadius: 6,
                 }}>
                   <Copy size={11} /> Merge with Existing
                 </button>

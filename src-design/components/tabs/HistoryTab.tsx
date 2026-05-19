@@ -88,7 +88,7 @@ export function HistoryTab() {
     <div className="space-y-5">
 
       {/* UW Action Timeline */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
         <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
           <RotateCcw size={14} color={N} />
           <div>
@@ -156,7 +156,7 @@ export function HistoryTab() {
       </div>
 
       {/* Prior Application Responses */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}` }}>
+      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}`, borderRadius: 8, overflow: "hidden" }}>
         <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
           <FileText size={14} color={N} />
           <div>

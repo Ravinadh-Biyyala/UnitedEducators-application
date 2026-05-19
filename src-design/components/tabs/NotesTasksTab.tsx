@@ -95,7 +95,7 @@ export function NotesTasksTab() {
       <div className="md:col-span-3 space-y-5">
 
         {/* ── Submission Status Tracker ─────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <GitBranch size={14} color={N} />
             <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -143,7 +143,7 @@ export function NotesTasksTab() {
         </div>
 
         {/* ── Notes & Communications ───────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <div className="flex items-center gap-2">
               <MessageSquare size={14} color={N} />
@@ -159,7 +159,7 @@ export function NotesTasksTab() {
               {(["UW Note", "Internal", "Broker Communication"] as Note["type"][]).map(t => (
                 <button key={t} onClick={() => setNoteType(t)}
                   className="px-3 py-1 transition-all"
-                  style={{ fontSize: "0.66rem", fontWeight: noteType === t ? 700 : 500, background: noteType === t ? N : "white", color: noteType === t ? "white" : TM, border: `1px solid ${noteType === t ? N : BD}` }}>
+                  style={{ fontSize: "0.66rem", fontWeight: noteType === t ? 700 : 500, background: noteType === t ? N : "white", color: noteType === t ? "white" : TM, border: `1px solid ${noteType === t ? N : BD}`, borderRadius: 6 }}>
                   {t}
                 </button>
               ))}
@@ -170,7 +170,7 @@ export function NotesTasksTab() {
               placeholder={`Add a ${noteType.toLowerCase()}… (stamped with name and date)`}
               rows={3}
               className="w-full resize-none outline-none px-4 py-3"
-              style={{ fontSize: "0.84rem", background: TH, border: `1px solid ${BD}`, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif" }}
+              style={{ fontSize: "0.84rem", background: TH, border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif" }}
             />
             <div className="flex items-center justify-between mt-2">
               <p style={{ fontSize: "0.64rem", color: TT }}>
@@ -178,7 +178,7 @@ export function NotesTasksTab() {
               </p>
               <button
                 className="flex items-center gap-1.5 px-4 py-2 transition-all hover:brightness-95"
-                style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 600 }}
+                style={{ background: N, color: "white", fontSize: "0.80rem", fontWeight: 600, borderRadius: 6 }}
               >
                 <Plus size={13} />
                 Add Note
@@ -232,7 +232,7 @@ export function NotesTasksTab() {
       <div className="md:col-span-2 space-y-5">
 
         {/* ── Workflow Actions ──────────────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}` }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <ArrowRightLeft size={14} color={N} />
             <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Workflow Actions</h3>
@@ -252,7 +252,7 @@ export function NotesTasksTab() {
               <button key={i}
                 onClick={action.onClick}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:brightness-97 transition-all text-left"
-                style={{ background: action.bg, border: `1px solid ${action.border}` }}>
+                style={{ background: action.bg, border: `1px solid ${action.border}`, borderRadius: 6 }}>
                 <span className="shrink-0">{action.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p style={{ fontSize: "0.78rem", fontWeight: 700, color: action.textColor }}>{action.label}</p>
@@ -272,7 +272,7 @@ export function NotesTasksTab() {
         </div>
 
         {/* ── Open Tasks ───────────────────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <div className="flex items-center gap-2">
               <CheckSquare size={14} color={N} />
@@ -325,7 +325,7 @@ export function NotesTasksTab() {
 
           <div className="px-5 py-3 flex justify-end" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
             <button className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
-              style={{ background: N, color: "white", fontSize: "0.72rem", fontWeight: 700 }}>
+              style={{ background: N, color: "white", fontSize: "0.72rem", fontWeight: 700, borderRadius: 6 }}>
               <Plus size={11} /> Add Task
             </button>
           </div>

@@ -192,6 +192,7 @@ function TextInput({
           paddingLeft: icon ? 34 : 11, paddingRight: 11,
           paddingTop: 9, paddingBottom: 9,
           border: `1px solid ${readOnly ? BDL : BD}`,
+          borderRadius: 6,
           background: readOnly ? "#F4F6FA" : "white",
           color: readOnly ? TT : TD,
           fontSize: "0.80rem", fontFamily: font, outline: "none",
@@ -233,7 +234,7 @@ function StageDropdown({
           width: "100%", display: "flex", alignItems: "center", gap: 8,
           padding: "9px 11px", border: `1px solid ${open ? N : BD}`,
           background: "white", cursor: "pointer", fontFamily: font,
-          textAlign: "left",
+          textAlign: "left", borderRadius: 6,
         }}
       >
         <span style={{
@@ -253,7 +254,7 @@ function StageDropdown({
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0,
-          background: "white", border: `1px solid ${BD}`,
+          background: "white", border: `1px solid ${BD}`, borderRadius: 6,
           boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200,
           maxHeight: 340, overflowY: "auto",
         }}>
@@ -285,6 +286,7 @@ function StageDropdown({
                     background: value === opt ? `${g.color}10` : "transparent",
                     border: "none", cursor: "pointer", fontFamily: font, textAlign: "left",
                     borderBottom: `1px solid ${BDL}`,
+                    borderRadius: 6,
                   }}
                   onMouseEnter={e => { if (value !== opt) e.currentTarget.style.background = "#F4F6FA"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = value === opt ? `${g.color}10` : "transparent"; }}
@@ -410,6 +412,7 @@ export function CreateSubmissionModal({ isOpen, onClose, onSubmit }: Props) {
         width: "min(680px, calc(100vw - 48px))",
         maxHeight: "calc(100vh - 64px)",
         background: "white",
+        borderRadius: 8, overflow: "hidden",
         display: "flex", flexDirection: "column",
         zIndex: 901, fontFamily: font, overflowY: "auto",
       }}>
@@ -446,6 +449,7 @@ export function CreateSubmissionModal({ isOpen, onClose, onSubmit }: Props) {
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)",
               cursor: "pointer", color: "white",
+              borderRadius: 6,
             }}
           >
             <X size={14} />
@@ -477,12 +481,14 @@ export function CreateSubmissionModal({ isOpen, onClose, onSubmit }: Props) {
                       border: `1.5px solid ${isActive ? c : BDL}`,
                       background: isActive ? `${c}08` : "white",
                       cursor: "pointer", transition: "all 0.15s",
+                      borderRadius: 6,
                     }}
                   >
                     <div style={{
                       width: 28, height: 28, marginBottom: 8,
                       background: isActive ? `${c}15` : "#F0F3F8",
                       border: `1px solid ${isActive ? `${c}40` : BDL}`,
+                      borderRadius: 6,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: isActive ? c : TT,
                     }}>
@@ -631,6 +637,7 @@ export function CreateSubmissionModal({ isOpen, onClose, onSubmit }: Props) {
                 background: "white", color: TM,
                 border: `1px solid ${BD}`, cursor: "pointer",
                 fontSize: "0.78rem", fontWeight: 600, fontFamily: font,
+                borderRadius: 6,
               }}
             >
               Cancel
@@ -645,6 +652,7 @@ export function CreateSubmissionModal({ isOpen, onClose, onSubmit }: Props) {
                 color: "white", border: "none", cursor: submitted ? "default" : "pointer",
                 fontSize: "0.78rem", fontWeight: 700, fontFamily: font,
                 transition: "background 0.15s",
+                borderRadius: 6,
               }}
             >
               {submitted ? (

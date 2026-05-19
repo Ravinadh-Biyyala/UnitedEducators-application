@@ -1,297 +1,385 @@
-import { useState } from "react";
-import { FileText, FileSpreadsheet, FileBadge, Download, Eye, CheckCircle2, Clock, AlertCircle, Highlighter } from "lucide-react";
-import { DocPreviewModal, type PreviewDoc, type HighlightEntry, type DocHighlights, HIGHLIGHT_PALETTE } from "../DocPreviewModal";
+import { useMemo, useState } from "react";
+import {
+  FileText, FileSpreadsheet, FileBadge, Download, Eye, CheckCircle2,
+  AlertCircle, Folder, FolderOpen, FileStack, Upload, Clock, Search,
+  ChevronRight,
+} from "lucide-react";
+import { DocPreviewModal, type PreviewDoc, type HighlightEntry, type DocHighlights } from "../DocPreviewModal";
+import {
+  N, BDL, TD, TM, TT, OK, WARN, BAD,
+  SectionCard, PrimaryButton, DangerButton, font,
+} from "../DashboardCards";
 
-// ─── UE tokens ───────────────────────────────────────────────────────────────
-const N   = "#0123D4";
-const G   = "#C9A227";
-const TH  = "#F0F3F8";
-const BD  = "#C4CDD8";
-const BDL = "#DCE3EC";
-const TD  = "#1A2530";
-const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+// ─── Types ────────────────────────────────────────────────────────────────────
+type DocStatus  = "Uploaded" | "InReview" | "Missing";
+type FolderId   = "Shared" | "EPL" | "ELL" | "GL" | "Cyber";
+type Category   = "Application" | "Loss" | "Financial" | "Property" | "Compliance" | "Member" | "Broker";
 
-type DocStatus = "Verified" | "Pending" | "Missing";
-interface Doc extends PreviewDoc {}
+interface Doc {
+  id: number;
+  name: string;
+  type: string;
+  category: Category;
+  product: FolderId;
+  uploaded: string;
+  uploadedBy: string;
+  size: string;
+  status: DocStatus;
+  required: boolean;
+}
 
-const docs: Doc[] = [
-  // Application
-  { id: 1,  name: "Standard Education Application 2024.pdf",    type: "PDF",   category: "Application", uploaded: "Mar 15, 2024", size: "1.2 MB", status: "Verified",  required: true },
-  { id: 2,  name: "Supplemental Safety Questionnaire.pdf",      type: "PDF",   category: "Application", uploaded: "Mar 15, 2024", size: "480 KB", status: "Verified",  required: true },
-  { id: 3,  name: "Enrollment & Faculty Roster 2023-24.xlsx",   type: "XLSX",  category: "Application", uploaded: "Mar 15, 2024", size: "820 KB", status: "Verified",  required: true },
-  { id: 4,  name: "Prior Year Application Response 2023.pdf",   type: "PDF",   category: "Application", uploaded: "Mar 16, 2024", size: "950 KB", status: "Verified",  required: false },
-  // Loss
-  { id: 5,  name: "5-Year Certified Loss Runs.xlsx",            type: "XLSX",  category: "Loss",        uploaded: "Mar 15, 2024", size: "640 KB", status: "Verified",  required: true },
-  { id: 6,  name: "Open Claims Detail Report.pdf",              type: "PDF",   category: "Loss",        uploaded: "Mar 17, 2024", size: "310 KB", status: "Pending",   required: true },
-  // Financial
-  { id: 7,  name: "Audited Financial Statement FY2023.pdf",     type: "PDF",   category: "Financial",   uploaded: "Mar 16, 2024", size: "3.4 MB", status: "Verified",  required: true },
-  { id: 8,  name: "Adopted Budget Report FY2024-25.pdf",        type: "PDF",   category: "Financial",   uploaded: "Mar 16, 2024", size: "1.8 MB", status: "Verified",  required: true },
-  { id: 9,  name: "GASB 68 Pension Liability Report.pdf",       type: "PDF",   category: "Financial",   uploaded: "Mar 18, 2024", size: "740 KB", status: "Pending",   required: false },
-  { id: 10, name: "Annual Investment Report 2023.pdf",          type: "PDF",   category: "Financial",   uploaded: "",             size: "",        status: "Missing",   required: false },
-  // Property
-  { id: 11, name: "Property Schedule & Valuations.xlsx",        type: "XLSX",  category: "Property",    uploaded: "Mar 15, 2024", size: "1.1 MB", status: "Verified",  required: true },
-  { id: 12, name: "Building Inspection Reports 2023.pdf",       type: "PDF",   category: "Property",    uploaded: "Mar 15, 2024", size: "5.2 MB", status: "Verified",  required: true },
-  { id: 13, name: "COPE Survey – Lincoln HS.pdf",               type: "PDF",   category: "Property",    uploaded: "Mar 19, 2024", size: "920 KB", status: "Pending",   required: false },
-  // Compliance
-  { id: 14, name: "Certificate of Self-Insurance.pdf",          type: "PDF",   category: "Compliance",  uploaded: "Mar 15, 2024", size: "210 KB", status: "Verified",  required: true },
-  { id: 15, name: "Safety Committee Minutes 2023.pdf",          type: "PDF",   category: "Compliance",  uploaded: "Mar 16, 2024", size: "390 KB", status: "Verified",  required: false },
-  { id: 16, name: "Background Check Policy Statement.pdf",      type: "PDF",   category: "Compliance",  uploaded: "",             size: "",        status: "Missing",   required: true },
+// ─── Folder catalog ───────────────────────────────────────────────────────────
+const FOLDERS: { id: FolderId; label: string; sub: string }[] = [
+  { id: "Shared", label: "Submission-level",     sub: "Member, broker & shared docs" },
+  { id: "EPL",    label: "Employment Practices", sub: "EPL specific documents"       },
+  { id: "ELL",    label: "Educators Legal",      sub: "ELL specific documents"       },
+  { id: "GL",     label: "General Liability",    sub: "GL specific documents"        },
+  { id: "Cyber",  label: "Cyber Liability",      sub: "Cyber specific documents"     },
 ];
 
-const categories = ["All", "Application", "Loss", "Financial", "Property", "Compliance"] as const;
-type Category = typeof categories[number];
+const CATEGORY_ORDER: Category[] = ["Member", "Broker", "Application", "Loss", "Financial", "Property", "Compliance"];
 
-const categoryColors: Record<string, { bg: string; text: string }> = {
-  Application: { bg: "#E8F0F9", text: "#00427A" },
-  Loss:        { bg: "#FFF8E6", text: "#8A5C00" },
-  Financial:   { bg: "#E8F5EC", text: "#1A5C30" },
-  Property:    { bg: "#F0EEF8", text: "#4A2D80" },
-  Compliance:  { bg: TH,       text: TM         },
-};
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const docs: Doc[] = [
+  // Submission-level / shared
+  { id: 101, name: "ACORD 125 Application 2024.pdf",      type: "PDF",  category: "Application", product: "Shared", uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",    size: "1.4 MB", status: "Uploaded", required: true  },
+  { id: 102, name: "Audited Financial Statement FY23.pdf", type: "PDF", category: "Financial",   product: "Shared", uploaded: "Mar 16, 2024", uploadedBy: "T. Owens (Broker)",    size: "2.4 MB", status: "Uploaded", required: true  },
+  { id: 103, name: "OFAC Screening Report.pdf",            type: "PDF", category: "Compliance",  product: "Shared", uploaded: "Mar 17, 2024", uploadedBy: "Compliance System",    size: "180 KB", status: "Uploaded", required: true  },
+  { id: 104, name: "Member Information Profile.xlsx",      type: "XLSX",category: "Member",      product: "Shared", uploaded: "Mar 15, 2024", uploadedBy: "M. Khanna",            size: "320 KB", status: "InReview", required: true  },
+  { id: 105, name: "Broker Correspondence — Quote.msg",    type: "MSG", category: "Broker",      product: "Shared", uploaded: "Mar 18, 2024", uploadedBy: "T. Owens (Broker)",    size: "92 KB",  status: "Uploaded", required: false },
+  { id: 106, name: "Prior Carrier Loss Summary.pdf",       type: "PDF", category: "Loss",        product: "Shared", uploaded: "",             uploadedBy: "",                      size: "",       status: "Missing",  required: true  },
 
-const statusIcon = (s: DocStatus) => {
-  if (s === "Verified") return <CheckCircle2 size={14} color="#2E7D32" />;
-  if (s === "Pending")  return <Clock size={14} color="#B45309" />;
-  return <AlertCircle size={14} color="#B91C1C" />;
-};
+  // EPL
+  { id: 1,  name: "EPL Application Supplement.pdf",       type: "PDF",  category: "Application", product: "EPL",   uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "820 KB", status: "Uploaded", required: true  },
+  { id: 2,  name: "Wage & Hour Practices Survey.xlsx",    type: "XLSX", category: "Application", product: "EPL",   uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "340 KB", status: "Uploaded", required: true  },
+  { id: 3,  name: "EPL Loss Runs (5-Year).xlsx",          type: "XLSX", category: "Loss",        product: "EPL",   uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "1.1 MB", status: "InReview", required: true  },
+  { id: 5,  name: "EEO Policy Statement.pdf",             type: "PDF",  category: "Compliance",  product: "EPL",   uploaded: "",             uploadedBy: "",                       size: "",       status: "Missing",  required: true  },
 
-const statusStyle = (s: DocStatus) => {
-  if (s === "Verified") return { color: "#1A5C30", bg: "#E8F5EC", border: "#93C8A0" };
-  if (s === "Pending")  return { color: "#8A5C00", bg: "#FFF8E6", border: "#F0D88A" };
-  return { color: "#7A1F1F", bg: "#FBEAEA", border: "#E8A8A8" };
+  // ELL
+  { id: 6,  name: "Educator Liability Application.pdf",     type: "PDF", category: "Application", product: "ELL",   uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "1.2 MB", status: "Uploaded", required: true  },
+  { id: 7,  name: "Faculty & Staff Roster 2023-24.xlsx",    type: "XLSX",category: "Application", product: "ELL",   uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "640 KB", status: "Uploaded", required: true  },
+  { id: 8,  name: "Title IX Coordinator Certification.pdf",type: "PDF", category: "Compliance",  product: "ELL",   uploaded: "Mar 16, 2024", uploadedBy: "Brookfield HR",          size: "210 KB", status: "Uploaded", required: true  },
+  { id: 9,  name: "Sexual Misconduct Policy.pdf",           type: "PDF", category: "Compliance",  product: "ELL",   uploaded: "",             uploadedBy: "",                       size: "",       status: "Missing",  required: true  },
+
+  // GL
+  { id: 10, name: "General Liability Application.pdf",    type: "PDF",  category: "Application", product: "GL",    uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "1.4 MB", status: "Uploaded", required: true  },
+  { id: 11, name: "COPE Survey — Lincoln HS.pdf",         type: "PDF",  category: "Application", product: "GL",    uploaded: "Mar 17, 2024", uploadedBy: "T. Owens (Broker)",     size: "920 KB", status: "InReview", required: false },
+  { id: 12, name: "5-Year GL Loss Runs.xlsx",             type: "XLSX", category: "Loss",        product: "GL",    uploaded: "Mar 15, 2024", uploadedBy: "T. Owens (Broker)",     size: "1.6 MB", status: "Uploaded", required: true  },
+  { id: 13, name: "Building Inspection Reports 2023.pdf", type: "PDF",  category: "Property",    product: "GL",    uploaded: "Mar 15, 2024", uploadedBy: "Brookfield Facilities",  size: "5.2 MB", status: "Uploaded", required: true  },
+  { id: 14, name: "Property Schedule & Valuations.xlsx",  type: "XLSX", category: "Property",    product: "GL",    uploaded: "",             uploadedBy: "",                       size: "",       status: "Missing",  required: true  },
+
+  // Cyber
+  { id: 15, name: "Cyber Risk Questionnaire.pdf",         type: "PDF",  category: "Application", product: "Cyber", uploaded: "Mar 18, 2024", uploadedBy: "T. Owens (Broker)",     size: "780 KB", status: "Uploaded", required: true  },
+  { id: 16, name: "IT Security Policy.pdf",               type: "PDF",  category: "Compliance",  product: "Cyber", uploaded: "Mar 18, 2024", uploadedBy: "Brookfield IT",          size: "420 KB", status: "Uploaded", required: true  },
+  { id: 17, name: "Data Breach Response Plan.pdf",        type: "PDF",  category: "Compliance",  product: "Cyber", uploaded: "",             uploadedBy: "",                       size: "",       status: "Missing",  required: false },
+];
+
+// ─── Style helpers ────────────────────────────────────────────────────────────
+const categoryColors: Record<Category, { bg: string; text: string }> = {
+  Application: { bg: "#E0E7FF", text: N         },
+  Loss:        { bg: "#FFFBEB", text: "#B45309" },
+  Financial:   { bg: "#E8F5EC", text: OK        },
+  Property:    { bg: "#F0EEF8", text: "#5B21B6" },
+  Compliance:  { bg: "#F1F5F9", text: TM        },
+  Member:      { bg: "#E0F2FE", text: "#0369A1" },
+  Broker:      { bg: "#FEF3C7", text: "#92400E" },
 };
 
 const fileIcon = (type: string) => {
-  if (type === "XLSX") return <FileSpreadsheet size={15} color="#2E7D32" />;
-  if (type === "PDF")  return <FileText size={15} color="#B91C1C" />;
-  return <FileBadge size={15} color={TT} />;
+  if (type === "XLSX") return <FileSpreadsheet size={15} color={OK}/>;
+  if (type === "PDF")  return <FileText size={15} color={BAD}/>;
+  return <FileBadge size={15} color={TT}/>;
 };
 
-// Summarise the highlight colors used in a doc as small swatches
-function HighlightBadge({ highlights }: { highlights: HighlightEntry[] }) {
-  if (!highlights || highlights.length === 0) return null;
+const statusMeta = (s: DocStatus) => {
+  if (s === "Uploaded") return { color: OK,   bg: "#E8F5EC", label: "Validated", icon: <CheckCircle2 size={11}/> };
+  if (s === "InReview") return { color: WARN, bg: "#FEF3C7", label: "In Review", icon: <Clock        size={11}/> };
+  return                       { color: BAD,  bg: "#FEE2E2", label: "Missing",   icon: <AlertCircle  size={11}/> };
+};
 
-  // Unique colors used
-  const usedColors = Array.from(new Set(highlights.map((h) => h.color)));
+// Map our internal DocStatus → PreviewDoc's accepted status enum
+const previewStatus = (s: DocStatus): "Verified" | "Pending" | "Missing" =>
+  s === "Uploaded" ? "Verified" : s === "InReview" ? "Pending" : "Missing";
 
-  return (
-    <div
-      className="flex items-center gap-1.5 px-2 py-0.5"
-      style={{
-        background: "#FFF8E6",
-        border: "1px solid #F0D88A",
-        display: "inline-flex",
-      }}
-    >
-      <Highlighter size={10} color="#8A5C00" />
-      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#8A5C00" }}>
-        {highlights.length}
-      </span>
-      {/* Color dots */}
-      <div className="flex items-center gap-0.5">
-        {usedColors.map((c) => (
-          <span
-            key={c}
-            className="rounded-full"
-            style={{ width: 6, height: 6, background: HIGHLIGHT_PALETTE[c].dot }}
-            title={HIGHLIGHT_PALETTE[c].label}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
+// ═════════════════════════════════════════════════════════════════════════════
+//   DocumentsTab
+// ═════════════════════════════════════════════════════════════════════════════
 export function DocumentsTab() {
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
-  const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
-  const [allHighlights, setAllHighlights] = useState<DocHighlights>({});
+  // Default = first product folder (per spec). Shared sits above it in the list.
+  const [selectedFolder, setSelectedFolder] = useState<FolderId>("EPL");
+  const [search, setSearch]                 = useState("");
+  const [previewDoc, setPreviewDoc]         = useState<Doc | null>(null);
+  const [allHighlights, setAllHighlights]   = useState<DocHighlights>({});
 
-  const filtered    = activeCategory === "All" ? docs : docs.filter((d) => d.category === activeCategory);
-  const previewable = docs.filter((d) => d.status !== "Missing");
+  // Folder-level stats + status dot
+  const folderStats = useMemo(() => {
+    return FOLDERS.map(f => {
+      const docsIn   = docs.filter(d => d.product === f.id);
+      const uploaded = docsIn.filter(d => d.status === "Uploaded").length;
+      const inReview = docsIn.filter(d => d.status === "InReview").length;
+      const missing  = docsIn.filter(d => d.status === "Missing").length;
+      const missingRequired = docsIn.some(d => d.status === "Missing" && d.required);
+      const dot      = missingRequired ? BAD : inReview > 0 ? WARN : missing > 0 ? WARN : OK;
+      const statusLabel = missingRequired
+        ? "Missing required"
+        : inReview > 0
+          ? "In review"
+          : missing > 0
+            ? "Optional missing"
+            : "Complete";
+      return { ...f, total: docsIn.length, uploaded, inReview, missing, dot, statusLabel };
+    });
+  }, []);
 
-  const verified = docs.filter((d) => d.status === "Verified").length;
-  const pending  = docs.filter((d) => d.status === "Pending").length;
-  const missing  = docs.filter((d) => d.status === "Missing").length;
+  // Docs in the selected folder, filtered + grouped by category
+  const filteredGroups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = docs.filter(d => d.product === selectedFolder);
+    if (q) list = list.filter(d => d.name.toLowerCase().includes(q));
+    return CATEGORY_ORDER
+      .map(cat => ({ category: cat, docs: list.filter(d => d.category === cat) }))
+      .filter(g => g.docs.length > 0);
+  }, [selectedFolder, search]);
+
+  const selectedMeta = folderStats.find(f => f.id === selectedFolder)!;
+
+  // Preview navigation across all previewable docs in the current folder
+  const previewable = useMemo(
+    () => docs.filter(d => d.product === selectedFolder && d.status !== "Missing"),
+    [selectedFolder]
+  );
+  const previewIdx = previewDoc ? previewable.findIndex(d => d.id === previewDoc.id) : -1;
 
   const openPreview  = (doc: Doc) => setPreviewDoc(doc);
   const closePreview = () => setPreviewDoc(null);
-
   const navigatePreview = (dir: "prev" | "next") => {
     if (!previewDoc) return;
-    const idx  = previewable.findIndex((d) => d.id === previewDoc.id);
-    const next = dir === "prev" ? previewable[idx - 1] : previewable[idx + 1];
+    const next = dir === "prev" ? previewable[previewIdx - 1] : previewable[previewIdx + 1];
     if (next) setPreviewDoc(next);
   };
-
-  const previewIdx = previewDoc ? previewable.findIndex((d) => d.id === previewDoc.id) : -1;
-
   const handleHighlightsChange = (docId: number, highlights: HighlightEntry[]) => {
-    setAllHighlights((prev) => ({ ...prev, [docId]: highlights }));
+    setAllHighlights(prev => ({ ...prev, [docId]: highlights }));
   };
-
-  const totalHighlighted = Object.values(allHighlights).filter((h) => h.length > 0).length;
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-5" style={{ fontFamily: font }}>
+        <SectionCard
+          title="Documents"
+          icon={<Folder size={13}/>}
+          accent={N}
+          noPad
+          action={
+            <PrimaryButton>
+              <Upload size={13}/>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700 }}>Upload Document</span>
+            </PrimaryButton>
+          }>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Verified",           value: verified, color: "#1A5C30", bg: "#E8F5EC", border: "#93C8A0", s: "Verified"  as DocStatus },
-            { label: "Pending Review",     value: pending,  color: "#8A5C00", bg: "#FFF8E6", border: "#F0D88A", s: "Pending"   as DocStatus },
-            { label: "Missing / Required", value: missing,  color: "#7A1F1F", bg: "#FBEAEA", border: "#E8A8A8", s: "Missing"   as DocStatus },
-          ].map((stat, i) => (
-            <div key={i} className="px-5 py-4 flex items-center gap-4" style={{ background: stat.bg, border: `1px solid ${stat.border}`, borderTop: `3px solid ${stat.color}` }}>
-              {statusIcon(stat.s)}
-              <div>
-                <p style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>{stat.label}</p>
-                <p style={{ fontSize: "1.45rem", fontWeight: 800, color: stat.color, lineHeight: 1.25, marginTop: 2 }}>
-                  {stat.value} <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>docs</span>
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+          {/* Two-pane: folder sidebar + folder content */}
+          <div className="flex flex-col lg:flex-row" style={{ minHeight: 480 }}>
 
-        {/* Document Table */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
-          {/* Filter + highlight summary */}
-          <div className="px-5 py-3.5 flex items-center justify-between flex-wrap gap-3" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className="px-3 py-1.5 transition-all"
-                  style={{
-                    fontSize: "0.75rem", fontWeight: 600,
-                    background: activeCategory === cat ? N : "white",
-                    color:      activeCategory === cat ? "white" : TM,
-                    border:     `1px solid ${activeCategory === cat ? N : BD}`,
-                    borderRadius: 2,
-                  }}
-                >
-                  {cat} {cat === "All" ? `(${docs.length})` : `(${docs.filter((d) => d.category === cat).length})`}
-                </button>
-              ))}
-            </div>
-            {totalHighlighted > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ background: "#FFF8E6", border: `1px solid #F0D88A` }}>
-                <Highlighter size={12} color="#8A5C00" />
-                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8A5C00" }}>
-                  {totalHighlighted} doc{totalHighlighted !== 1 ? "s" : ""} with highlights
-                </span>
-              </div>
-            )}
-          </div>
-
-          <table className="w-full" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: TH }}>
-                {["Document", "Category", "Uploaded", "Size", "Status", "Actions"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left" style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: `1px solid ${BDL}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((doc) => {
-                const ss = statusStyle(doc.status);
-                const cc = categoryColors[doc.category];
-                const docHighlights  = allHighlights[doc.id] ?? [];
-                const hasHighlights  = docHighlights.length > 0;
-
-                return (
-                  <tr
-                    key={doc.id}
-                    style={{ borderBottom: `1px solid ${BDL}`, background: hasHighlights ? "#FFFDF4" : "white" }}
-                    className="hover:bg-slate-50 transition-colors group"
-                  >
-                    {/* Name */}
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        {fileIcon(doc.type)}
-                        <div className="flex flex-col gap-0.5">
-                          {doc.status !== "Missing" ? (
-                            <button
-                              onClick={() => openPreview(doc)}
-                              className="text-left transition-colors"
-                              style={{ fontSize: "0.82rem", fontWeight: 500, color: "#005B99", textDecoration: "none" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                            >
-                              {doc.name}
-                            </button>
-                          ) : (
-                            <p style={{ fontSize: "0.82rem", fontWeight: 500, color: TT }}>{doc.name}</p>
-                          )}
-                          <div className="flex items-center gap-2">
-                            {doc.required && <span style={{ fontSize: "0.62rem", color: "#005B99", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Required</span>}
-                            {hasHighlights && <HighlightBadge highlights={docHighlights} />}
+            {/* ── Folder sidebar ─────────────────────────────────────────── */}
+            <aside
+              className="lg:flex-col lg:w-[260px] lg:shrink-0 lg:border-r border-b lg:border-b-0"
+              style={{ borderColor: BDL, background: "#FAFBFD" }}>
+              <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible">
+                {folderStats.map((f) => {
+                  const isSelected = selectedFolder === f.id;
+                  const isShared   = f.id === "Shared";
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => { setSelectedFolder(f.id); setSearch(""); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedFolder(f.id);
+                          setSearch("");
+                        }
+                      }}
+                      aria-current={isSelected ? "true" : undefined}
+                      className="text-left lg:w-full shrink-0 lg:shrink transition-all"
+                      style={{
+                        minWidth: 220,
+                        padding: "12px 14px",
+                        background: isSelected ? `${N}0D` : "transparent",
+                        borderLeft: `3px solid ${isSelected ? N : "transparent"}`,
+                        borderRight: `1px solid ${BDL}`,
+                        borderBottom: `1px solid ${BDL}`,
+                        cursor: "pointer",
+                        fontFamily: font,
+                      }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "white"; }}
+                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
+                      <div className="flex items-center gap-2.5">
+                        <span className="inline-flex items-center justify-center shrink-0"
+                          style={{
+                            width: 30, height: 30, borderRadius: 6,
+                            background: isShared ? `${TM}18` : `${N}12`,
+                            color: isShared ? TM : N,
+                          }}>
+                          {isShared
+                            ? <FileStack size={14}/>
+                            : isSelected ? <FolderOpen size={14}/> : <Folder size={14}/>}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p style={{
+                              fontSize: "0.78rem", fontWeight: 700, color: TD,
+                              lineHeight: 1.2, whiteSpace: "nowrap",
+                              overflow: "hidden", textOverflow: "ellipsis",
+                            }}>{f.label}</p>
+                            <span
+                              aria-label={`Folder status: ${f.statusLabel}`}
+                              title={f.statusLabel}
+                              style={{
+                                width: 8, height: 8, borderRadius: "50%",
+                                background: f.dot, flexShrink: 0,
+                                boxShadow: `0 0 0 2px ${f.dot}22`,
+                              }}/>
+                          </div>
+                          <div className="flex items-center gap-1.5" style={{ marginTop: 2 }}>
+                            <span style={{ fontSize: "0.6rem", fontWeight: 700, color: TT }}>
+                              {f.total} doc{f.total !== 1 ? "s" : ""}
+                            </span>
+                            <span style={{ fontSize: "0.6rem", color: TT }}>·</span>
+                            <span style={{ fontSize: "0.6rem", color: f.dot, fontWeight: 700 }}>
+                              {f.statusLabel}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    </td>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
 
-                    <td className="px-5 py-3">
-                      <span className="px-2.5 py-0.5" style={{ fontSize: "0.68rem", fontWeight: 700, background: cc.bg, color: cc.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>{doc.category}</span>
-                    </td>
-                    <td className="px-5 py-3" style={{ fontSize: "0.78rem", color: doc.uploaded ? TM : TT }}>{doc.uploaded || "—"}</td>
-                    <td className="px-5 py-3" style={{ fontSize: "0.78rem", color: TT }}>{doc.size || "—"}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 w-fit" style={{ background: ss.bg, border: `1px solid ${ss.border}` }}>
-                        {statusIcon(doc.status)}
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: ss.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{doc.status}</span>
+            {/* ── Folder content ─────────────────────────────────────────── */}
+            <main className="flex-1 min-w-0">
+
+              {/* Folder header + search */}
+              <div className="flex items-center justify-between gap-3 px-5 py-3 flex-wrap"
+                style={{ borderBottom: `1px solid ${BDL}`, background: "white" }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-flex items-center justify-center shrink-0"
+                    style={{
+                      width: 28, height: 28, borderRadius: 6,
+                      background: selectedFolder === "Shared" ? `${TM}18` : `${N}12`,
+                      color: selectedFolder === "Shared" ? TM : N,
+                    }}>
+                    {selectedFolder === "Shared" ? <FileStack size={13}/> : <FolderOpen size={13}/>}
+                  </span>
+                  <div className="min-w-0">
+                    <p style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, lineHeight: 1.2 }}>
+                      {selectedMeta.label}
+                    </p>
+                    <p style={{ fontSize: "0.66rem", color: TT, marginTop: 1 }}>
+                      {selectedMeta.sub} · {selectedMeta.total} document{selectedMeta.total !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5"
+                    style={{
+                      fontSize: "0.64rem", fontWeight: 700, color: OK,
+                      background: "#E8F5EC", padding: "3px 9px", borderRadius: 4,
+                    }}>
+                    <CheckCircle2 size={11}/> {selectedMeta.uploaded} Validated
+                  </span>
+                  {selectedMeta.inReview > 0 && (
+                    <span className="inline-flex items-center gap-1.5"
+                      style={{
+                        fontSize: "0.64rem", fontWeight: 700, color: WARN,
+                        background: "#FEF3C7", padding: "3px 9px", borderRadius: 4,
+                      }}>
+                      <Clock size={11}/> {selectedMeta.inReview} In Review
+                    </span>
+                  )}
+                  {selectedMeta.missing > 0 && (
+                    <span className="inline-flex items-center gap-1.5"
+                      style={{
+                        fontSize: "0.64rem", fontWeight: 700, color: BAD,
+                        background: "#FEE2E2", padding: "3px 9px", borderRadius: 4,
+                      }}>
+                      <AlertCircle size={11}/> {selectedMeta.missing} Missing
+                    </span>
+                  )}
+
+                  {/* Search box */}
+                  <div className="relative" style={{ minWidth: 200 }}>
+                    <Search size={12} color={TT}
+                      style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)" }}/>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search in folder…"
+                      style={{
+                        width: "100%",
+                        padding: "6px 10px 6px 26px",
+                        fontSize: "0.72rem",
+                        border: `1px solid ${BDL}`,
+                        borderRadius: 5,
+                        background: "white",
+                        color: TD,
+                        outline: "none",
+                        fontFamily: font,
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = N; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = BDL; }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Doc grid grouped by category */}
+              <div className="px-5 py-4 space-y-4" style={{ background: "white" }}>
+                {filteredGroups.length === 0 && (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12"
+                    style={{ color: TT, fontSize: "0.78rem" }}>
+                    <Folder size={28} color={TT}/>
+                    <span>No documents in this folder match your search.</span>
+                  </div>
+                )}
+
+                {filteredGroups.map(group => {
+                  const cc = categoryColors[group.category];
+                  return (
+                    <div key={group.category}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span style={{
+                          fontSize: "0.6rem", fontWeight: 800,
+                          color: cc.text, background: cc.bg,
+                          padding: "2px 8px", borderRadius: 3,
+                          textTransform: "uppercase", letterSpacing: "0.06em",
+                        }}>
+                          {group.category}
+                        </span>
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, color: TT }}>
+                          {group.docs.length} doc{group.docs.length !== 1 ? "s" : ""}
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      {doc.status !== "Missing" ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => openPreview(doc)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 transition-all hover:brightness-95"
-                            style={{
-                              border: `1px solid ${hasHighlights ? "#F0D88A" : BD}`,
-                              background: hasHighlights ? "#FFF8E6" : "white",
-                              borderRadius: 2,
-                            }}
-                            title="Preview document"
-                          >
-                            <Eye size={13} color={hasHighlights ? "#8A5C00" : N} />
-                            <span style={{ fontSize: "0.70rem", fontWeight: 700, color: hasHighlights ? "#8A5C00" : N }}>Preview</span>
-                            {hasHighlights && <Highlighter size={11} color="#8A5C00" />}
-                          </button>
-                          <button
-                            className="p-1.5 transition-colors hover:bg-gray-100"
-                            style={{ border: `1px solid ${BD}`, borderRadius: 2 }}
-                            title="Download"
-                          >
-                            <Download size={13} color={TM} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className="px-3 py-1.5 transition-all hover:brightness-95"
-                          style={{ fontSize: "0.70rem", fontWeight: 700, background: "#B91C1C", color: "white", borderRadius: 2 }}
-                        >
-                          Request
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                        {group.docs.map(doc => (
+                          <DocCard key={doc.id} doc={doc} onPreview={openPreview}/>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </main>
+          </div>
+        </SectionCard>
       </div>
 
-      {/* Preview Modal */}
       {previewDoc && (
         <DocPreviewModal
-          doc={previewDoc}
+          doc={{ ...previewDoc, status: previewStatus(previewDoc.status) } as PreviewDoc}
           highlights={allHighlights[previewDoc.id] ?? []}
           onHighlightsChange={(h) => handleHighlightsChange(previewDoc.id, h)}
           onClose={closePreview}
@@ -302,5 +390,118 @@ export function DocumentsTab() {
         />
       )}
     </>
+  );
+}
+
+// ─── DocCard — single document card in the right pane ────────────────────────
+function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) {
+  const sm = statusMeta(doc.status);
+  const isMissing = doc.status === "Missing";
+  const [hover, setHover] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        border: `1px solid ${hover ? `${N}40` : BDL}`,
+        borderRadius: 8,
+        padding: "10px 12px",
+        background: isMissing ? "#FFFBFB" : hover ? "#FAFBFD" : "white",
+        boxShadow: hover ? "0 1px 4px rgba(15,23,42,0.06)" : "none",
+        transition: "all 0.15s ease",
+      }}>
+      <div className="flex items-start gap-2.5">
+        <span className="inline-flex items-center justify-center shrink-0"
+          style={{ width: 32, height: 32, borderRadius: 6, background: "#F4F6FA" }}>
+          {fileIcon(doc.type)}
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              {!isMissing ? (
+                <button
+                  onClick={() => onPreview(doc)}
+                  className="text-left hover:underline truncate w-full"
+                  style={{
+                    fontSize: "0.78rem", fontWeight: 600, color: N,
+                    background: "none", border: "none", padding: 0,
+                    cursor: "pointer", fontFamily: font,
+                  }}>
+                  {doc.name}
+                </button>
+              ) : (
+                <span className="truncate block"
+                  style={{ fontSize: "0.78rem", fontWeight: 600, color: TT }}>
+                  {doc.name}
+                </span>
+              )}
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap"
+                style={{ fontSize: "0.66rem", color: TT }}>
+                <span style={{ fontWeight: 700 }}>{doc.type}</span>
+                {doc.size && <><span>·</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{doc.size}</span></>}
+                {doc.uploaded && <><span>·</span><span>{doc.uploaded}</span></>}
+                {doc.uploadedBy && <><span>·</span><span>{doc.uploadedBy}</span></>}
+              </div>
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 shrink-0"
+              style={{ background: sm.bg, padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ color: sm.color, display: "inline-flex" }}>{sm.icon}</span>
+              <span style={{ fontSize: "0.64rem", fontWeight: 700, color: sm.color }}>
+                {sm.label}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              {doc.required && (
+                <span style={{
+                  fontSize: "0.56rem", fontWeight: 800, color: N,
+                  background: `${N}10`, padding: "1px 6px", borderRadius: 3,
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}>
+                  Required
+                </span>
+              )}
+            </div>
+
+            <div className="inline-flex items-center gap-1.5">
+              {!isMissing ? (
+                <>
+                  <button
+                    onClick={() => onPreview(doc)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 transition-colors hover:bg-slate-50"
+                    style={{
+                      border: `1px solid ${BDL}`, background: "white",
+                      borderRadius: 5, cursor: "pointer", fontFamily: font,
+                    }}
+                    title="Preview document">
+                    <Eye size={11} color={N}/>
+                    <span style={{ fontSize: "0.66rem", fontWeight: 700, color: N }}>Preview</span>
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center p-1.5 transition-colors hover:bg-slate-50"
+                    style={{
+                      border: `1px solid ${BDL}`, borderRadius: 5,
+                      background: "white", cursor: "pointer",
+                    }}
+                    title="Download">
+                    <Download size={11} color={TM}/>
+                  </button>
+                </>
+              ) : (
+                <DangerButton>
+                  <span style={{ fontSize: "0.66rem", fontWeight: 700 }}>Request</span>
+                  <ChevronRight size={11}/>
+                </DangerButton>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

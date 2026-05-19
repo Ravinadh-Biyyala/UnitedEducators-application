@@ -1,13 +1,16 @@
-import { TrendingDown, TrendingUp, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
+import { TrendingDown, TrendingUp, AlertCircle, CheckCircle2, Clock, FileText, DollarSign, AlertTriangle, Hash, Users } from "lucide-react";
+import { N, G, BDL, TD, TM, TT, OK, WARN, BAD, SectionCard, KPITile, font, type KPI } from "../DashboardCards";
 
-const N   = "#0123D4";
-const G   = "#C9A227";
-const TH  = "#F0F3F8";
-const BD  = "#C4CDD8";
-const BDL = "#DCE3EC";
-const TD  = "#1A2530";
-const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+/* ── Per-member loss row (passed in by the parent when the submission is a
+   group). Drives the "By Member" view on the Year-by-Year card. */
+export interface GroupMemberLoss {
+  name: string;
+  memberType: string;
+  products: string[];
+  lossRatio: number;
+  trend: "up" | "down" | "neutral";
+}
 
 const claims = [
   { id: "CLM-2023-041", date: "Sep 14, 2023", type: "Property – Water Damage",       location: "Lincoln HS",       paid: "$12,400", reserve: "$6,100", total: "$18,500", status: "Closed", alert: false },
@@ -28,141 +31,332 @@ const yearSummary = [
   { year: "2023", claims: 1, paid: "$12,400",  reserve: "$6,100", incurred: "$18,500", ratio: "22%", trend: "neutral" },
 ];
 
-export function LossTab() {
+export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) {
   const totalOpen = 2;
+  const isGroup   = !!groupMembers && groupMembers.length > 0;
+  const [yearView, setYearView] = useState<"year" | "member">("year");
+
+  const kpis: KPI[] = [
+    { label: "5-Yr Incurred Total",  value: "$87,200", sub: "Total paid + reserves", trend: "up",   accent: N,    icon: <DollarSign size={16}/>     },
+    { label: "5-Yr Avg. Loss Ratio", value: "21.0%",   sub: "Below 70% threshold",    trend: "down", accent: OK,   icon: <TrendingDown size={16}/>   },
+    { label: "Total Open Claims",    value: "2",       sub: "Active reserves",        trend: "none", accent: WARN, icon: <AlertTriangle size={16}/>  },
+    { label: "Total Claims (5yr)",   value: "9",       sub: "All claim activity",     trend: "none", accent: G,    icon: <Hash size={16}/>           },
+  ];
 
   return (
-    <div className="space-y-5">
-
-      {/* Summary Stats */}
+    <div className="space-y-5" style={{ fontFamily: font }}>
+      {/* Summary KPIs — modern */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "5-Yr Incurred Total",  value: "$87,200", color: N,         bg: "#E8F0F9", border: "#9ABCD6" },
-          { label: "5-Yr Avg. Loss Ratio", value: "21.0%",   color: "#2E7D32", bg: "#E8F5EC", border: "#93C8A0" },
-          { label: "Total Open Claims",    value: "2",        color: "#B45309", bg: "#FFF8E6", border: "#F0D88A" },
-          { label: "Total Claims (5yr)",   value: "9",        color: TD,        bg: TH,        border: BD       },
-        ].map((s, i) => (
-          <div key={i} className="px-5 py-4" style={{ background: s.bg, border: `1px solid ${s.border}`, borderTop: `3px solid ${s.color}` }}>
-            <p style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>{s.label}</p>
-            <p style={{ fontSize: "1.6rem", fontWeight: 800, color: s.color, lineHeight: 1.25, marginTop: 4 }}>{s.value}</p>
-          </div>
-        ))}
+        {kpis.map((k, i) => <KPITile key={i} k={k}/>)}
       </div>
 
-      {/* Year-by-Year Summary */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
-        <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-          <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Year-by-Year Loss Summary</h3>
-        </div>
+      {/* Year-by-Year (or per-member, on group submissions) */}
+      <SectionCard
+        title={isGroup && yearView === "member" ? "Loss Ratio by Member" : "Year-by-Year Loss Summary"}
+        accent={N}
+        icon={<FileText size={13}/>}
+        noPad
+        action={isGroup ? (
+          <div className="inline-flex items-center" style={{ background: "white", border: `1px solid ${BDL}`, borderRadius: 6, padding: 2 }}>
+            {([
+              { id: "year",   label: "By Year",   icon: <FileText size={11}/> },
+              { id: "member", label: "By Member", icon: <Users size={11}/>    },
+            ] as const).map(opt => {
+              const active = yearView === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setYearView(opt.id)}
+                  className="inline-flex items-center gap-1.5"
+                  style={{
+                    background: active ? N : "transparent",
+                    color: active ? "white" : TM,
+                    border: "none", borderRadius: 4,
+                    padding: "4px 9px",
+                    fontSize: "0.66rem", fontWeight: 800,
+                    fontFamily: font,
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : undefined}
+      >
+        {isGroup && yearView === "member" ? (
+          <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#FAFBFD" }}>
+                {["Member", "Member Type", "Products", "Loss Ratio", "Trend"].map(h => (
+                  <th key={h} className="px-5 py-2.5 text-left whitespace-nowrap"
+                    style={{
+                      fontSize: "0.58rem", fontWeight: 700, color: TT,
+                      textTransform: "uppercase", letterSpacing: "0.09em",
+                      borderBottom: `1px solid ${BDL}`,
+                    }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {groupMembers!.map((m, i, arr) => {
+                const ratioColor = m.lossRatio >= 70 ? BAD : m.lossRatio >= 55 ? WARN : OK;
+                const ratioBg    = m.lossRatio >= 70 ? "#FEE2E2" : m.lossRatio >= 55 ? "#FFF8E6" : "#E8F5EC";
+                const isLast     = i === arr.length - 1;
+                return (
+                  <tr key={m.name} className="hover:bg-slate-50 transition-colors"
+                    style={{ borderBottom: isLast ? "none" : `1px solid #EEF1F5` }}>
+                    <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>
+                      {m.name}
+                    </td>
+                    <td className="px-5 py-3" style={{ fontSize: "0.76rem", color: TM }}>
+                      {m.memberType}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {m.products.map(p => (
+                          <span key={p} style={{
+                            background: "#F1F4F8", color: TM,
+                            fontSize: "0.60rem", fontWeight: 700,
+                            padding: "2px 6px", borderRadius: 3,
+                            letterSpacing: "0.02em",
+                          }}>
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span style={{
+                        fontSize: "0.78rem", fontWeight: 800,
+                        color: ratioColor,
+                        background: ratioBg,
+                        padding: "2px 9px", borderRadius: 4,
+                        fontVariantNumeric: "tabular-nums",
+                      }}>
+                        {m.lossRatio}%
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      {m.trend === "up"   && <TrendingUp size={14} color={BAD}/>}
+                      {m.trend === "down" && <TrendingDown size={14} color={OK}/>}
+                      {m.trend === "neutral" && <span style={{ fontSize: "0.74rem", color: TT }}>—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+              <tr style={{ background: "#FAFBFD", borderTop: `1px solid ${BDL}` }}>
+                <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 800, color: TD }}>
+                  Group (weighted)
+                </td>
+                <td className="px-5 py-3" colSpan={2} style={{ fontSize: "0.74rem", color: TT }}>
+                  {groupMembers!.length} members
+                </td>
+                <td className="px-5 py-3" colSpan={2}>
+                  {(() => {
+                    const wlr = groupMembers!.reduce((s, m) => s + m.lossRatio, 0) / groupMembers!.length;
+                    const c   = wlr >= 70 ? BAD : wlr >= 55 ? WARN : OK;
+                    const bg  = wlr >= 70 ? "#FEE2E2" : wlr >= 55 ? "#FFF8E6" : "#E8F5EC";
+                    return (
+                      <span style={{
+                        fontSize: "0.78rem", fontWeight: 800, color: c,
+                        background: bg, padding: "2px 10px", borderRadius: 4,
+                      }}>
+                        {wlr.toFixed(1)}% avg
+                      </span>
+                    );
+                  })()}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ background: TH }}>
-              {["Policy Year", "# Claims", "Paid", "Reserve", "Incurred Total", "Loss Ratio", "Trend"].map((h) => (
-                <th key={h} className="px-5 py-3 text-left" style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: `1px solid ${BDL}` }}>{h}</th>
+            <tr style={{ background: "#FAFBFD" }}>
+              {["Policy Year", "# Claims", "Paid", "Reserve", "Incurred Total", "Loss Ratio", "Trend"].map(h => (
+                <th key={h} className="px-5 py-2.5 text-left whitespace-nowrap"
+                  style={{
+                    fontSize: "0.58rem", fontWeight: 700, color: TT,
+                    textTransform: "uppercase", letterSpacing: "0.09em",
+                    borderBottom: `1px solid ${BDL}`,
+                  }}>
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {yearSummary.map((row, i) => (
-              <tr key={i} style={{ borderBottom: `1px solid ${BDL}` }} className="hover:bg-slate-50 transition-colors">
-                <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 700, color: N }}>{row.year}</td>
-                <td className="px-5 py-3" style={{ fontSize: "0.875rem", color: TM }}>{row.claims}</td>
-                <td className="px-5 py-3" style={{ fontSize: "0.875rem", color: TM }}>{row.paid}</td>
-                <td className="px-5 py-3" style={{ fontSize: "0.875rem", color: row.reserve === "$0" ? TT : "#B45309" }}>{row.reserve}</td>
-                <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 600, color: TD }}>{row.incurred}</td>
+            {yearSummary.map((row, i, arr) => (
+              <tr key={i} className="hover:bg-slate-50 transition-colors"
+                style={{ borderBottom: i === arr.length - 1 ? "none" : `1px solid #EEF1F5` }}>
+                <td className="px-5 py-3" style={{ fontSize: "0.86rem", fontWeight: 800, color: N, fontVariantNumeric: "tabular-nums" }}>
+                  {row.year}
+                </td>
+                <td className="px-5 py-3" style={{ fontSize: "0.82rem", color: TD, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                  {row.claims}
+                </td>
+                <td className="px-5 py-3" style={{ fontSize: "0.82rem", color: TM, fontVariantNumeric: "tabular-nums" }}>{row.paid}</td>
+                <td className="px-5 py-3" style={{
+                  fontSize: "0.82rem", color: row.reserve === "$0" ? TT : WARN,
+                  fontWeight: row.reserve === "$0" ? 400 : 600,
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {row.reserve}
+                </td>
+                <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 700, color: TD, fontVariantNumeric: "tabular-nums" }}>
+                  {row.incurred}
+                </td>
                 <td className="px-5 py-3">
-                  <span
-                    className="px-2.5 py-0.5"
-                    style={{
-                      fontSize: "0.78rem", fontWeight: 700,
-                      background: row.trend === "up" ? "#FBEAEA" : row.trend === "down" ? "#E8F5EC" : TH,
-                      color:      row.trend === "up" ? "#B91C1C" : row.trend === "down" ? "#2E7D32" : TT,
-                      border: `1px solid ${row.trend === "up" ? "#E8A8A8" : row.trend === "down" ? "#93C8A0" : BD}`,
-                    }}
-                  >
+                  <span style={{
+                    fontSize: "0.7rem", fontWeight: 800,
+                    background:
+                      row.trend === "up" ? "#FEE2E2" :
+                      row.trend === "down" ? "#E8F5EC" : "#F1F5F9",
+                    color:
+                      row.trend === "up" ? BAD :
+                      row.trend === "down" ? OK : TT,
+                    padding: "2px 8px", borderRadius: 4,
+                  }}>
                     {row.ratio}
                   </span>
                 </td>
                 <td className="px-5 py-3">
-                  {row.trend === "up"      && <TrendingUp size={15} color="#B91C1C" />}
-                  {row.trend === "down"    && <TrendingDown size={15} color="#2E7D32" />}
-                  {row.trend === "neutral" && <span style={{ fontSize: "0.75rem", color: TT }}>—</span>}
+                  {row.trend === "up"      && <TrendingUp size={14} color={BAD}/>}
+                  {row.trend === "down"    && <TrendingDown size={14} color={OK}/>}
+                  {row.trend === "neutral" && <span style={{ fontSize: "0.74rem", color: TT }}>—</span>}
                 </td>
               </tr>
             ))}
-            <tr style={{ borderTop: `2px solid ${BD}`, background: TH }}>
-              <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 700, color: TD }}>5-Year Total</td>
-              <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 700, color: TD }}>9</td>
-              <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 700, color: TD }}>$71,700</td>
-              <td className="px-5 py-3" style={{ fontSize: "0.875rem", fontWeight: 700, color: "#B45309" }}>$14,500</td>
-              <td className="px-5 py-3" style={{ fontSize: "0.95rem", fontWeight: 800, color: N }}>$87,200</td>
+            <tr style={{ background: "#FAFBFD", borderTop: `1px solid ${BDL}` }}>
+              <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 800, color: TD }}>5-Year Total</td>
+              <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 800, color: TD, fontVariantNumeric: "tabular-nums" }}>9</td>
+              <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 800, color: TD, fontVariantNumeric: "tabular-nums" }}>$71,700</td>
+              <td className="px-5 py-3" style={{ fontSize: "0.84rem", fontWeight: 800, color: WARN, fontVariantNumeric: "tabular-nums" }}>$14,500</td>
+              <td className="px-5 py-3" style={{ fontSize: "0.94rem", fontWeight: 800, color: N, fontVariantNumeric: "tabular-nums" }}>$87,200</td>
               <td className="px-5 py-3" colSpan={2}>
-                <span style={{ fontSize: "0.78rem", fontWeight: 700, background: "#E8F5EC", color: "#2E7D32", border: "1px solid #93C8A0", padding: "2px 10px" }}>21.0% avg</span>
+                <span style={{
+                  fontSize: "0.74rem", fontWeight: 800, color: OK,
+                  background: "#E8F5EC", padding: "2px 10px", borderRadius: 4,
+                }}>
+                  21.0% avg
+                </span>
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
+        )}
+      </SectionCard>
 
       {/* Claim Detail Log */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}` }}>
-        <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-          <div>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Claim Detail Log</h3>
-            <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2 }}>All claims — 2019 to present</p>
-          </div>
+      <SectionCard
+        title="Claim Detail Log"
+        accent={G}
+        icon={<Clock size={13}/>}
+        noPad
+        action={
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, background: "#FFF8E6", color: "#8A5C00", border: "1px solid #F0D88A", padding: "2px 10px" }}>
+            <span style={{
+              fontSize: "0.66rem", fontWeight: 700, background: "#FFFBEB", color: WARN,
+              padding: "2px 9px", borderRadius: 10,
+            }}>
               {totalOpen} Open
             </span>
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, background: "#E8F5EC", color: "#1A5C30", border: "1px solid #93C8A0", padding: "2px 10px" }}>
+            <span style={{
+              fontSize: "0.66rem", fontWeight: 700, background: "#E8F5EC", color: OK,
+              padding: "2px 9px", borderRadius: 10,
+            }}>
               {9 - totalOpen} Closed
             </span>
           </div>
-        </div>
-        <table className="w-full" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: TH }}>
-              {["Claim ID", "Date", "Type", "Location", "Paid", "Reserve", "Total", "Status"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left" style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: `1px solid ${BDL}` }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {claims.map((c, i) => (
-              <tr
-                key={i}
-                style={{ borderBottom: `1px solid ${BDL}`, background: c.alert ? "#FFFDF4" : "white" }}
-                className="hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", fontWeight: 700, color: "#005B99" }}>{c.id}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", color: TM }}>{c.date}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", color: TD }}>{c.type}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", color: TM }}>{c.location}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", color: TD }}>{c.paid}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", color: c.reserve === "$0" ? TT : "#B45309", fontWeight: c.reserve !== "$0" ? 600 : 400 }}>{c.reserve}</td>
-                <td className="px-4 py-3" style={{ fontSize: "0.78rem", fontWeight: 700, color: TD }}>{c.total}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    {c.status === "Closed"
-                      ? <CheckCircle2 size={13} color="#2E7D32" />
-                      : c.alert
-                        ? <AlertCircle size={13} color="#B45309" />
-                        : <Clock size={13} color={TT} />
-                    }
-                    <span style={{
-                      fontSize: "0.72rem", fontWeight: 600,
-                      color: c.status === "Closed" ? "#2E7D32" : c.alert ? "#B45309" : TM,
+        }>
+        <div className="overflow-x-auto">
+          <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#FAFBFD" }}>
+                {["Claim ID", "Date", "Type", "Location", "Paid", "Reserve", "Total", "Status"].map(h => (
+                  <th key={h} className="px-4 py-2.5 text-left whitespace-nowrap"
+                    style={{
+                      fontSize: "0.58rem", fontWeight: 700, color: TT,
+                      textTransform: "uppercase", letterSpacing: "0.09em",
+                      borderBottom: `1px solid ${BDL}`,
                     }}>
-                      {c.status}
-                    </span>
-                  </div>
-                </td>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {claims.map((c, i, arr) => {
+                const isLast = i === arr.length - 1;
+                return (
+                  <tr key={c.id}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    style={{
+                      borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
+                      background: c.alert ? "#FFFBF0" : "white",
+                      borderLeft: c.alert ? `3px solid ${WARN}` : "3px solid transparent",
+                    }}>
+                    <td className="px-4 py-3" style={{
+                      fontSize: "0.72rem", fontWeight: 700, color: N,
+                      fontFamily: "ui-monospace, monospace",
+                    }}>
+                      {c.id}
+                    </td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.74rem", color: TM, whiteSpace: "nowrap" }}>{c.date}</td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.76rem", color: TD, fontWeight: 500 }}>{c.type}</td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.74rem", color: TM }}>{c.location}</td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.76rem", color: TD, fontVariantNumeric: "tabular-nums" }}>
+                      {c.paid}
+                    </td>
+                    <td className="px-4 py-3" style={{
+                      fontSize: "0.76rem", color: c.reserve === "$0" ? TT : WARN,
+                      fontWeight: c.reserve !== "$0" ? 600 : 400,
+                      fontVariantNumeric: "tabular-nums",
+                    }}>
+                      {c.reserve}
+                    </td>
+                    <td className="px-4 py-3" style={{
+                      fontSize: "0.78rem", fontWeight: 800, color: TD,
+                      fontVariantNumeric: "tabular-nums",
+                    }}>
+                      {c.total}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5"
+                        style={{
+                          background:
+                            c.status === "Closed" ? "#E8F5EC" :
+                            c.alert ? "#FFFBEB" : "#F1F5F9",
+                          padding: "2px 8px", borderRadius: 4,
+                        }}>
+                        {c.status === "Closed"
+                          ? <CheckCircle2 size={11} color={OK}/>
+                          : c.alert
+                            ? <AlertCircle size={11} color={WARN}/>
+                            : <Clock size={11} color={TT}/>}
+                        <span style={{
+                          fontSize: "0.68rem", fontWeight: 700,
+                          color: c.status === "Closed" ? OK : c.alert ? WARN : TM,
+                        }}>
+                          {c.status}
+                        </span>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
     </div>
   );
 }

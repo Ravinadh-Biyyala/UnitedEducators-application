@@ -33,6 +33,27 @@ Open http://localhost:3000.
 | `npm run format` | Run Prettier on all source files |
 | `npm run type-check` | Run TypeScript without emitting |
 
+## AI Companion (two-process setup)
+
+The Companion chat panel talks to a standalone Express server in `/server` that proxies OpenAI server-side (the API key never reaches the browser). If the server is down the UI gracefully falls back to a local heuristic responder.
+
+1. **Start the backend** (one-time install, then dev watch):
+   ```bash
+   cd server
+   npm install
+   cp .env.example .env
+   # edit server/.env and set OPENAI_API_KEY=sk-...
+   npm run dev
+   ```
+   Server listens on `http://localhost:8787` and exposes `POST /api/companion/chat`.
+
+2. **Start the frontend** in another terminal at the workbench root:
+   ```bash
+   npm run dev       # or: npm run dev:design
+   ```
+
+3. Open the workbench, open the Companion panel, type a question. Replies now come from OpenAI via `gpt-4.1`. Override the endpoint with `VITE_COMPANION_API_URL` in the root `.env` if needed.
+
 ## Architecture
 
 The full architecture spec lives in **[CLAUDE.md](./CLAUDE.md)** and **[.cursorrules](./.cursorrules)**. Read these before adding code.

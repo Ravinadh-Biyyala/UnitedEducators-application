@@ -219,9 +219,16 @@ export function AuditTrailTab() {
     <div className="space-y-5" style={{ fontFamily: font }}>
 
       {/* Header bar */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}` }}>
-        <div className="px-5 py-3.5 flex items-center justify-between flex-wrap gap-3"
-          style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
+      <div style={{
+        background: "white",
+        border: `1px solid ${BDL}`,
+        borderTop: `3px solid ${N}`,
+        borderRadius: 8,
+        overflow: "hidden",
+        boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+      }}>
+        <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-3"
+          style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
           <div className="flex items-center gap-2">
             <Clock size={14} color={N} />
             <div>
@@ -242,6 +249,7 @@ export function AuditTrailTab() {
               background: showSystem ? `${N}0C` : "white",
               fontSize: "0.72rem", fontWeight: 600,
               color: showSystem ? N : TM,
+              borderRadius: 6,
             }}>
             <Settings size={11} />
             {showSystem ? "Hide" : "Show"} System Events
@@ -261,6 +269,7 @@ export function AuditTrailTab() {
                 background: filter === f.id ? N : "white",
                 color: filter === f.id ? "white" : TM,
                 border: `1px solid ${filter === f.id ? N : BDL}`,
+                borderRadius: 6,
               }}>
               {f.label}
             </button>
@@ -363,7 +372,7 @@ export function AuditTrailTab() {
             Showing {filtered.length} of {EVENTS.length} events · Last updated Mar 26, 2024
           </span>
           <button className="flex items-center gap-1.5 hover:underline"
-            style={{ fontSize: "0.68rem", color: N, fontWeight: 700 }}>
+            style={{ fontSize: "0.68rem", color: N, fontWeight: 700, borderRadius: 6 }}>
             <FileText size={11} /> Export Audit Log
           </button>
         </div>
@@ -378,7 +387,7 @@ export function AuditTrailTab() {
           { label: "System Events",   value: EVENTS.filter(e => e.systemFlag).length,                     color: TM,       bg: TH       },
         ].map((c, i) => (
           <div key={i} className="px-4 py-3"
-            style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${c.color}` }}>
+            style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${c.color}`, borderRadius: 8 }}>
             <p style={{ fontSize: "1.45rem", fontWeight: 800, color: c.color, lineHeight: 1.1 }}>{c.value}</p>
             <p style={{ fontSize: "0.66rem", fontWeight: 700, color: TT, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.07em" }}>
               {c.label}
