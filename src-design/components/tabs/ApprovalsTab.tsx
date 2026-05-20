@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, X, ChevronDown, Check, Flag } from "lucide-react";
+import { useSubmissionWorkspaceOptional } from "../../context/SubmissionWorkspaceContext";
 
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 const N    = "#0123D4";
@@ -110,6 +111,55 @@ const AUTHORITY_RULE: Partial<Record<Reason, string>> = {
 
 const APPROVERS = ["Leo Tran", "Sarah Mitchell", "James Owens", "Devon Carter", "Maya Khanna"];
 
+/* Author identity used when an approval is mirrored to the Notes tab. */
+const APPROVER_AVATAR_COLOR: Record<string, string> = {
+  "Leo Tran":        "#1A7A4A",
+  "Sarah Mitchell":  "#7B2FBE",
+  "James Owens":     "#B45309",
+  "Devon Carter":    "#7B2FBE",
+  "Maya Khanna":     N,
+};
+
+/* Clickable summary pill that doubles as a status filter on the Approvals list. */
+function FilterPill({
+  active, onClick, bg, border, text, dot, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  bg: string; border: string; text: string; dot: string;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-97 transition-all"
+      style={{
+        background: bg,
+        border: `1px solid ${border}`,
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        color: text,
+        borderRadius: 6,
+        cursor: "pointer",
+        boxShadow: active ? `0 0 0 2px ${border}` : "none",
+        outline: "none",
+      }}>
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, display: "inline-block" }} />
+      {label}
+    </button>
+  );
+}
+
+function authorFromApprover(approver: string): { name: string; initials: string; color: string } {
+  // "Leo Tran (UW Manager)" → name "Leo Tran"
+  const name = approver.split(/\s*\(/)[0].trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("");
+  return { name, initials, color: APPROVER_AVATAR_COLOR[name] ?? N };
+}
+
 /* ── Dropdown helper ───────────────────────────────────────────────────────── */
 function SelectField<T extends string>({
   label, value, onChange, options, placeholder, hint, required,
@@ -168,8 +218,9 @@ function NewApprovalModal({ onClose, onSubmit }: {
   onClose: () => void;
   onSubmit: (a: Omit<Approval, "id">) => void;
 }) {
-  const [account,  setAccount]  = useState("Brookfield Day School");
-  const [submission, setSub]    = useState("SUB-10428");
+  // Locked to current submission workspace context.
+  const account    = "Brookfield Day School";
+  const submission = "SUB-10428";
   const [reason,   setReason]   = useState<Reason | "">("");
   const [referTo,  setReferTo]  = useState<string>("");
   const [urgency,  setUrgency]  = useState<Urgency | "">("");
@@ -208,7 +259,7 @@ function NewApprovalModal({ onClose, onSubmit }: {
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(15, 25, 40, 0.55)" }}>
 
-      <div className="w-full mx-4" style={{ maxWidth: 660, background: "white", border: `1px solid ${BD}`, boxShadow: "0 20px 60px rgba(0,0,0,0.20)" }}>
+      <div className="w-full mx-4" style={{ maxWidth: 660, background: "white", border: `1px solid ${BD}`, boxShadow: "0 20px 60px rgba(0,0,0,0.20)", borderRadius: 10, overflow: "hidden" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BDL}` }}>
@@ -222,22 +273,27 @@ function NewApprovalModal({ onClose, onSubmit }: {
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
 
-          {/* Account + Submission */}
+          {/* Account + Submission — locked to current submission context */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Account</label>
-              <input value={account} onChange={e => setAccount(e.target.value)}
-                className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font }} />
+              <input
+                readOnly
+                value={account}
+                aria-readonly="true"
+                tabIndex={-1}
+                className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: font, background: TH }} />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>Submission</label>
-                <span style={{ fontSize: "0.68rem", color: TT }}>optional</span>
-              </div>
-              <input value={submission} onChange={e => setSub(e.target.value)}
-                className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font }} />
+              <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Submission</label>
+              <input
+                readOnly
+                value={submission}
+                aria-readonly="true"
+                tabIndex={-1}
+                className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: font, background: TH }} />
             </div>
           </div>
 
@@ -252,10 +308,10 @@ function NewApprovalModal({ onClose, onSubmit }: {
             required
           />
 
-          {/* Refer to + Urgency + Need by */}
+          {/* Assign to + Urgency + Approve by */}
           <div className="grid grid-cols-3 gap-4">
             <SelectField<string>
-              label="Refer to"
+              label="Assign to"
               value={referTo}
               onChange={setReferTo}
               options={APPROVERS}
@@ -271,16 +327,16 @@ function NewApprovalModal({ onClose, onSubmit }: {
               required
             />
             <div>
-              <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Need by</label>
+              <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Approve by</label>
               <input type="date" value={needBy} onChange={e => setNeedBy(e.target.value)}
                 className="w-full px-3 py-2.5 outline-none"
                 style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: needBy ? TD : TT, fontFamily: font }} />
             </div>
           </div>
 
-          {/* Context for approver */}
+          {/* Note for Approver */}
           <div>
-            <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Context for approver</label>
+            <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Note for Approver</label>
             <textarea value={context} onChange={e => setContext(e.target.value)}
               placeholder="Why this is being referred, what's been considered, and what decision you need."
               rows={4} className="w-full outline-none resize-y px-3 py-2.5"
@@ -311,10 +367,9 @@ function NewApprovalModal({ onClose, onSubmit }: {
 }
 
 /* ── Approval Card ─────────────────────────────────────────────────────────── */
-function ApprovalCard({ approval, onApprove, onDecline }: {
-  approval:  Approval;
-  onApprove: (id: string) => void;
-  onDecline: (id: string) => void;
+function ApprovalCard({ approval, onAction }: {
+  approval: Approval;
+  onAction: (id: string) => void;
 }) {
   const ss = statusStyle(approval.status);
   const cs = categoryStyle();
@@ -343,7 +398,7 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
             <span style={{
               fontSize: "0.68rem", fontWeight: 600, color: cs.text,
               background: cs.bg, border: `1px solid ${cs.border}`,
-              padding: "2px 8px",
+              padding: "2px 8px", borderRadius: 4,
             }}>
               {approval.category}
             </span>
@@ -351,14 +406,15 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
             <span style={{
               fontSize: "0.68rem", fontWeight: 700,
               background: ss.bg, color: ss.text, border: `1px solid ${ss.border}`,
-              padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "2px 8px", borderRadius: 4,
+              display: "inline-flex", alignItems: "center", gap: 5,
             }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: ss.dot, display: "inline-block", flexShrink: 0 }} />
               {approval.status}
             </span>
             {/* Due date chip (Pending only) */}
             {isPending && approval.dueDate && (
-              <span style={{ fontSize: "0.68rem", fontWeight: 600, color: "#B91C1C", background: "#FBEAEA", border: "1px solid #E8A8A8", padding: "2px 8px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 600, color: "#B91C1C", background: "#FBEAEA", border: "1px solid #E8A8A8", padding: "2px 8px", borderRadius: 4 }}>
                 Due {approval.dueDate}
               </span>
             )}
@@ -388,24 +444,19 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
 
           {/* Row 4: Note */}
           {approval.note && (
-            <div style={{ background: "#F8FAFC", border: `1px solid ${BDL}`, padding: "8px 14px" }}>
+            <div style={{ background: "#F8FAFC", border: `1px solid ${BDL}`, padding: "8px 14px", borderRadius: 6 }}>
               <p style={{ fontSize: "0.80rem", color: TM, fontStyle: "italic" }}>"{approval.note}"</p>
             </div>
           )}
         </div>
 
-        {/* Right: Action buttons (Pending only) */}
+        {/* Right: Action button (Pending only) — opens modal to choose Approve or Decline */}
         {isPending && (
           <div className="flex items-center gap-2 shrink-0 mt-1">
-            <button onClick={() => onApprove(approval.id)}
+            <button onClick={() => onAction(approval.id)}
               className="flex items-center gap-1.5 px-4 py-2 hover:brightness-95 transition-all"
               style={{ background: N, color: "white", fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${N}`, borderRadius: 6 }}>
-              <Check size={12} /> Approve
-            </button>
-            <button onClick={() => onDecline(approval.id)}
-              className="flex items-center gap-1.5 px-4 py-2 hover:bg-slate-50 transition-all"
-              style={{ background: "white", color: TM, fontSize: "0.78rem", fontWeight: 600, border: `1px solid ${BD}`, borderRadius: 6 }}>
-              <X size={12} /> Decline
+              Actions <ChevronDown size={12} />
             </button>
           </div>
         )}
@@ -416,29 +467,53 @@ function ApprovalCard({ approval, onApprove, onDecline }: {
 
 /* ── Main component ────────────────────────────────────────────────────────── */
 export function ApprovalsTab() {
+  const workspace = useSubmissionWorkspaceOptional();
   const [approvals,  setApprovals] = useState<Approval[]>(SEED);
   const [showModal,  setShowModal] = useState(false);
+  const [actionTarget, setActionTarget] = useState<Approval | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "All">("All");
   const nextNum = useRef(2242);
 
   const pending  = approvals.filter(a => a.status === "Pending");
   const approved = approvals.filter(a => a.status === "Approved");
   const declined = approvals.filter(a => a.status === "Declined");
 
-  // Sort: Pending first, then Approved, then Declined
-  const sorted = [...pending, ...approved, ...declined];
+  // Sort: Pending first, then Approved, then Declined — then apply status filter.
+  const sorted = [...pending, ...approved, ...declined]
+    .filter(a => statusFilter === "All" || a.status === statusFilter);
 
-  const handleApprove = (id: string) => {
-    const now = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    setApprovals(prev => prev.map(a =>
-      a.id === id ? { ...a, status: "Approved", decisionDate: now, note: a.note ?? "Approved as submitted" } : a
-    ));
+  // Clicking an active filter chip clears the filter.
+  const toggleFilter = (s: ApprovalStatus) =>
+    setStatusFilter(prev => prev === s ? "All" : s);
+
+  // Open the action modal — user picks Approve or Decline, writes a note, then confirms.
+  const handleAction = (id: string) => {
+    const target = approvals.find(a => a.id === id);
+    if (target) setActionTarget(target);
   };
 
-  const handleDecline = (id: string) => {
+  const handleConfirmAction = (action: "Approve" | "Decline", note: string) => {
+    if (!actionTarget) return;
     const now = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const status: ApprovalStatus = action === "Approve" ? "Approved" : "Declined";
+    const fallbackNote = action === "Approve" ? "Approved as submitted" : "Declined";
     setApprovals(prev => prev.map(a =>
-      a.id === id ? { ...a, status: "Declined", decisionDate: now } : a
+      a.id === actionTarget.id
+        ? { ...a, status, decisionDate: now, note: note.trim() || fallbackNote }
+        : a
     ));
+    // Mirror the decision as a note in the Notes tab with the matching tag.
+    const { name, initials, color } = authorFromApprover(actionTarget.approver);
+    const verb = action === "Approve" ? "Approved" : "Declined";
+    const tag  = action === "Approve" ? "Approval" : "Decline";
+    workspace?.pushPendingNote({
+      content: `${verb} ${actionTarget.id} — ${actionTarget.title}.${note.trim() ? ` ${note.trim()}` : ""}`,
+      tags: [tag],
+      author: name,
+      initials,
+      avatarColor: color,
+    });
+    setActionTarget(null);
   };
 
   const handleAdd = (partial: Omit<Approval, "id">) => {
@@ -452,28 +527,39 @@ export function ApprovalsTab() {
         {/* ── Toolbar ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-3">
 
-          {/* Summary pills */}
-          <div className="flex items-center gap-2">
+          {/* Summary pills — click to filter, click again (or the active one) to clear */}
+          <div className="flex items-center gap-2 flex-wrap">
             {pending.length > 0 && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5"
-                style={{ background: "#FFF8E6", border: "1px solid #F0D88A", fontSize: "0.75rem", fontWeight: 700, color: "#8A5C00" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#C9A227", display: "inline-block" }} />
-                {pending.length} pending
-              </span>
+              <FilterPill
+                active={statusFilter === "Pending"}
+                onClick={() => toggleFilter("Pending")}
+                bg="#FFF8E6" border="#F0D88A" text="#8A5C00" dot="#C9A227"
+                label={`${pending.length} pending`}
+              />
             )}
             {approved.length > 0 && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5"
-                style={{ background: "#E8F5EC", border: "1px solid #93C8A0", fontSize: "0.75rem", fontWeight: 700, color: "#1A5C30" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#2E7D32", display: "inline-block" }} />
-                {approved.length} approved
-              </span>
+              <FilterPill
+                active={statusFilter === "Approved"}
+                onClick={() => toggleFilter("Approved")}
+                bg="#E8F5EC" border="#93C8A0" text="#1A5C30" dot="#2E7D32"
+                label={`${approved.length} approved`}
+              />
             )}
             {declined.length > 0 && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5"
-                style={{ background: "#FBEAEA", border: "1px solid #E8A8A8", fontSize: "0.75rem", fontWeight: 700, color: "#7A1F1F" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#B91C1C", display: "inline-block" }} />
-                {declined.length} declined
-              </span>
+              <FilterPill
+                active={statusFilter === "Declined"}
+                onClick={() => toggleFilter("Declined")}
+                bg="#FBEAEA" border="#E8A8A8" text="#7A1F1F" dot="#B91C1C"
+                label={`${declined.length} declined`}
+              />
+            )}
+            {statusFilter !== "All" && (
+              <button
+                onClick={() => setStatusFilter("All")}
+                className="hover:brightness-95 transition-all"
+                style={{ fontSize: "0.72rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, padding: "5px 10px", borderRadius: 6 }}>
+                Clear filter
+              </button>
             )}
             {approvals.length === 0 && (
               <span style={{ fontSize: "0.78rem", color: TT }}>No approvals yet for this submission.</span>
@@ -490,12 +576,17 @@ export function ApprovalsTab() {
 
         {/* ── Approval cards ────────────────────────────────────────────────── */}
         <div className="space-y-3">
+          {sorted.length === 0 && statusFilter !== "All" && (
+            <div className="flex items-center justify-center"
+              style={{ background: "white", border: `1px dashed ${BD}`, borderRadius: 8, padding: "28px 16px", color: TT, fontSize: "0.82rem" }}>
+              No {statusFilter.toLowerCase()} approvals.
+            </div>
+          )}
           {sorted.map(approval => (
             <ApprovalCard
               key={approval.id}
               approval={approval}
-              onApprove={handleApprove}
-              onDecline={handleDecline}
+              onAction={handleAction}
             />
           ))}
         </div>
@@ -504,6 +595,180 @@ export function ApprovalsTab() {
       {showModal && (
         <NewApprovalModal onClose={() => setShowModal(false)} onSubmit={handleAdd} />
       )}
+
+      {actionTarget && (
+        <ActionModal
+          approval={actionTarget}
+          onClose={() => setActionTarget(null)}
+          onConfirm={handleConfirmAction}
+        />
+      )}
     </>
+  );
+}
+
+/* ── Action modal (Approve / Decline) ────────────────────────────────────────
+   Shown when the underwriter clicks "Actions" on a pending approval card.
+   User picks Approve or Decline, writes a note, then confirms. The decision
+   is mirrored to the Notes tab tagged "Approval" or "Decline" via the
+   shared workspace context. Layout matches the existing approval modal. */
+function ActionModal({
+  approval, onClose, onConfirm,
+}: {
+  approval: Approval;
+  onClose: () => void;
+  onConfirm: (action: "Approve" | "Decline", note: string) => void;
+}) {
+  const [action, setAction] = useState<"Approve" | "Decline">("Approve");
+  const [note, setNote]     = useState("");
+
+  const isApprove = action === "Approve";
+  const accent    = isApprove ? "#2E7D32" : "#B91C1C";
+  const noteLabel = isApprove ? "Approval note" : "Decline reason";
+  const placeholder = isApprove
+    ? "Conditions, rationale, or context for this approval. Posted to the Notes tab as an Approval entry."
+    : "Reason for declining this request. Posted to the Notes tab as a Decline entry.";
+  const tagLabel   = isApprove ? "Approval" : "Decline";
+  const confirmBg  = isApprove ? N : "#B91C1C";
+  const confirmLbl = isApprove ? "Confirm approval" : "Confirm decline";
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(15, 25, 40, 0.55)" }}>
+
+      <div className="w-full mx-4"
+        style={{ maxWidth: 560, background: "white", border: `1px solid ${BD}`, boxShadow: "0 20px 60px rgba(0,0,0,0.20)", borderRadius: 10, overflow: "hidden" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BDL}` }}>
+          <div className="flex items-center gap-2">
+            {isApprove
+              ? <Check size={16} color={accent} />
+              : <X size={16} color={accent} />}
+            <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD }}>
+              {isApprove ? "Approve request" : "Decline request"}
+            </h2>
+            <span style={{ fontSize: "0.78rem", color: TT }}>· {approval.id}</span>
+          </div>
+          <button onClick={onClose} className="flex items-center justify-center hover:bg-slate-100 transition-colors"
+            style={{ width: 28, height: 28, color: TT, borderRadius: 6 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+
+          {/* Request summary */}
+          <div style={{ background: "#F8FAFC", border: `1px solid ${BDL}`, borderRadius: 6, padding: "10px 14px" }}>
+            <p style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>
+              {approval.category}
+            </p>
+            <p style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, lineHeight: 1.4 }}>
+              {approval.title}
+            </p>
+            <p style={{ fontSize: "0.72rem", color: TM, marginTop: 4 }}>
+              Requested by <strong>{approval.requestedBy}</strong> · {approval.requestedOn}
+            </p>
+          </div>
+
+          {/* Action toggle */}
+          <div>
+            <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>
+              Decision
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <ActionChoice
+                selected={isApprove}
+                onClick={() => setAction("Approve")}
+                color="#2E7D32"
+                bg="#E8F5EC"
+                border="#93C8A0"
+                icon={<Check size={14} />}
+                label="Approve"
+              />
+              <ActionChoice
+                selected={!isApprove}
+                onClick={() => setAction("Decline")}
+                color="#B91C1C"
+                bg="#FBEAEA"
+                border="#E8A8A8"
+                icon={<X size={14} />}
+                label="Decline"
+              />
+            </div>
+          </div>
+
+          {/* Note */}
+          <div>
+            <label style={{ fontSize: "0.62rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>
+              {noteLabel}
+            </label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={placeholder}
+              rows={4}
+              autoFocus
+              className="w-full outline-none resize-y px-3 py-2.5"
+              style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, boxSizing: "border-box" }}
+            />
+            <p style={{ fontSize: "0.68rem", color: TT, marginTop: 6 }}>
+              This note will appear in the Notes tab tagged <strong>{tagLabel}</strong>.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2.5 px-6 py-4" style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
+          <button onClick={onClose} className="px-4 py-2 hover:brightness-97 transition-all"
+            style={{ fontSize: "0.80rem", fontWeight: 600, color: TM, background: "white", border: `1px solid ${BD}`, borderRadius: 6 }}>
+            Cancel
+          </button>
+          <button onClick={() => onConfirm(action, note)}
+            className="flex items-center gap-1.5 px-5 py-2 hover:brightness-95 transition-all"
+            style={{ background: confirmBg, color: "white", fontSize: "0.80rem", fontWeight: 700, borderRadius: 6 }}>
+            {isApprove ? <Check size={13} /> : <X size={13} />}
+            {confirmLbl}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Segmented option used inside the ActionModal to pick Approve vs Decline. */
+function ActionChoice({
+  selected, onClick, color, bg, border, icon, label,
+}: {
+  selected: boolean;
+  onClick:  () => void;
+  color:    string;
+  bg:       string;
+  border:   string;
+  icon:     React.ReactNode;
+  label:    string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className="flex items-center justify-center gap-2 px-3 py-2.5 transition-all hover:brightness-97"
+      style={{
+        background: selected ? bg : "white",
+        border: `1.5px solid ${selected ? border : BD}`,
+        color: selected ? color : TM,
+        fontSize: "0.84rem",
+        fontWeight: 700,
+        borderRadius: 6,
+        boxShadow: selected ? `0 0 0 2px ${border}55` : "none",
+        cursor: "pointer",
+        outline: "none",
+      }}>
+      <span style={{ color: selected ? color : TT, display: "inline-flex" }}>{icon}</span>
+      {label}
+    </button>
   );
 }

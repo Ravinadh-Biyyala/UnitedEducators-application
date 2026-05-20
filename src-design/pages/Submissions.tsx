@@ -6,7 +6,7 @@ import {
   Check, Users, User,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import {
   AppShell,
 } from "../components/AppShell";

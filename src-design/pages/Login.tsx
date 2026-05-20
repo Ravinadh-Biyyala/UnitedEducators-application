@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   GraduationCap, Eye, EyeOff, ShieldCheck, Users,
   AlertCircle, ArrowRight, CheckCircle2, Lock,

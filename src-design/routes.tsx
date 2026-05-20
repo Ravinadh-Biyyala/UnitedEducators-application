@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from "react-router";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import { CompanionProvider } from "./components/companion/CompanionContext";
 import { Dashboard }        from "./pages/Dashboard";
 import { Submissions }      from "./pages/Submissions";

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import {
   Bell, AlertTriangle, CheckCircle2, Clock, AtSign,
   Flag, FileText, CheckCheck,

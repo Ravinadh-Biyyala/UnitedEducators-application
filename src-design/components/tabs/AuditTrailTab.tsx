@@ -304,6 +304,7 @@ export function AuditTrailTab() {
                         width: 28, height: 28,
                         background: isSystem ? TH : es.bg,
                         border: `1.5px solid ${isSystem ? BD : es.border}`,
+                        borderRadius: 6,
                         fontSize: "0.52rem", fontWeight: 800,
                         color: isSystem ? TT : es.text,
                       }}>
@@ -317,7 +318,7 @@ export function AuditTrailTab() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {/* Event type badge */}
                         <span className="flex items-center gap-1 px-2 py-0.5"
-                          style={{ background: es.bg, border: `1px solid ${es.border}`, fontSize: "0.60rem", fontWeight: 700, color: es.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          style={{ background: es.bg, border: `1px solid ${es.border}`, borderRadius: 4, fontSize: "0.60rem", fontWeight: 700, color: es.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           {es.icon}
                           {es.label}
                         </span>
@@ -334,30 +335,6 @@ export function AuditTrailTab() {
 
                     {/* Detail */}
                     <p style={{ fontSize: "0.80rem", color: TM, lineHeight: 1.6 }}>{event.detail}</p>
-
-                    {/* Field change */}
-                    {(event.from || event.to) && (
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {event.field && (
-                          <span style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                            {event.field}:
-                          </span>
-                        )}
-                        {event.from && (
-                          <span style={{ fontSize: "0.70rem", background: "#FBEAEA", color: "#7A1F1F", border: "1px solid #E8A8A8", padding: "1px 7px" }}>
-                            {event.from}
-                          </span>
-                        )}
-                        {event.from && event.to && (
-                          <ArrowRightLeft size={11} color={TT} />
-                        )}
-                        {event.to && (
-                          <span style={{ fontSize: "0.70rem", background: "#E8F5EC", color: "#1A5C30", border: "1px solid #93C8A0", padding: "1px 7px" }}>
-                            {event.to}
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -378,23 +355,6 @@ export function AuditTrailTab() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Status Changes",  value: EVENTS.filter(e => e.eventType === "status_change").length,  color: "#005B99", bg: "#E8F0F9" },
-          { label: "Documents",       value: EVENTS.filter(e => e.eventType === "document").length,        color: "#2E7D32", bg: "#E8F5EC" },
-          { label: "UW Notes & Actions", value: EVENTS.filter(e => e.eventType === "note" || e.eventType === "uw_action").length, color: "#7B2FBE", bg: "#F0EEF8" },
-          { label: "System Events",   value: EVENTS.filter(e => e.systemFlag).length,                     color: TM,       bg: TH       },
-        ].map((c, i) => (
-          <div key={i} className="px-4 py-3"
-            style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${c.color}`, borderRadius: 8 }}>
-            <p style={{ fontSize: "1.45rem", fontWeight: 800, color: c.color, lineHeight: 1.1 }}>{c.value}</p>
-            <p style={{ fontSize: "0.66rem", fontWeight: 700, color: TT, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-              {c.label}
-            </p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

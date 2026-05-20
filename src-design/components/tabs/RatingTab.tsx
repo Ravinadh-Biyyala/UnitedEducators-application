@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Check, Plus, X, Info, Shield, FileText, AlertCircle,
   ShieldCheck, UserCheck, Briefcase, Globe, Lock, Car,
@@ -3025,9 +3025,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       </div>
                       <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4, marginTop: 2 }}>{libEnd.desc}</p>
                       <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 6 }}>
-                        {libEnd.premium > 0 && (
-                          <span style={{ fontSize: "0.72rem", color: product.categoryColor, fontWeight: 700 }}>+{fmt(libEnd.premium)}</span>
-                        )}
                         <a
                           href={sampleUrl}
                           target="_blank"

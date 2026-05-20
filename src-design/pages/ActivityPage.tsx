@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import {
   Activity, FileText, CheckCircle2, MessageSquare, Mail,
   Flag, Upload, Edit3, ShieldCheck, DollarSign,

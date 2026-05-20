@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import {
   Flag, CheckCircle2, XCircle, Clock, AlertTriangle,
   ChevronRight, ChevronLeft, Filter, Check, X,

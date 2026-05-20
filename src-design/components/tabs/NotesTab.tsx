@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useLocation } from "react-router";
+import { useLocation } from "react-router-dom";
 import { Search, Pin, Plus, X } from "lucide-react";
 import { useSubmissionWorkspaceOptional } from "../../context/SubmissionWorkspaceContext";
 
@@ -31,6 +31,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> =
   "Risk control": { bg: "#F0EEF8", text: "#4A2D80", border: "#C3B8E8" },
   "Loss run":     { bg: "#E8F5EC", text: "#1A5C30", border: "#93C8A0" },
   "Approval":     { bg: "#E8F5EC", text: "#1A5C30", border: "#93C8A0" },
+  "Decline":      { bg: "#FBEAEA", text: "#7A1F1F", border: "#E8A8A8" },
   "Claims":       { bg: "#FFF8E6", text: "#8A5C00", border: "#F0D88A" },
   "Subjectivity": { bg: "#F0EEF8", text: "#4A2D80", border: "#C3B8E8" },
   "Quote":        { bg: "#E8F0F9", text: "#00427A", border: "#9ABCD6" },
@@ -90,6 +91,7 @@ export function NotesTab() {
   const [search, setSearch]       = useState("");
   const [filter, setFilter]       = useState<"All" | "Mine" | "Pinned">("All");
   const [showModal, setShowModal] = useState(false);
+  const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
 
   // Drain any notes pushed from other tabs (e.g. UW Review approve modal).
   // Runs on mount and whenever the pending-note queue grows.
@@ -124,19 +126,22 @@ export function NotesTab() {
   const mineCount   = notes.filter(n => n.mine).length;
   const pinnedCount = notes.filter(n => n.pinned).length;
 
-  /* filter + search */
-  const visible = notes.filter(n => {
-    const matchesFilter =
-      filter === "All"    ? true :
-      filter === "Mine"   ? n.mine :
-      n.pinned;
-    const q = search.toLowerCase();
-    const matchesSearch = !q ||
-      n.author.toLowerCase().includes(q) ||
-      n.content.toLowerCase().includes(q) ||
-      n.tags.some(t => t.toLowerCase().includes(q));
-    return matchesFilter && matchesSearch;
-  });
+  /* filter + search, then float pinned notes to the top (stable: preserves
+     recency order within pinned and unpinned groups) */
+  const visible = notes
+    .filter(n => {
+      const matchesFilter =
+        filter === "All"    ? true :
+        filter === "Mine"   ? n.mine :
+        n.pinned;
+      const q = search.toLowerCase();
+      const matchesSearch = !q ||
+        n.author.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) ||
+        n.tags.some(t => t.toLowerCase().includes(q));
+      return matchesFilter && matchesSearch;
+    })
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
   /* pin/unpin a note */
   const togglePin = (id: string) =>
@@ -256,8 +261,18 @@ export function NotesTab() {
             {visible.map((note, idx) => {
               return (
                 <div key={note.id}
-                  className="px-5 py-3 hover:bg-slate-50/50 transition-colors"
-                  style={{ borderBottom: idx < visible.length - 1 ? `1px solid ${BDL}` : "none" }}>
+                  onClick={() => setViewingNoteId(note.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setViewingNoteId(note.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open note ${note.id}`}
+                  className="px-5 py-3 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                  style={{ borderBottom: idx < visible.length - 1 ? `1px solid ${BDL}` : "none", outline: "none" }}>
 
                   {/* Row 1: avatar + meta + note ID */}
                   <div className="flex items-start justify-between gap-4 mb-1.5">
@@ -296,7 +311,7 @@ export function NotesTab() {
                     {/* Note ID + Pin toggle */}
                     <div className="flex items-center gap-2 shrink-0" style={{ marginTop: 2 }}>
                       <button
-                        onClick={() => togglePin(note.id)}
+                        onClick={(e) => { e.stopPropagation(); togglePin(note.id); }}
                         title={note.pinned ? "Click to unpin" : "Click to pin"}
                         aria-pressed={note.pinned}
                         className="flex items-center gap-1 px-2 py-1 transition-all hover:brightness-97"
@@ -319,8 +334,17 @@ export function NotesTab() {
                     </div>
                   </div>
 
-                  {/* Row 2: content */}
-                  <p style={{ fontSize: "0.82rem", color: TM, lineHeight: 1.5, paddingLeft: 40 }}>
+                  {/* Row 2: content preview — clamped to 2 lines; full text in the popup */}
+                  <p style={{
+                    fontSize: "0.82rem",
+                    color: TM,
+                    lineHeight: 1.5,
+                    paddingLeft: 40,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}>
                     {note.content}
                   </p>
                 </div>
@@ -365,28 +389,28 @@ export function NotesTab() {
             {/* Modal body */}
             <div className="px-6 py-5 space-y-5">
 
-              {/* Account + Submission row */}
+              {/* Account + Submission row — locked to current submission context */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>Account</label>
-                    <span style={{ fontSize: "0.65rem", color: TT }}>optional</span>
-                  </div>
+                  <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Account</label>
                   <input
-                    defaultValue="Brookfield Day School"
-                    className="w-full px-3 py-2.5 outline-none"
-                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
+                    readOnly
+                    value="Brookfield Day School"
+                    aria-readonly="true"
+                    tabIndex={-1}
+                    className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: TH }}
                   />
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>Submission</label>
-                    <span style={{ fontSize: "0.65rem", color: TT }}>optional</span>
-                  </div>
+                  <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Submission</label>
                   <input
-                    defaultValue="SUB-10428"
-                    className="w-full px-3 py-2.5 outline-none"
-                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: "white" }}
+                    readOnly
+                    value="SUB-10428"
+                    aria-readonly="true"
+                    tabIndex={-1}
+                    className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                    style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: "'Source Sans 3', system-ui, sans-serif", background: TH }}
                   />
                 </div>
               </div>
@@ -473,6 +497,144 @@ export function NotesTab() {
           </div>
         </div>
       )}
+
+      {/* ── View Note Modal ─────────────────────────────────────────────── */}
+      {viewingNoteId && (() => {
+        const note = notes.find(n => n.id === viewingNoteId);
+        if (!note) return null;
+        return (
+          <NoteViewModal
+            note={note}
+            onClose={() => setViewingNoteId(null)}
+            onTogglePin={() => togglePin(note.id)}
+          />
+        );
+      })()}
     </>
+  );
+}
+
+/* ── View Note Modal ─────────────────────────────────────────────────────────
+   Read-only view of a single note. Opens when a user clicks a row in the
+   notes list — useful for long notes that exceed the 2-line list preview. */
+function NoteViewModal({
+  note, onClose, onTogglePin,
+}: {
+  note: NoteEntry;
+  onClose: () => void;
+  onTogglePin: () => void;
+}) {
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(15, 25, 40, 0.55)" }}>
+
+      <div className="w-full mx-4"
+        style={{
+          maxWidth: 640,
+          background: "white",
+          border: `1px solid ${BD}`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
+          borderRadius: 10,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "85vh",
+        }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 py-4"
+          style={{ borderBottom: `1px solid ${BDL}` }}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center justify-center shrink-0"
+              style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: note.avatarColor, color: "white",
+                fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.02em",
+              }}>
+              {note.initials}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ fontSize: "0.95rem", fontWeight: 800, color: TD }}>{note.author}</span>
+                <span style={{ fontSize: "0.72rem", color: TT }}>·</span>
+                <span style={{ fontSize: "0.72rem", color: TT }}>{note.timeAgo}</span>
+                <span style={{ fontSize: "0.72rem", color: TT }}>·</span>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: TT }}>{note.id}</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0"
+            style={{ width: 28, height: 28, color: TT, borderRadius: 6 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Tags */}
+        {note.tags.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap px-6 pt-4">
+            {note.tags.map(tag => {
+              const tc = TAG_COLORS[tag] ?? fallbackTag;
+              return (
+                <span key={tag}
+                  style={{
+                    fontSize: "0.68rem", fontWeight: 700,
+                    background: tc.bg, color: tc.text,
+                    border: `1px solid ${tc.border}`,
+                    padding: "2px 9px", borderRadius: 4,
+                  }}>
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Body — full note content, scrollable for long notes */}
+        <div className="px-6 py-4 overflow-y-auto flex-1">
+          <p style={{
+            fontSize: "0.92rem",
+            color: TD,
+            lineHeight: 1.6,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}>
+            {note.content}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-2.5 px-6 py-4"
+          style={{ borderTop: `1px solid ${BDL}`, background: TH }}>
+          <button
+            onClick={onTogglePin}
+            title={note.pinned ? "Click to unpin" : "Click to pin"}
+            aria-pressed={note.pinned}
+            className="flex items-center gap-1.5 px-3 py-2 transition-all hover:brightness-97"
+            style={{
+              fontSize: "0.74rem", fontWeight: 700,
+              background: note.pinned ? "#FFF8E6" : "white",
+              color: note.pinned ? "#8A5C00" : TM,
+              border: `1px solid ${note.pinned ? "#F0D88A" : BD}`,
+              borderRadius: 6, cursor: "pointer",
+            }}>
+            <Pin size={12} color={note.pinned ? "#C9A227" : TT}
+              style={{ fill: note.pinned ? "#C9A227" : "none" }} />
+            {note.pinned ? "Pinned" : "Pin"}
+          </button>
+
+          <button onClick={onClose}
+            className="px-4 py-2 hover:brightness-95 transition-all"
+            style={{
+              fontSize: "0.80rem", fontWeight: 700,
+              background: N, color: "white", borderRadius: 6,
+            }}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

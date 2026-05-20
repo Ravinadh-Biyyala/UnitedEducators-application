@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 import { useCompanion, newId, now, type Suggestion } from "./CompanionContext";
 
 /**

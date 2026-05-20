@@ -176,7 +176,9 @@ export interface NewTaskModalProps {
 }
 
 export function NewTaskModal({ onClose, onSubmit, defaults }: NewTaskModalProps) {
-  const [submission, setSubmission] = useState("SUB-10428");
+  // Account + Submission are locked to the current submission workspace context.
+  const account    = "Brookfield Day School";
+  const submission = "SUB-10428";
   const [type,       setType]       = useState<TaskType | "">(defaults?.type ?? "");
   const [title,      setTitle]      = useState(defaults?.title ?? "");
   const [priority,   setPriority]   = useState<Priority | "">(defaults?.priority ?? "");
@@ -211,19 +213,33 @@ export function NewTaskModal({ onClose, onSubmit, defaults }: NewTaskModalProps)
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
+          {/* Account + Submission — locked to current submission context */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em" }}>Submission</label>
-                <span style={{ fontSize: "0.65rem", color: TT }}>optional</span>
-              </div>
-              <input value={submission} onChange={e => setSubmission(e.target.value)} className="w-full px-3 py-2.5 outline-none"
-                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TD, fontFamily: font, background: "white" }} />
+              <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Account</label>
+              <input
+                readOnly
+                value={account}
+                aria-readonly="true"
+                tabIndex={-1}
+                className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: font, background: TH }} />
             </div>
             <div>
-              <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Type</label>
-              <CustomSelect<TaskType> value={type} onChange={setType} options={TASK_TYPES} placeholder="Select type…" />
+              <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Submission</label>
+              <input
+                readOnly
+                value={submission}
+                aria-readonly="true"
+                tabIndex={-1}
+                className="w-full px-3 py-2.5 outline-none cursor-not-allowed"
+                style={{ fontSize: "0.84rem", border: `1px solid ${BD}`, borderRadius: 6, color: TM, fontFamily: font, background: TH }} />
             </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.65rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.09em", display: "block", marginBottom: 6 }}>Type</label>
+            <CustomSelect<TaskType> value={type} onChange={setType} options={TASK_TYPES} placeholder="Select type…" />
           </div>
 
           <div>

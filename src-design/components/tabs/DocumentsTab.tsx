@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import {
   FileText, FileSpreadsheet, FileBadge, Download, Eye, CheckCircle2,
-  AlertCircle, Folder, FolderOpen, FileStack, Upload, Clock, Search,
-  ChevronRight,
+  AlertCircle, Folder, FolderOpen, FileStack, Upload, Search,
 } from "lucide-react";
 import { DocPreviewModal, type PreviewDoc, type HighlightEntry, type DocHighlights } from "../DocPreviewModal";
 import {
   N, BDL, TD, TM, TT, OK, WARN, BAD,
-  SectionCard, PrimaryButton, DangerButton, font,
+  SectionCard, PrimaryButton, font,
 } from "../DashboardCards";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -92,9 +91,8 @@ const fileIcon = (type: string) => {
 };
 
 const statusMeta = (s: DocStatus) => {
-  if (s === "Uploaded") return { color: OK,   bg: "#E8F5EC", label: "Validated", icon: <CheckCircle2 size={11}/> };
-  if (s === "InReview") return { color: WARN, bg: "#FEF3C7", label: "In Review", icon: <Clock        size={11}/> };
-  return                       { color: BAD,  bg: "#FEE2E2", label: "Missing",   icon: <AlertCircle  size={11}/> };
+  if (s === "Missing") return { color: BAD, bg: "#FEE2E2", label: "Missing",  icon: <AlertCircle  size={11}/> };
+  return                      { color: OK,  bg: "#E8F5EC", label: "Uploaded", icon: <CheckCircle2 size={11}/> };
 };
 
 // Map our internal DocStatus → PreviewDoc's accepted status enum
@@ -119,14 +117,12 @@ export function DocumentsTab() {
       const inReview = docsIn.filter(d => d.status === "InReview").length;
       const missing  = docsIn.filter(d => d.status === "Missing").length;
       const missingRequired = docsIn.some(d => d.status === "Missing" && d.required);
-      const dot      = missingRequired ? BAD : inReview > 0 ? WARN : missing > 0 ? WARN : OK;
+      const dot      = missingRequired ? BAD : missing > 0 ? WARN : OK;
       const statusLabel = missingRequired
         ? "Missing required"
-        : inReview > 0
-          ? "In review"
-          : missing > 0
-            ? "Optional missing"
-            : "Complete";
+        : missing > 0
+          ? "Optional missing"
+          : "Complete";
       return { ...f, total: docsIn.length, uploaded, inReview, missing, dot, statusLabel };
     });
   }, []);
@@ -287,17 +283,8 @@ export function DocumentsTab() {
                       fontSize: "0.64rem", fontWeight: 700, color: OK,
                       background: "#E8F5EC", padding: "3px 9px", borderRadius: 4,
                     }}>
-                    <CheckCircle2 size={11}/> {selectedMeta.uploaded} Validated
+                    <CheckCircle2 size={11}/> {selectedMeta.uploaded + selectedMeta.inReview} Uploaded
                   </span>
-                  {selectedMeta.inReview > 0 && (
-                    <span className="inline-flex items-center gap-1.5"
-                      style={{
-                        fontSize: "0.64rem", fontWeight: 700, color: WARN,
-                        background: "#FEF3C7", padding: "3px 9px", borderRadius: 4,
-                      }}>
-                      <Clock size={11}/> {selectedMeta.inReview} In Review
-                    </span>
-                  )}
                   {selectedMeta.missing > 0 && (
                     <span className="inline-flex items-center gap-1.5"
                       style={{
@@ -468,37 +455,30 @@ function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) 
               )}
             </div>
 
-            <div className="inline-flex items-center gap-1.5">
-              {!isMissing ? (
-                <>
-                  <button
-                    onClick={() => onPreview(doc)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 transition-colors hover:bg-slate-50"
-                    style={{
-                      border: `1px solid ${BDL}`, background: "white",
-                      borderRadius: 5, cursor: "pointer", fontFamily: font,
-                    }}
-                    title="Preview document">
-                    <Eye size={11} color={N}/>
-                    <span style={{ fontSize: "0.66rem", fontWeight: 700, color: N }}>Preview</span>
-                  </button>
-                  <button
-                    className="inline-flex items-center justify-center p-1.5 transition-colors hover:bg-slate-50"
-                    style={{
-                      border: `1px solid ${BDL}`, borderRadius: 5,
-                      background: "white", cursor: "pointer",
-                    }}
-                    title="Download">
-                    <Download size={11} color={TM}/>
-                  </button>
-                </>
-              ) : (
-                <DangerButton>
-                  <span style={{ fontSize: "0.66rem", fontWeight: 700 }}>Request</span>
-                  <ChevronRight size={11}/>
-                </DangerButton>
-              )}
-            </div>
+            {!isMissing && (
+              <div className="inline-flex items-center gap-1.5">
+                <button
+                  onClick={() => onPreview(doc)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 transition-colors hover:bg-slate-50"
+                  style={{
+                    border: `1px solid ${BDL}`, background: "white",
+                    borderRadius: 5, cursor: "pointer", fontFamily: font,
+                  }}
+                  title="Preview document">
+                  <Eye size={11} color={N}/>
+                  <span style={{ fontSize: "0.66rem", fontWeight: 700, color: N }}>Preview</span>
+                </button>
+                <button
+                  className="inline-flex items-center justify-center p-1.5 transition-colors hover:bg-slate-50"
+                  style={{
+                    border: `1px solid ${BDL}`, borderRadius: 5,
+                    background: "white", cursor: "pointer",
+                  }}
+                  title="Download">
+                  <Download size={11} color={TM}/>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

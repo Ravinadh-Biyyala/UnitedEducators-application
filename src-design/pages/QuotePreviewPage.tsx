@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";

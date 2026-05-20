@@ -404,7 +404,7 @@ export function SubmissionDetailsCard() {
             <DetailRow label="Member #" copyValue="473" value="473"/>
             <DetailRow label="Group Name" value="Northeast Independent Schools Group"/>
             <DetailRow label="Group Number" copyValue="GRP-4827" value="GRP-4827"/>
-            <DetailRow last label="Group Type" value="K-12 · Private · Day"/>
+            <DetailRow last label="Type" value="K-12 · Private · Day"/>
           </SectionCard>
         </div>
 

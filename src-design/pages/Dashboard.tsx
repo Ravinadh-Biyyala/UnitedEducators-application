@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate }       from "react-router";
+import { useNavigate }       from "react-router-dom";
 import {
   Filter, ChevronDown, ChevronLeft, ChevronRight, ArrowUpRight,
   AlertTriangle, CheckCircle2, Clock, TrendingUp, TrendingDown,

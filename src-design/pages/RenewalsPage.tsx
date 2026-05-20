@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import {
   Calendar, RefreshCw, AlertCircle, AlertTriangle,
   ChevronRight, ChevronLeft, Filter,

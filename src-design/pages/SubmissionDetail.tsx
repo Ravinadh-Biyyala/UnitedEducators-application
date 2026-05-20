@@ -1,14 +1,15 @@
 import { AuditTrailTab }    from "../components/tabs/AuditTrailTab";
 import { ApprovalsTab }    from "../components/tabs/ApprovalsTab";
+import { ConditionsTab }   from "../components/tabs/ConditionsTab";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams, useLocation } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, ShieldAlert, TrendingDown,
   FolderOpen, MessageSquare, Mail,
   ClipboardCheck, Clock, Calculator, CheckSquare,
   ShieldCheck, UserCheck, Briefcase, Globe, Lock, Car,
-  Building2, Shield, ThumbsUp,
+  Building2, Shield, ThumbsUp, ListChecks,
   TrendingUp, Activity, Flag, Calendar, User, Check,
   ChevronRight,
 } from "lucide-react";
@@ -121,6 +122,7 @@ function buildTabPack(tab: string, S: typeof SUBMISSION, subId: string) {
     documents: "Documents", correspondence: "Correspondence",
     audit: "Audit Trail", review: "Underwriting Review", risk: "Risk", loss: "Loss History",
     rating: "Underwriting", notes: "Notes", tasks: "Tasks", approvals: "Approvals",
+    conditions: "Conditions",
   };
   const tabLabel = TAB_LABELS[tab] ?? "Submission";
 
@@ -416,6 +418,7 @@ const TABS = [
   {id:"members",       label:"Group Members",      icon:<Users size={13}/>},
   {id:"risk",          label:"Risk & Exposure",    icon:<ShieldAlert size={13}/>},
   {id:"loss",          label:"Loss History",       icon:<TrendingDown size={13}/>},
+  {id:"conditions",    label:"Conditions",         icon:<ListChecks size={13}/>},
   {id:"rating",        label:"Underwriting",       icon:<Calculator size={13}/>},
   {id:"documents",     label:"Documents",          icon:<FolderOpen size={13}/>},
   {id:"correspondence",label:"Correspondence",     icon:<Mail size={13}/>},
@@ -659,6 +662,7 @@ function SubmissionDetailInner() {
       case "notes":         return <NotesTab/>;
       case "tasks":         return <TasksTab/>;
       case "approvals":     return <ApprovalsTab/>;
+      case "conditions":    return <ConditionsTab/>;
       case "member":        return <MemberBrokerTab/>;
       case "members":       return <GroupMembersTab/>;
       case "documents":     return <DocumentsTab/>;
@@ -814,7 +818,6 @@ ${SUBMISSION.underwriter.title} · United Educators`;
               position: "relative",
               background: "white",
               borderTop: `1px solid ${BDL}`,
-              overflow: "hidden",
             }}
           >
 
