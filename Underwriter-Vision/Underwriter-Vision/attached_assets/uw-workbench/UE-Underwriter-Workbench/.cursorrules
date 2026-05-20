@@ -1,0 +1,118 @@
+# Project Rules — React Enterprise Template
+
+Stack: React 18 + TS strict, Vite, Tailwind, Redux Toolkit + RTK Query, React Router v6.
+UI library: TBD — keep `components/common/` library-agnostic.
+
+## Folders
+
+- `src/app/` — App, providers, routes, store composition
+- `src/components/common/` — Pure UI primitives (Button, Input, Modal, Tabs, Table)
+- `src/components/domain/` — Business-aware presentational (StatusBadge, KpiCard, SubmissionsTable)
+- `src/components/layout/` — AppShell, Sidebar, TopBar, PageHeader
+- `src/containers/<f>/` — Smart components: data + Redux → presentational
+- `src/features/<f>/` — `pages/`, `components/` (feature-only), `types.ts`, `index.ts` (barrel)
+- `src/hooks/{auth,common,<f>}/` — Custom hooks
+- `src/services/<f>/<f>Api.ts` — RTK Query endpoints, axios client, baseQuery
+- `src/store/slices/` — Slices for non-server state only
+- `src/shared/{types,utils,constants}/` — Pure TS, no React/Redux
+- `src/theme/` — Design tokens
+- `src/config/env.ts` — Type-safe env
+
+## Import boundaries (NON-NEGOTIABLE)
+
+| From | Can import from |
+|---|---|
+| shared | shared |
+| theme | — |
+| config | shared |
+| services | shared, config |
+| store | services, shared |
+| hooks | services, store, shared |
+| components/common | shared, theme |
+| components/domain | common, shared, theme |
+| components/layout | common, domain, hooks, shared, theme |
+| containers | components/*, hooks, services, store, shared, theme |
+| features | containers, components/*, hooks, shared, theme |
+| app | everything |
+
+**No cross-feature imports.** `features/A` cannot import from `features/B`. Promote shared widgets to `components/domain/`. Data hooks via `services/<f>/` are exempt.
+
+**Barrel only.** Import features as `@/features/<f>` — never deep-import.
+
+## Three-layer data flow
+
+`Page` → `Container` → `Presentational`
+
+- **services/** *defines* API calls (URL, types, cache tags). No React.
+- **containers/** *invokes* APIs (`useGetXQuery`) + Redux (`useAppSelector`). Passes plain props.
+- **components/domain & common/** *render*. Props in, events out. No fetch, no Redux.
+
+## Where does X go? (first match wins)
+
+1. Generic UI, no business meaning → `components/common/`
+2. Presentational + business types, no fetching → `components/domain/`
+3. App shell → `components/layout/`
+4. Fetches / dispatches / coordinates → `containers/<f>/`
+5. Route-level page → `features/<f>/pages/`
+6. Stateful logic, no JSX → `hooks/<g>/`
+7. API endpoint → `services/<f>/`
+8. Global UI/auth state → `store/slices/`
+9. Pure util/type/constant → `shared/`
+
+## Naming
+
+- Component: `SubmissionsTable.tsx` (PascalCase)
+- Container: `KpiRowContainer.tsx`
+- Page: `DashboardPage.tsx`
+- Hook: `useDisclosure.ts`
+- Slice: `dashboardFiltersSlice.ts`
+- API: `submissionsApi.ts`
+- Imports: `@/` aliases only, no `../../../`
+
+## RTK Query
+
+- One `createApi` per domain at `services/<f>/<f>Api.ts`
+- Type endpoints: `build.query<Result, Args>(...)`
+- Use `tagTypes` + `providesTags` / `invalidatesTags`
+- Export generated hooks (`useGetXQuery`, `useUpdateXMutation`)
+- Register reducer + middleware in `app/store.ts`
+
+## Component rules
+
+- Default to presentational; containers only when state/data is needed
+- **Promote, don't duplicate.** Reused twice → move to `components/domain/`
+- Prop drilling >2 levels = parent should be a container
+- Component >200 lines or container >150 lines → split
+- Every public export → relevant `index.ts` barrel
+
+## Auto-reject — flag and refuse
+
+- ❌ `fetch(` / `axios.` in a container → extract to `services/`
+- ❌ `useGetXQuery` in presentational → move to container
+- ❌ `useAppSelector` / `useAppDispatch` in `common/` or `domain/` → move to container
+- ❌ Deep import from another feature → promote to `domain/` or use barrel
+- ❌ `../../../` → use `@/` aliases
+- ❌ Server data in Redux slices → use RTK Query
+- ❌ Business logic in `shared/` → utilities only
+
+## Workflow
+
+1. **Identify the layer first** before writing code. State it: *"This is a container because…"*.
+2. Search `common/` and `domain/` for reusable pieces before creating new.
+3. Wire top-down: types → service → slice (if needed) → container → page → route.
+4. Add new exports to relevant `index.ts`.
+5. No new top-level folders without asking.
+6. If a request would violate the boundary table, **stop and ask** — don't silently work around it.
+
+## Adding a feature — required files
+
+```
+shared/types/domain.ts                # + new type
+services/<f>/<f>Api.ts                # createApi
+store/slices/<f>FiltersSlice.ts       # if UI state needed
+containers/<f>/<X>Container.tsx       # smart components
+features/<f>/pages/<X>Page.tsx        # composes containers
+features/<f>/index.ts                 # barrel
+app/routes.tsx                        # lazy route via barrel
+app/store.ts                          # register reducer + middleware
+```
