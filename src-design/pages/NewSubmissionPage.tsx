@@ -23,7 +23,7 @@ const G    = "#C9A227";
 const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const TM   = "#4A5D6E";
 const TD   = "#1A2530";
 const font = "'Source Sans 3', system-ui, sans-serif";
@@ -288,9 +288,12 @@ interface InboxPrefill {
   enrollment?: number;
   coverageLines?: string[];
   effectiveDate?: string;
+  needByDate?: string;
   broker?: string;
   annualPremiumEstimate?: string;
   institutionType?: string;
+  submissionType?: SubmissionType;
+  crossSellMatch?: { id: string; name: string; status: string } | null;
 }
 
 const EMPTY: FormState = {
@@ -644,7 +647,7 @@ function ProductMultiSelect({ value, onChange }: { value: string[]; onChange: (v
               <span key={p} style={{
                 display: "inline-flex", alignItems: "center", gap: 4,
                 padding: "2px 8px", background: `${c}12`, border: `1px solid ${c}30`,
-                borderRadius: 4,
+                borderRadius: 9999,
                 fontSize: "0.70rem", fontWeight: 600, color: c,
               }}>
                 {grp && <span style={{ fontSize: "0.58rem", fontWeight: 800, opacity: 0.75 }}>{grp.abbr}</span>}
@@ -684,7 +687,7 @@ function ProductMultiSelect({ value, onChange }: { value: string[]; onChange: (v
                 <span style={{
                   fontSize: "0.58rem", fontWeight: 800, color: grp.color,
                   background: `${grp.color}18`, border: `1px solid ${grp.color}40`,
-                  borderRadius: 3,
+                  borderRadius: 9999,
                   padding: "1px 6px", letterSpacing: "0.07em",
                 }}>{grp.abbr}</span>
                 <span style={{ fontSize: "0.63rem", fontWeight: 700, color: grp.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -713,7 +716,7 @@ function ProductMultiSelect({ value, onChange }: { value: string[]; onChange: (v
                       width: 15, height: 15, flexShrink: 0,
                       background: active ? grp.color : "white",
                       border: `2px solid ${active ? grp.color : BD}`,
-                      borderRadius: 3,
+                      borderRadius: 9999,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       transition: "all 0.13s",
                     }}>
@@ -1025,7 +1028,6 @@ function DocumentsSection({ docs, onChange }: { docs: UploadedDoc[]; onChange: (
     <div style={{
       background: "white",
       border: `1px solid ${BDL}`,
-      borderTop: `3px solid ${N}`,
       borderRadius: 8,
       overflow: "hidden",
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -1037,8 +1039,8 @@ function DocumentsSection({ docs, onChange }: { docs: UploadedDoc[]; onChange: (
             style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
             <Paperclip size={13}/>
           </span>
-          <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>Submission Documents</h3>
-          {docs.length > 0 && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "white", background: N, padding: "1px 7px", borderRadius: 4 }}>{docs.length}</span>}
+          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Submission Documents</h3>
+          {docs.length > 0 && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "white", background: N, padding: "1px 7px", borderRadius: 9999 }}>{docs.length}</span>}
         </div>
         <button type="button" onClick={() => fileRef.current?.click()}
           className="flex items-center gap-1.5 px-3 py-1.5 hover:brightness-95 transition-all"
@@ -1078,7 +1080,7 @@ function DocumentsSection({ docs, onChange }: { docs: UploadedDoc[]; onChange: (
                     <span style={{ color: BDL }}>·</span>
                     {editCat === doc.id ? (
                       <select value={doc.category} onChange={e => updateCategory(doc.id, e.target.value)} onBlur={() => setEditCat(null)} autoFocus
-                        style={{ fontSize: "0.62rem", color: N, fontFamily: font, border: `1px solid ${N}`, borderRadius: 4, background: "white", padding: "1px 4px", cursor: "pointer" }}>
+                        style={{ fontSize: "0.62rem", color: N, fontFamily: font, border: `1px solid ${N}`, borderRadius: 9999, background: "white", padding: "1px 4px", cursor: "pointer" }}>
                         {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     ) : (
@@ -1371,7 +1373,7 @@ function GroupMembersEditor({
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "6px 8px",
-                  border: `1px solid ${BDL}`, borderRadius: 4,
+                  border: `1px solid ${BDL}`, borderRadius: 9999,
                   background: "white", color: TD,
                   fontSize: "0.78rem", fontFamily: font, fontWeight: 600, outline: "none",
                 }}
@@ -1384,7 +1386,7 @@ function GroupMembersEditor({
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "6px 8px",
-                  border: `1px solid ${BDL}`, borderRadius: 4,
+                  border: `1px solid ${BDL}`, borderRadius: 9999,
                   background: "white", color: TD,
                   fontSize: "0.74rem", fontFamily: font, outline: "none",
                   appearance: "none",
@@ -1400,7 +1402,7 @@ function GroupMembersEditor({
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "6px 8px",
-                  border: `1px solid ${BDL}`, borderRadius: 4,
+                  border: `1px solid ${BDL}`, borderRadius: 9999,
                   background: "white", color: TD,
                   fontSize: "0.76rem", fontFamily: font, outline: "none",
                   textAlign: "center", textTransform: "uppercase",
@@ -1414,7 +1416,7 @@ function GroupMembersEditor({
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "6px 8px",
-                  border: `1px solid ${BDL}`, borderRadius: 4,
+                  border: `1px solid ${BDL}`, borderRadius: 9999,
                   background: "white", color: TD,
                   fontSize: "0.76rem", fontFamily: font, outline: "none",
                   textAlign: "right", fontVariantNumeric: "tabular-nums",
@@ -1434,7 +1436,7 @@ function GroupMembersEditor({
                       })}
                       style={{
                         fontSize: "0.60rem", fontWeight: 700,
-                        padding: "2px 6px", borderRadius: 3,
+                        padding: "2px 6px", borderRadius: 9999,
                         border: `1px solid ${active ? N : BDL}`,
                         background: active ? `${N}12` : "white",
                         color: active ? N : TT,
@@ -1455,7 +1457,7 @@ function GroupMembersEditor({
                       fontSize: "0.60rem", fontWeight: 800,
                       color: m.aiConfidence >= 90 ? "#1A7A4A" : m.aiConfidence >= 75 ? "#8A5C00" : "#B91C1C",
                       background: m.aiConfidence >= 90 ? "#E8F5EC" : m.aiConfidence >= 75 ? "#FFF8E6" : "#FBEAEA",
-                      padding: "2px 6px", borderRadius: 3,
+                      padding: "2px 6px", borderRadius: 9999,
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -1523,28 +1525,27 @@ function SectionCard({ title, accent = N, children, badge, locked, lockedLabel =
     <div style={{
       background: "white",
       border: `1px solid ${BDL}`,
-      borderTop: `3px solid ${accent}`,
       borderRadius: 8,
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
     }}>
-      <div className="flex items-center justify-between px-5 py-3"
+      <div className="flex items-center justify-between px-5 py-3.5"
         style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD", borderTopLeftRadius: 5, borderTopRightRadius: 5 }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && (
             <span className="inline-flex items-center justify-center"
-              style={{ width: 24, height: 24, borderRadius: 6, background: `${accent}12`, color: accent }}>
+              style={{ width: 26, height: 26, borderRadius: 6, background: `${accent}12`, color: accent }}>
               {icon}
             </span>
           )}
-          <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>{title}</h3>
+          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>{title}</h3>
         </div>
         {locked ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1" style={{ background: `${N}0A`, border: `1px solid ${N}25`, borderRadius: 4 }}>
+          <div className="flex items-center gap-1.5 px-2.5 py-1" style={{ background: `${N}0A`, border: `1px solid ${N}25`, borderRadius: 9999 }}>
             <Lock size={10} color={N} />
             <span style={{ fontSize: "0.60rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>{lockedLabel}</span>
           </div>
         ) : badge ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1" style={{ background: `${N}0A`, border: `1px solid ${N}25`, borderRadius: 4 }}>
+          <div className="flex items-center gap-1.5 px-2.5 py-1" style={{ background: `${N}0A`, border: `1px solid ${N}25`, borderRadius: 9999 }}>
             <Lock size={10} color={N} />
             <span style={{ fontSize: "0.60rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>{badge}</span>
           </div>
@@ -1689,6 +1690,12 @@ export function NewSubmissionPage() {
     const warnings: string[] = [];
     const updates: Partial<FormState> = {};
 
+    // Submission Type — honor the inbox classification (Cross-Sell if the
+    // account already has a bound policy, else New Business).
+    if (prefill.submissionType) {
+      updates.submissionType = prefill.submissionType;
+    }
+
     // Institution → account
     if (prefill.institutionName) {
       const account = findAccountByName(prefill.institutionName);
@@ -1718,12 +1725,23 @@ export function NewSubmissionPage() {
       const iso = parsePrefillDate(prefill.effectiveDate);
       if (iso) {
         updates.effectiveDate = iso;
+        // Fall back to effective date only if no explicit need-by was extracted.
         updates.needByDate    = iso;
       } else {
         warnings.push(`Could not parse effective date "${prefill.effectiveDate}".`);
       }
     } else {
       warnings.push("Effective date was not extracted from the email.");
+    }
+
+    // Need-By date — prefer the explicitly extracted value over the effective-date fallback.
+    if (prefill.needByDate) {
+      const iso = parsePrefillDate(prefill.needByDate);
+      if (iso) {
+        updates.needByDate = iso;
+      } else {
+        warnings.push(`Could not parse need-by date "${prefill.needByDate}".`);
+      }
     }
 
     // Coverage lines → canonical product lines (drop any that don't match the catalog)
@@ -2197,7 +2215,7 @@ export function NewSubmissionPage() {
                     background: form.submissionKind === "Group" ? "#7B2FBE" : "rgba(255,255,255,0.18)",
                     border: `1px solid ${form.submissionKind === "Group" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.25)"}`,
                     color: "white",
-                    padding: "2px 9px", borderRadius: 4,
+                    padding: "2px 9px", borderRadius: 9999,
                     fontSize: "0.60rem", fontWeight: 800,
                     letterSpacing: "0.08em", textTransform: "uppercase",
                   }}

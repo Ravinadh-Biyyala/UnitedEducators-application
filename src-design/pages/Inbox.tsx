@@ -2,13 +2,13 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail, Search, Paperclip, Star, RefreshCw,
-  ChevronRight, X, Sparkles, FileText, Copy,
+  X, Sparkles, FileText, Copy,
   AlertTriangle, CheckCircle, Clock, Building2,
-  Users, Shield, Car, Wifi, Briefcase, ArrowRight,
+  Briefcase, ArrowRight,
   Download, Eye, MoreHorizontal, Inbox as InboxIcon,
   Send, Archive, Trash2, Filter,
-  Plus, Loader2, Check, ExternalLink, Globe,
-  BookOpen, ZapIcon,
+  Plus, Loader2, Check, ExternalLink,
+  Bell, CornerUpLeft,
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { PageRegister } from "../components/companion/PageRegister";
@@ -21,7 +21,7 @@ const G    = "#C9A227";
 const BDL  = "#DCE3EC";
 const BD   = "#C4CDD8";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
@@ -44,6 +44,7 @@ interface Email {
     institutionName: string; state: string; enrollment: number;
     coverageLines: string[]; effectiveDate: string; broker: string;
     annualPremiumEstimate?: string; institutionType?: string;
+    needByDate?: string;
   };
   potentialDuplicates?: { id: string; name: string; match: number; reason: string; status: string }[];
 }
@@ -68,7 +69,7 @@ const MOCK_EMAILS: Email[] = [
       institutionName: "Riverside Unified School District",
       state: "CA", enrollment: 42500,
       coverageLines: ["General Liability", "Property", "Cyber Liability", "Commercial Auto"],
-      effectiveDate: "July 1, 2026", broker: "Gallagher Education",
+      effectiveDate: "July 1, 2026", needByDate: "June 15, 2026", broker: "Gallagher Education",
       annualPremiumEstimate: "$2,100,000", institutionType: "K-12 Public School District",
     },
     potentialDuplicates: [
@@ -95,7 +96,7 @@ const MOCK_EMAILS: Email[] = [
       institutionName: "Horizon Academy Network",
       state: "TX", enrollment: 6200,
       coverageLines: ["Educators Legal Liability", "General Liability", "Cyber Liability", "D&O"],
-      effectiveDate: "September 1, 2026", broker: "Lockton Companies",
+      effectiveDate: "September 1, 2026", needByDate: "August 10, 2026", broker: "Lockton Companies",
       institutionType: "Charter School Network",
     },
     potentialDuplicates: [
@@ -135,7 +136,7 @@ const MOCK_EMAILS: Email[] = [
       institutionName: "Pacific Northwest University Consortium",
       state: "WA/OR", enrollment: 9800,
       coverageLines: ["Property", "General Liability", "Educators Professional Liability", "Cyber", "Student Accident"],
-      effectiveDate: "July 1, 2026", broker: "Marsh McLennan",
+      effectiveDate: "July 1, 2026", needByDate: "June 12, 2026", broker: "Marsh McLennan",
       institutionType: "Higher Education Consortium",
     },
     potentialDuplicates: [],
@@ -195,6 +196,17 @@ function AttachIcon({ type }: { type: Attachment["type"] }) {
   );
 }
 
+// Operational / system / automated messages get muted treatment so they don't
+// compete with broker correspondence. Reply detection drives thread affordances.
+function isOperational(email: Email) {
+  return email.from.email.toLowerCase().startsWith("noreply")
+    || email.tags.includes("automated")
+    || email.tags.includes("alert");
+}
+function isReply(subject: string) {
+  return /^\s*re:\s/i.test(subject);
+}
+
 type AIPanel = "none" | "create" | "parse" | "duplicates";
 
 // ── Main Inbox page ────────────────────────────────────────────────────────────
@@ -246,16 +258,6 @@ export function Inbox() {
       setActivePanel(panel);
       setAiDone(prev => new Set(prev).add(panel));
     }, 1400);
-  };
-
-  const coverageIcon = (c: string) => {
-    if (c.includes("Liability")) return <Shield size={11} />;
-    if (c.includes("Property")) return <Building2 size={11} />;
-    if (c.includes("Cyber")) return <Wifi size={11} />;
-    if (c.includes("Auto")) return <Car size={11} />;
-    if (c.includes("EPL") || c.includes("Educators")) return <BookOpen size={11} />;
-    if (c.includes("D&O")) return <Briefcase size={11} />;
-    return <Shield size={11} />;
   };
 
   const FOLDERS = [
@@ -371,88 +373,159 @@ export function Inbox() {
                 <p style={{ fontSize: "0.74rem", color: TT }}>No emails found</p>
               </div>
             )}
-            {filtered.map(email => (
-              <div
-                key={email.id}
-                onClick={() => openEmail(email)}
-                style={{
-                  padding: "12px 14px",
-                  borderBottom: `1px solid ${BDL}`,
-                  cursor: "pointer",
-                  background: selected.id === email.id ? `${N}08` : email.unread ? "#FAFBFF" : "white",
-                  borderLeft: selected.id === email.id ? `3px solid ${N}` : `3px solid transparent`,
-                  transition: "background 0.12s",
-                  position: "relative",
-                }}
-              >
-                {/* Unread dot */}
-                {email.unread && (
-                  <div style={{
-                    position: "absolute", top: 14, left: 5,
-                    width: 6, height: 6, borderRadius: "50%", background: N,
-                  }} />
-                )}
+            {filtered.map(email => {
+              const operational = isOperational(email);
+              const reply       = isReply(email.subject);
+              const isSelected  = selected.id === email.id;
 
-                <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                  {/* Avatar */}
-                  <div style={{
-                    width: 32, height: 32, background: email.from.color,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, fontSize: "0.60rem", fontWeight: 800, color: "white",
-                    borderRadius: 6,
-                  }}>
-                    {email.from.initials}
+              // Operational/system messages: dense, muted single-row treatment so
+              // they don't sit at the same visual weight as broker correspondence.
+              if (operational) {
+                return (
+                  <div
+                    key={email.id}
+                    onClick={() => openEmail(email)}
+                    style={{
+                      padding: "9px 14px 9px 18px",
+                      borderBottom: `1px solid ${BDL}`,
+                      cursor: "pointer",
+                      background: isSelected ? `${N}06` : "white",
+                      borderLeft: isSelected ? `3px solid ${N}` : `3px solid transparent`,
+                      transition: "background 0.12s",
+                      display: "flex", alignItems: "center", gap: 9,
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, background: "#EEF1F6",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, borderRadius: 6,
+                    }}>
+                      <Bell size={11} color={TT} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 1 }}>
+                        <span style={{
+                          fontSize: "0.52rem", fontWeight: 800, color: TT,
+                          textTransform: "uppercase", letterSpacing: "0.07em",
+                          padding: "1px 5px", background: "#EEF1F6", borderRadius: 9999,
+                        }}>System</span>
+                        <span style={{ fontSize: "0.60rem", color: TT }}>{email.from.company}</span>
+                        <span style={{ fontSize: "0.60rem", color: TT, marginLeft: "auto" }}>{formatDate(email.date)}</span>
+                      </div>
+                      <div style={{
+                        fontSize: "0.68rem", fontWeight: email.unread ? 600 : 500,
+                        color: email.unread ? "#1A2530" : TM,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {email.subject}
+                      </div>
+                    </div>
                   </div>
+                );
+              }
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Row 1: name + date + flag */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 1 }}>
-                      <span style={{ fontSize: "0.74rem", fontWeight: email.unread ? 700 : 600, color: "#1A2530", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 150 }}>
-                        {email.from.name}
-                      </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                        <span style={{ fontSize: "0.60rem", color: TT }}>{formatDate(email.date)}</span>
-                        <button onClick={e => toggleFlag(email.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, borderRadius: 6 }}>
+              // Broker correspondence: full card. Unread emphasis is now single-channel
+              // (subject weight only) — no background tint, no left dot.
+              return (
+                <div
+                  key={email.id}
+                  onClick={() => openEmail(email)}
+                  style={{
+                    padding: "12px 14px",
+                    borderBottom: `1px solid ${BDL}`,
+                    cursor: "pointer",
+                    background: isSelected ? `${N}08` : "white",
+                    borderLeft: isSelected ? `3px solid ${N}` : `3px solid transparent`,
+                    transition: "background 0.12s",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                    <div style={{
+                      width: 30, height: 30, background: email.from.color,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, fontSize: "0.58rem", fontWeight: 800, color: "white",
+                      borderRadius: 6,
+                    }}>
+                      {email.from.initials}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Row 1: name · company · date · flag (single metadata line) */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                        <span style={{
+                          fontSize: "0.73rem", fontWeight: email.unread ? 700 : 600,
+                          color: "#1A2530",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          maxWidth: 130,
+                        }}>
+                          {email.from.name}
+                        </span>
+                        <span style={{
+                          fontSize: "0.60rem", color: TT, flex: 1, minWidth: 0,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>· {email.from.company}</span>
+                        <span style={{ fontSize: "0.60rem", color: TT, flexShrink: 0 }}>{formatDate(email.date)}</span>
+                        <button onClick={e => toggleFlag(email.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, borderRadius: 6, flexShrink: 0 }}>
                           <Star size={11} fill={email.flagged ? G : "none"} color={email.flagged ? G : BD} />
                         </button>
                       </div>
-                    </div>
 
-                    {/* Company */}
-                    <div style={{ fontSize: "0.62rem", color: TT, marginBottom: 3 }}>{email.from.company}</div>
-
-                    {/* Subject */}
-                    <div style={{ fontSize: "0.71rem", fontWeight: email.unread ? 700 : 500, color: email.unread ? "#1A2530" : TM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
-                      {email.subject}
-                    </div>
-
-                    {/* Preview */}
-                    <div style={{ fontSize: "0.63rem", color: TT, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.45 }}>
-                      {email.preview}
-                    </div>
-
-                    {/* Footer: tags + attachment */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
-                      {email.attachments.length > 0 && (
-                        <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.58rem", color: TT }}>
-                          <Paperclip size={9} /> {email.attachments.length}
+                      {/* Subject — with optional reply indicator for thread continuity */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3, minWidth: 0 }}>
+                        {reply && (
+                          <CornerUpLeft size={11} color={TT} style={{ flexShrink: 0 }} />
+                        )}
+                        <span style={{
+                          fontSize: "0.72rem",
+                          fontWeight: email.unread ? 700 : 500,
+                          color: email.unread ? "#1A2530" : TM,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          flex: 1, minWidth: 0,
+                        }}>
+                          {email.subject}
                         </span>
-                      )}
-                      {email.tags.filter(t => t !== "broker").slice(0, 2).map(tag => (
-                        <span key={tag} style={{
-                          fontSize: "0.55rem", fontWeight: 700, padding: "1px 5px",
-                          background: tag === "new-submission" ? `${N}12` : tag === "follow-up" ? "#B4530912" : "#F0F3F8",
-                          color: tag === "new-submission" ? N : tag === "follow-up" ? "#B45309" : TT,
-                          border: `1px solid ${tag === "new-submission" ? `${N}30` : tag === "follow-up" ? "#B4530930" : BDL}`,
-                          textTransform: "uppercase", letterSpacing: "0.05em",
-                          borderRadius: 4,
-                        }}>{tag}</span>
-                      ))}
+                      </div>
+
+                      {/* Preview — only one line, freeing vertical density */}
+                      <div style={{
+                        fontSize: "0.63rem", color: TT,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        lineHeight: 1.45,
+                      }}>
+                        {email.preview}
+                      </div>
+
+                      {/* Footer: tags + attachment count (only when meaningful) */}
+                      {(() => {
+                        const visibleTags = email.tags.filter(t =>
+                          t !== "broker" && t !== "new-submission" && t !== "cross-sell"
+                        );
+                        if (email.attachments.length === 0 && visibleTags.length === 0) return null;
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                            {email.attachments.length > 0 && (
+                              <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.58rem", color: TT }}>
+                                <Paperclip size={9} /> {email.attachments.length}
+                              </span>
+                            )}
+                            {visibleTags.slice(0, 2).map(tag => (
+                              <span key={tag} style={{
+                                fontSize: "0.55rem", fontWeight: 700, padding: "1px 6px",
+                                background: tag === "follow-up" ? "#B4530910" : "#F0F3F8",
+                                color: tag === "follow-up" ? "#B45309" : TT,
+                                textTransform: "uppercase", letterSpacing: "0.05em",
+                                borderRadius: 9999,
+                              }}>{tag}</span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -462,13 +535,23 @@ export function Inbox() {
           {/* Email viewer header */}
           <div style={{
             background: "white", borderBottom: `1px solid ${BDL}`, flexShrink: 0,
-            padding: "14px 20px", borderTop: `3px solid ${N}`,
+            padding: "14px 20px",
           }}>
             {/* Subject */}
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-              <h2 style={{ fontSize: "0.94rem", fontWeight: 800, color: "#1A2530", lineHeight: 1.35, flex: 1 }}>
-                {selected.subject}
-              </h2>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {isReply(selected.subject) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                    <CornerUpLeft size={11} color={TT} />
+                    <span style={{ fontSize: "0.58rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      Reply · ongoing thread
+                    </span>
+                  </div>
+                )}
+                <h2 style={{ fontSize: "0.94rem", fontWeight: 800, color: "#1A2530", lineHeight: 1.35 }}>
+                  {selected.subject}
+                </h2>
+              </div>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 <button style={{ width: 28, height: 28, border: `1px solid ${BDL}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
                   <Archive size={13} color={TT} />
@@ -482,54 +565,91 @@ export function Inbox() {
               </div>
             </div>
 
-            {/* From / To */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            {isOperational(selected) ? (
+              /* Operational sender block — flat one-liner, no big avatar */
               <div style={{
-                width: 34, height: 34, background: selected.from.color, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.62rem", fontWeight: 800, color: "white",
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 10px", background: "#F4F6FA", border: `1px solid ${BDL}`,
                 borderRadius: 6,
               }}>
-                {selected.from.initials}
+                <Bell size={13} color={TT} />
+                <span style={{
+                  fontSize: "0.55rem", fontWeight: 800, color: TT,
+                  textTransform: "uppercase", letterSpacing: "0.07em",
+                  padding: "1px 6px", background: "white", border: `1px solid ${BDL}`, borderRadius: 9999,
+                }}>System</span>
+                <span style={{ fontSize: "0.70rem", fontWeight: 600, color: "#1A2530" }}>{selected.from.company}</span>
+                <span style={{ fontSize: "0.62rem", color: TT }}>· automated notification</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.62rem", color: TT }}>
+                  {new Date(selected.date).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                </span>
               </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1A2530" }}>{selected.from.name}</span>
-                  <span style={{ fontSize: "0.64rem", color: TT }}>·</span>
-                  <span style={{ fontSize: "0.64rem", color: TT }}>{selected.from.company}</span>
+            ) : (
+              /* Broker sender block — full identity */
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 38, height: 38, background: selected.from.color, flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "0.72rem", fontWeight: 800, color: "white",
+                  borderRadius: 6,
+                }}>
+                  {selected.from.initials}
                 </div>
-                <div style={{ fontSize: "0.62rem", color: TT }}>
-                  {selected.from.email} → {selected.to}
-                </div>
-              </div>
-              <div style={{ marginLeft: "auto", fontSize: "0.63rem", color: TT }}>
-                {new Date(selected.date).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-              </div>
-            </div>
-
-            {/* Attachments */}
-            {selected.attachments.length > 0 && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                {selected.attachments.map((att, i) => (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "5px 10px 5px 7px",
-                    border: `1px solid ${BDL}`, background: "#F8FAFC", cursor: "pointer",
-                    borderRadius: 6,
-                  }}>
-                    <AttachIcon type={att.type} />
-                    <div>
-                      <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "#1A2530" }}>{att.name}</div>
-                      <div style={{ fontSize: "0.58rem", color: TT }}>{att.size}</div>
-                    </div>
-                    <Download size={11} color={TT} style={{ marginLeft: 4 }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1A2530" }}>{selected.from.name}</span>
+                    <span style={{ fontSize: "0.74rem", color: TT }}>·</span>
+                    <span style={{ fontSize: "0.74rem", color: TT }}>{selected.from.company}</span>
                   </div>
-                ))}
+                  <div style={{ fontSize: "0.72rem", color: TT }}>
+                    {selected.from.email} → {selected.to}
+                  </div>
+                </div>
+                <div style={{ marginLeft: "auto", fontSize: "0.72rem", color: TT }}>
+                  {new Date(selected.date).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                </div>
+              </div>
+            )}
+
+            {/* Compact attachment row — chip-style with truncation, low chrome */}
+            {selected.attachments.length > 0 && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginTop: 10,
+                flexWrap: "wrap",
+              }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: "0.58rem", fontWeight: 700, color: TT,
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}>
+                  <Paperclip size={10} /> {selected.attachments.length} attached
+                </span>
+                {selected.attachments.map((att, i) => {
+                  const fileColor: Record<string, string> = { pdf: "#B91C1C", xlsx: "#1A7A4A", docx: "#0123D4", img: "#B45309" };
+                  const c = fileColor[att.type] ?? TT;
+                  return (
+                    <div key={i} style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "4px 9px",
+                      background: "white", border: `1px solid ${BDL}`,
+                      cursor: "pointer", borderRadius: 9999, maxWidth: 240,
+                    }}>
+                      <FileText size={11} color={c} style={{ flexShrink: 0 }} />
+                      <span style={{
+                        fontSize: "0.64rem", fontWeight: 600, color: "#1A2530",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>{att.name}</span>
+                      <span style={{ fontSize: "0.56rem", color: TT, flexShrink: 0 }}>{att.size}</span>
+                      <Download size={10} color={TT} style={{ flexShrink: 0 }} />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* ── AI Action Toolbar ────────────────────────────────────────────── */}
+          {!isOperational(selected) && (
           <div style={{
             background: "white", borderBottom: `1px solid ${BDL}`, padding: "10px 20px",
             display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
@@ -587,6 +707,7 @@ export function Inbox() {
               </button>
             )}
           </div>
+          )}
 
           {/* ── AI Result Panel ──────────────────────────────────────────────── */}
           {(activePanel !== "none" || aiLoading !== "none") && (
@@ -594,18 +715,27 @@ export function Inbox() {
               panel={activePanel !== "none" ? activePanel : aiLoading}
               loading={aiLoading !== "none"}
               email={selected}
-              onCreateSubmission={() => navigate("/submissions/new", {
-                state: {
-                  freshFromInbox: true,
-                  prefill: selected.extracted ?? null,
-                  sourceEmail: {
-                    subject: selected.subject,
-                    fromName: selected.from.name,
-                    fromCompany: selected.from.company,
-                    attachments: selected.attachments,
+              onCreateSubmission={() => {
+                const matchedBound = selected.potentialDuplicates?.find(d => d.status === "Bound");
+                navigate("/submissions/new", {
+                  state: {
+                    freshFromInbox: true,
+                    prefill: selected.extracted
+                      ? {
+                          ...selected.extracted,
+                          submissionType: matchedBound ? "Cross-Sell" : "New Business",
+                          crossSellMatch: matchedBound ?? null,
+                        }
+                      : null,
+                    sourceEmail: {
+                      subject: selected.subject,
+                      fromName: selected.from.name,
+                      fromCompany: selected.from.company,
+                      attachments: selected.attachments,
+                    },
                   },
-                },
-              })}
+                });
+              }}
               onClose={() => setActivePanel("none")}
             />
           )}
@@ -640,18 +770,30 @@ function AIActionButton({
         disabled={disabled || loading}
         style={{
           display: "flex", alignItems: "center", gap: 6,
-          padding: "6px 13px",
+          padding: "6px 12px",
           background: active ? color : "white",
-          color: active ? "white" : disabled ? BD : color,
-          border: `1.5px solid ${active ? color : disabled ? BDL : `${color}60`}`,
+          color: active ? "white" : disabled ? BD : TM,
+          border: `1px solid ${active ? color : BDL}`,
           cursor: disabled || loading ? "not-allowed" : "pointer",
-          fontSize: "0.72rem", fontWeight: 700, fontFamily: font,
+          fontSize: "0.70rem", fontWeight: 600, fontFamily: font,
           opacity: disabled ? 0.5 : 1,
           transition: "all 0.15s",
           borderRadius: 6,
         }}
-        onMouseEnter={e => { if (!disabled && !active && !loading) (e.currentTarget as HTMLElement).style.background = `${color}10`; }}
-        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "white"; }}
+        onMouseEnter={e => {
+          if (!disabled && !active && !loading) {
+            (e.currentTarget as HTMLElement).style.background = `${color}08`;
+            (e.currentTarget as HTMLElement).style.borderColor = `${color}40`;
+            (e.currentTarget as HTMLElement).style.color = color;
+          }
+        }}
+        onMouseLeave={e => {
+          if (!active) {
+            (e.currentTarget as HTMLElement).style.background = "white";
+            (e.currentTarget as HTMLElement).style.borderColor = BDL;
+            (e.currentTarget as HTMLElement).style.color = disabled ? BD : TM;
+          }
+        }}
       >
         {loading ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : icon}
         {label}
@@ -670,12 +812,14 @@ function AIResultPanel({
   onCreateSubmission: () => void; onClose: () => void;
 }) {
   if (loading) {
+    const accent = panel === "parse" ? "#7B2FBE" : panel === "duplicates" ? "#1A7A4A" : N;
+    const bg     = panel === "parse" ? "#FAF4FF" : panel === "duplicates" ? "#F2FBF6" : "#F4F8FF";
     return (
       <div style={{
-        background: "#F8FAFC", borderBottom: `1px solid ${BDL}`,
-        padding: "18px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+        background: bg, borderBottom: `1px solid ${BDL}`, borderLeft: `3px solid ${accent}`,
+        padding: "16px 22px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
-        <Loader2 size={16} color={N} style={{ animation: "spin 0.8s linear infinite" }} />
+        <Loader2 size={16} color={accent} style={{ animation: "spin 0.8s linear infinite" }} />
         <div>
           <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1A2530" }}>
             {panel === "create" ? "Extracting submission data…" : panel === "parse" ? "Parsing attachments with OCR…" : "Scanning submission database…"}
@@ -697,47 +841,69 @@ function CreateSubmissionPanel({ email, onCreate, onClose }: { email: Email; onC
   const ex = email.extracted;
   if (!ex) return null;
 
-  const fields = [
-    { label: "Institution Name", value: ex.institutionName, conf: 98, icon: <Building2 size={11} /> },
-    { label: "Institution Type", value: ex.institutionType ?? "K-12 Public", conf: 91, icon: <BookOpen size={11} /> },
-    { label: "State / Territory", value: ex.state, conf: 99, icon: <Globe size={11} /> },
-    { label: "Enrollment", value: ex.enrollment.toLocaleString() + " students", conf: 95, icon: <Users size={11} /> },
-    { label: "Effective Date", value: ex.effectiveDate, conf: 97, icon: <Clock size={11} /> },
-    { label: "Producing Broker", value: ex.broker, conf: 99, icon: <Briefcase size={11} /> },
-    ...(ex.annualPremiumEstimate ? [{ label: "Expiring Premium", value: ex.annualPremiumEstimate, conf: 82, icon: <ZapIcon size={11} /> }] : []),
+  // A "Bound" duplicate means the account already exists as an active policy
+  // holder in the database → this is a cross-sell. Otherwise New Business.
+  const matchedBound  = email.potentialDuplicates?.find(d => d.status === "Bound");
+  const isCrossSell   = !!matchedBound;
+  const submissionType = isCrossSell ? "Cross-Sell" : "New Business";
+
+  const fields: {
+    label: string; value: string; conf: number;
+    icon: React.ReactNode; sub?: string; tone?: "primary" | "warning" | "neutral";
+  }[] = [
+    {
+      label: "Submission Type",
+      value: submissionType,
+      sub: isCrossSell ? `Matched ${matchedBound!.id} · ${matchedBound!.status}` : "No prior policy on file",
+      conf: 99,
+      icon: <Sparkles size={11} />,
+      tone: isCrossSell ? "warning" : "primary",
+    },
+    { label: "Account Name",   value: ex.institutionName,           conf: 98, icon: <Building2 size={11} /> },
+    { label: "Need By Date",   value: ex.needByDate ?? "Not specified", conf: ex.needByDate ? 88 : 0, icon: <Clock size={11} /> },
+    { label: "Effective Date", value: ex.effectiveDate,             conf: 97, icon: <Clock size={11} /> },
+    { label: "Brokerage",      value: ex.broker,                    conf: 99, icon: <Briefcase size={11} /> },
   ];
 
   const confColor = (c: number) => c >= 95 ? "#1A7A4A" : c >= 80 ? "#B45309" : "#B91C1C";
   const confBg    = (c: number) => c >= 95 ? "#E8F5EC" : c >= 80 ? "#FEF3C7" : "#FEE2E2";
 
+  const valueTone: Record<string, { bg: string; fg: string }> = {
+    warning: { bg: "#FEF3C7", fg: "#B45309" },
+    primary: { bg: `${N}10`,  fg: N },
+    neutral: { bg: "transparent", fg: "#1A2530" },
+  };
+
   return (
-    <div style={{ background: "#F0F7FF", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: `3px solid ${N}` }}>
-      {/* Panel header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px 8px", borderBottom: `1px solid ${BDL}` }}>
-        <div style={{ width: 22, height: 22, background: N, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ background: "#F4F8FF", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: `3px solid ${N}` }}>
+      {/* Panel header — softened: rounded icon, no internal divider */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 18px 6px" }}>
+        <div style={{ width: 22, height: 22, background: N, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
           <Plus size={12} color="white" />
         </div>
         <div>
           <span style={{ fontSize: "0.72rem", fontWeight: 800, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Open Submission</span>
-          <span style={{ fontSize: "0.62rem", color: TT, marginLeft: 8 }}>· AI extracted {fields.length} fields with high confidence</span>
+          <span style={{ fontSize: "0.62rem", color: TT, marginLeft: 8 }}>
+            · AI extracted {fields.length + 1} fields {isCrossSell && "· cross-sell match detected"}
+          </span>
         </div>
         <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: TT, borderRadius: 6 }}>
           <X size={13} />
         </button>
       </div>
 
-      <div style={{ padding: "12px 18px 14px" }}>
-        {/* Coverage lines */}
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>
-            Coverage Lines Detected
+      <div style={{ padding: "8px 18px 14px" }}>
+        {/* Selected Product(s) — borderless pills, the multi-value field */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            Selected Product(s)
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {ex.coverageLines.map(c => (
               <span key={c} style={{
-                display: "flex", alignItems: "center", gap: 4,
-                padding: "3px 9px", fontSize: "0.65rem", fontWeight: 600,
-                background: `${N}10`, color: N, border: `1px solid ${N}30`,
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "3px 10px", fontSize: "0.64rem", fontWeight: 600,
+                background: `${N}12`, color: N, borderRadius: 9999,
               }}>
                 {c}
               </span>
@@ -745,26 +911,55 @@ function CreateSubmissionPanel({ email, onCreate, onClose }: { email: Email; onC
           </div>
         </div>
 
-        {/* Extracted fields grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 6, marginBottom: 12 }}>
-          {fields.map(f => (
-            <div key={f.label} style={{
-              background: "white", border: `1px solid ${BDL}`,
-              padding: "7px 10px", display: "flex", flexDirection: "column", gap: 3,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, color: TT }}>
-                  {f.icon}
-                  <span style={{ fontSize: "0.59rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.label}</span>
+        {/* Extracted fields grid — borderless white tiles. High-confidence shows
+            a subtle dot; medium/low keeps the visible % so review attention is
+            drawn there. Submission Type uses a tone-colored value chip. */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8, marginBottom: 14 }}>
+          {fields.map(f => {
+            const highConf = f.conf >= 95;
+            const tone     = valueTone[f.tone ?? "neutral"];
+            const isToned  = f.tone === "warning" || f.tone === "primary";
+            return (
+              <div key={f.label} style={{
+                background: "white", borderRadius: 8,
+                padding: "8px 11px", display: "flex", flexDirection: "column", gap: 3,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, color: TT, minWidth: 0 }}>
+                    {f.icon}
+                    <span style={{ fontSize: "0.58rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.label}</span>
+                  </div>
+                  {highConf ? (
+                    <span title={`${f.conf}% confidence`} style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: confColor(f.conf), flexShrink: 0,
+                    }} />
+                  ) : (
+                    <span style={{
+                      fontSize: "0.56rem", fontWeight: 800, padding: "1px 6px",
+                      background: confBg(f.conf), color: confColor(f.conf),
+                      borderRadius: 9999, flexShrink: 0,
+                    }}>{f.conf}%</span>
+                  )}
                 </div>
-                <span style={{
-                  fontSize: "0.57rem", fontWeight: 800, padding: "1px 5px",
-                  background: confBg(f.conf), color: confColor(f.conf),
-                }}>{f.conf}%</span>
+                {isToned ? (
+                  <div style={{
+                    display: "inline-flex", alignSelf: "flex-start", alignItems: "center",
+                    padding: "2px 9px", borderRadius: 9999,
+                    background: tone.bg, color: tone.fg,
+                    fontSize: "0.70rem", fontWeight: 700,
+                  }}>
+                    {f.value}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#1A2530" }}>{f.value}</div>
+                )}
+                {f.sub && (
+                  <div style={{ fontSize: "0.58rem", color: TT, marginTop: 1 }}>{f.sub}</div>
+                )}
               </div>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#1A2530" }}>{f.value}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* CTA */}
@@ -857,10 +1052,10 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
   const current = PARSED[selected] ?? PARSED[0];
 
   return (
-    <div style={{ background: "#F9F0FF", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: "3px solid #7B2FBE", maxHeight: 300, display: "flex", flexDirection: "column" }}>
+    <div style={{ background: "#FAF4FF", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: "3px solid #7B2FBE", maxHeight: 300, display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px 8px", borderBottom: `1px solid ${BDL}`, flexShrink: 0 }}>
-        <div style={{ width: 22, height: 22, background: "#7B2FBE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 18px 6px", flexShrink: 0 }}>
+        <div style={{ width: 22, height: 22, background: "#7B2FBE", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
           <FileText size={12} color="white" />
         </div>
         <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#7B2FBE", textTransform: "uppercase", letterSpacing: "0.06em" }}>Parse Attachments</span>
@@ -870,17 +1065,16 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
         </button>
       </div>
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Doc tabs */}
-        <div style={{ width: 180, flexShrink: 0, borderRight: `1px solid ${BDL}`, background: "white", overflowY: "auto" }}>
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", padding: "4px 8px 10px" }}>
+        {/* Doc tabs — rounded card group, no per-row bottom borders */}
+        <div style={{ width: 188, flexShrink: 0, background: "white", overflowY: "auto", borderRadius: 8, marginRight: 10 }}>
           {PARSED.map((doc, i) => (
             <button key={i} onClick={() => setSelected(i)}
               style={{
                 width: "100%", padding: "10px 12px", textAlign: "left", cursor: "pointer",
                 background: selected === i ? "#7B2FBE10" : "transparent",
                 borderLeft: `3px solid ${selected === i ? "#7B2FBE" : "transparent"}`,
-                border: "none", borderBottom: `1px solid ${BDL}`, fontFamily: font,
-                borderRadius: 6,
+                border: "none", fontFamily: font,
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                 <FileText size={11} color={doc.color} />
@@ -891,12 +1085,12 @@ function ParseAttachmentsPanel({ email, onClose }: { email: Email; onClose: () =
           ))}
         </div>
 
-        {/* Parsed fields */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 5 }}>
+        {/* Parsed fields — borderless white tiles on the panel tint */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "2px 4px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 6 }}>
             {current.fields.map(f => (
-              <div key={f.label} style={{ background: "white", border: `1px solid ${BDL}`, padding: "6px 10px" }}>
-                <div style={{ fontSize: "0.59rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{f.label}</div>
+              <div key={f.label} style={{ background: "white", padding: "7px 11px", borderRadius: 8 }}>
+                <div style={{ fontSize: "0.58rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{f.label}</div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "#1A2530" }}>{f.value}</div>
               </div>
             ))}
@@ -941,10 +1135,10 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
   const statusBg: Record<string, string>    = { Bound: "#E8F5EC", Declined: "#FEE2E2", "In Review": "#FEF3C7", "Quote Issued": "#F3E8FF" };
 
   return (
-    <div style={{ background: "#F0FBF5", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: "3px solid #1A7A4A" }}>
+    <div style={{ background: "#F2FBF6", borderBottom: `1px solid ${BDL}`, flexShrink: 0, borderLeft: "3px solid #1A7A4A" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px 8px", borderBottom: `1px solid ${BDL}` }}>
-        <div style={{ width: 22, height: 22, background: "#1A7A4A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 18px 6px" }}>
+        <div style={{ width: 22, height: 22, background: "#1A7A4A", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>
           <Copy size={12} color="white" />
         </div>
         <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#1A7A4A", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check Duplicates</span>
@@ -956,9 +1150,9 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 0 }}>
-        {/* Checks list */}
-        <div style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${BDL}`, padding: "10px 14px" }}>
+      <div style={{ display: "flex", gap: 10, padding: "6px 14px 12px" }}>
+        {/* Checks list — borderless rows, status conveyed by glyph + color only */}
+        <div style={{ width: 240, flexShrink: 0, background: "white", borderRadius: 8, padding: "10px 12px" }}>
           <div style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Scan Results
           </div>
@@ -967,8 +1161,8 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
               <div style={{
                 width: 16, height: 16, flexShrink: 0,
                 background: c.found ? "#FEE2E2" : "#E8F5EC",
-                border: `1px solid ${c.found ? "#B91C1C30" : "#93C8A030"}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 4,
               }}>
                 {c.found
                   ? <AlertTriangle size={9} color="#B91C1C" />
@@ -982,26 +1176,30 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
         </div>
 
         {/* Matches */}
-        <div style={{ flex: 1, padding: "10px 16px" }}>
+        <div style={{ flex: 1 }}>
           {!hasDuplicates ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0", gap: 6 }}>
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              padding: "20px 0", gap: 6, background: "white", borderRadius: 8,
+            }}>
               <CheckCircle size={28} color="#1A7A4A" />
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1A7A4A" }}>No duplicates found</span>
               <span style={{ fontSize: "0.65rem", color: TT }}>This appears to be a new unique submission. Safe to proceed.</span>
             </div>
           ) : (
             <>
-              <div style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              <div style={{ fontSize: "0.60rem", fontWeight: 700, color: TT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
                 Potential Matches in System
               </div>
               {email.potentialDuplicates!.map((dup, i) => (
                 <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
-                  background: "white", border: `1px solid ${BDL}`, marginBottom: 6,
+                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                  background: "white", marginBottom: 6,
                   borderLeft: `3px solid ${dup.match >= 90 ? "#B91C1C" : "#B45309"}`,
+                  borderRadius: 8,
                 }}>
                   {/* Match % gauge */}
-                  <div style={{ textAlign: "center", flexShrink: 0 }}>
+                  <div style={{ textAlign: "center", flexShrink: 0, minWidth: 38 }}>
                     <div style={{ fontSize: "1.0rem", fontWeight: 800, color: dup.match >= 90 ? "#B91C1C" : "#B45309", lineHeight: 1 }}>{dup.match}%</div>
                     <div style={{ fontSize: "0.55rem", color: TT }}>match</div>
                   </div>
@@ -1009,9 +1207,10 @@ function CheckDuplicatesPanel({ email, onClose }: { email: Email; onClose: () =>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: N, cursor: "pointer", textDecoration: "underline" }}>{dup.id}</span>
                       <span style={{
-                        fontSize: "0.58rem", fontWeight: 800, padding: "1px 6px",
+                        fontSize: "0.56rem", fontWeight: 800, padding: "1px 7px",
                         background: statusBg[dup.status] ?? "#F0F3F8",
                         color: statusColor[dup.status] ?? TT,
+                        borderRadius: 9999, textTransform: "uppercase", letterSpacing: "0.04em",
                       }}>{dup.status}</span>
                     </div>
                     <div style={{ fontSize: "0.68rem", color: "#1A2530", fontWeight: 600 }}>{dup.name}</div>

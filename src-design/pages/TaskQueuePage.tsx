@@ -19,7 +19,7 @@ const G   = "#C9A227";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ─── KPI Tile (Dashboard hover effect, click-to-filter) ──────────────────────
@@ -44,16 +44,17 @@ function KPITile({ label, value, sub, accent, icon, onClick, selected = false }:
       aria-label={`${label}: ${value}, ${sub}${clickable ? (active ? " (filter active)" : " (click to filter)") : ""}`}
       style={{
         textAlign: "left", width: "100%", fontFamily: "inherit",
-        background: active
-          ? `linear-gradient(135deg, ${accent}12 0%, ${accent}06 100%)`
-          : hovered
-          ? `linear-gradient(135deg, white 0%, ${accent}08 100%)`
-          : "white",
+        // Selection is conveyed by border + ring shadow + colored text only.
+        // Background stays white in all states.
+        background: "white",
         border: `${active ? 1.5 : 1}px solid ${active ? accent : hovered ? `${accent}40` : BDL}`,
         borderRadius: 10,
         padding: "14px 16px",
         boxShadow: active
-          ? `0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
+          // Double-ring glow on the active filter card — matches the
+          // Submissions page so the active KPI reads as "currently filtering"
+          // at a glance, even across pages.
+          ? `0 0 0 1px ${accent}, 0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
           : hovered
           ? `0 2px 6px ${accent}14, 0 1px 2px rgba(15,23,42,0.04)`
           : "0 1px 2px rgba(15,23,42,0.04)",
@@ -98,7 +99,7 @@ function KPITile({ label, value, sub, accent, icon, onClick, selected = false }:
         {value}
       </p>
       <div className="inline-flex items-center gap-1 mt-2"
-        style={{ fontSize: "0.66rem", color: TT, fontWeight: 600 }}>
+        style={{ fontSize: "0.66rem", color: active ? accent : TT, fontWeight: 600 }}>
         <span>{sub}</span>
       </div>
     </button>
@@ -201,7 +202,7 @@ export function TaskQueuePage() {
 
   return (
     <AppShell activePage="tasks" role={role} onRoleChange={() => {}}>
-      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+      <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
         style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
         <PageRegister
@@ -269,7 +270,7 @@ export function TaskQueuePage() {
             background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
             borderRadius: "50%",
           }}/>
-          <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-start justify-between gap-3 flex-wrap">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5 flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Task Queue</h1>
               <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
@@ -297,7 +298,6 @@ export function TaskQueuePage() {
           style={{
             background: "white",
             border: `1px solid ${BDL}`,
-            borderTop: `3px solid ${N}`,
             borderRadius: 8,
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -311,7 +311,7 @@ export function TaskQueuePage() {
                 style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
                 <CheckSquare size={13} />
               </span>
-              <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
                 Task Queue
               </h3>
             </div>
@@ -407,40 +407,60 @@ export function TaskQueuePage() {
                     </td>
                   </tr>
                 ) : paginated.map((task, idx) => {
-                  const slaColor = task.slaUsedPct >= 100 ? "#B91C1C" : task.slaUsedPct >= 80 ? "#B45309" : "#2E7D32";
+                  // SLA bar — kept muted for normal usage, gets louder at risk thresholds.
+                  const slaColor = task.slaUsedPct >= 100 ? "#B91C1C" : task.slaUsedPct >= 80 ? "#B45309" : "#9AA5B5";
                   const priorityDot =
                     task.priority === "Critical" ? "#B91C1C" :
                     task.priority === "High" ? "#B45309" :
                     task.priority === "Medium" ? "#005B99" : TT;
-                  const statusBg =
-                    task.status === "Overdue" ? "#FEE2E2" :
-                    task.status === "Done" ? "#E8F5EC" :
-                    task.status === "In Progress" ? "#E0E7FF" : "#F1F5F9";
                   const statusColor =
                     task.status === "Overdue" ? "#B91C1C" :
                     task.status === "Done" ? "#15803D" :
                     task.status === "In Progress" ? N : TM;
+                  // Row-level urgency tier — drives rail + soft bg so the entire row
+                  // reads as urgent at a glance rather than via three competing chips.
+                  const isOverdue   = task.status === "Overdue" || task.daysUntilDue < 0;
+                  const isAtRisk    = !isOverdue && (task.daysUntilDue <= 2 || task.slaUsedPct >= 80);
+                  const rowBg       = isOverdue ? "#FEF2F2" : isAtRisk ? "#FFFBEB" : "white";
+                  const rowHoverBg  = isOverdue ? "#FEE2E2" : isAtRisk ? "#FEF3C7" : "#F0F6FF";
+                  const railColor   = isOverdue ? "#B91C1C" : isAtRisk ? "#B45309" : null;
+                  const railWidth   = isOverdue ? 5 : isAtRisk ? 4 : 0;
+                  // Scale boost — urgent rows visibly larger than normal so the urgency
+                  // reads in scale, not only in hue.
+                  const cellPadY    = isOverdue ? 18 : isAtRisk ? 14 : 12;
+                  const titleSize   = isOverdue ? "0.9rem" : "0.8rem";
+                  const titleWeight = isOverdue ? 700 : 600;
+                  const titleColor  = isOverdue ? "#7A1F1F" : TD;
                   const isLast = idx === paginated.length - 1;
                   return (
                     <tr key={task.id}
                       onClick={() => navigate(`/submission/${task.submission}`)}
-                      className="cursor-pointer hover:bg-slate-50 transition-colors group"
-                      style={{ borderBottom: isLast ? "none" : `1px solid #EEF1F5` }}>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5"
-                          style={{ fontSize: "0.62rem", fontWeight: 700, color: priorityDot }}>
-                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: priorityDot }} />
-                          {task.priority}
-                        </span>
+                      className="cursor-pointer transition-colors group"
+                      onMouseEnter={e => { e.currentTarget.style.background = rowHoverBg; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}
+                      style={{
+                        borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
+                        background: rowBg,
+                      }}>
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
+                        <div className="flex items-center gap-2">
+                          {isOverdue && <AlertCircle size={14} color="#B91C1C" />}
+                          {isAtRisk && !isOverdue && <AlertTriangle size={14} color="#B45309" />}
+                          <span className="inline-flex items-center gap-1.5"
+                            style={{ fontSize: "0.7rem", fontWeight: 500, color: TM }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: priorityDot }} />
+                            {task.priority}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3" style={{ maxWidth: 280 }}>
-                        <p style={{ fontSize: "0.8rem", fontWeight: 600, color: TD, lineHeight: 1.35 }}
+                      <td style={{ maxWidth: 280, padding: `${cellPadY}px 16px` }}>
+                        <p style={{ fontSize: titleSize, fontWeight: titleWeight, color: titleColor, lineHeight: 1.35, letterSpacing: isOverdue ? "-0.005em" : "0" }}
                           className="group-hover:underline">
                           {task.title}
                         </p>
                         <p style={{ fontSize: "0.64rem", color: TT, marginTop: 1 }}>{task.member}</p>
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/submission/${task.submission}`); }}
                           className="hover:underline"
@@ -452,7 +472,7 @@ export function TaskQueuePage() {
                           {task.submission}
                         </button>
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center justify-center rounded-full shrink-0"
                             style={{
@@ -467,12 +487,12 @@ export function TaskQueuePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
                         <span style={{ fontSize: "0.66rem", color: TM, fontWeight: 500, whiteSpace: "nowrap" }}>
                           {task.type}
                         </span>
                       </td>
-                      <td className="px-4 py-3" style={{ minWidth: 110 }}>
+                      <td style={{ minWidth: 110, padding: `${cellPadY}px 16px` }}>
                         <div className="flex items-center gap-2">
                           <div style={{ flex: 1, height: 4, background: "#EEF1F5", minWidth: 50, borderRadius: 2, overflow: "hidden" }}>
                             <div style={{
@@ -489,7 +509,7 @@ export function TaskQueuePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3" style={{ whiteSpace: "nowrap" }}>
+                      <td style={{ whiteSpace: "nowrap", padding: `${cellPadY}px 16px` }}>
                         <div className="inline-flex items-center gap-1.5">
                           {task.daysUntilDue < 0
                             ? <AlertCircle size={11} color="#B91C1C" />
@@ -505,20 +525,28 @@ export function TaskQueuePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5"
-                          style={{
-                            background: statusBg, padding: "2px 8px", borderRadius: 4,
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
+                        {task.status === "Overdue" ? (
+                          <span style={{
+                            background: "#B91C1C", color: "white",
+                            padding: "3px 9px", borderRadius: 9,
+                            fontSize: "0.6rem", fontWeight: 800,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
                             whiteSpace: "nowrap",
                           }}>
-                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor }} />
-                          <span style={{ fontSize: "0.66rem", fontWeight: 700, color: statusColor }}>
-                            {task.status}
+                            Overdue
                           </span>
-                        </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5" style={{ whiteSpace: "nowrap" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor }} />
+                            <span style={{ fontSize: "0.72rem", fontWeight: 500, color: statusColor }}>
+                              {task.status}
+                            </span>
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3">
-                        <ChevronRight size={13} color={BDL} className="transition-colors group-hover:text-blue-600" />
+                      <td style={{ padding: `${cellPadY}px 16px` }}>
+                        <ChevronRight size={15} color={TT} className="transition-all group-hover:text-blue-600 group-hover:translate-x-0.5" />
                       </td>
                     </tr>
                   );
@@ -530,12 +558,12 @@ export function TaskQueuePage() {
           {/* Pagination — Dashboard style */}
           <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-3"
             style={{ borderTop: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-            <span style={{ fontSize: "0.72rem", color: TT }}>
-              Showing <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
-              {" – "}
+            <span style={{ fontSize: "0.78rem", color: TM }}>
+              <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
+              {"–"}
               <span style={{ fontWeight: 700, color: TD }}>{Math.min(page * PER_PAGE, filtered.length)}</span>
               {" of "}
-              <span style={{ fontWeight: 700, color: N }}>{filtered.length}</span> tasks
+              <span style={{ fontWeight: 700, color: TD }}>{filtered.length}</span> tasks
             </span>
             <div className="flex items-center gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}

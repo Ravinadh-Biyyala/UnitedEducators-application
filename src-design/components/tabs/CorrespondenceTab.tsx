@@ -532,7 +532,7 @@ export function CorrespondenceTab() {
                             background: active ? (meta?.bg ?? `${N}10`) : "white",
                             color: active ? (meta?.color ?? N) : TM,
                             border: `1px solid ${active ? (meta?.color ?? N) : BDL}`,
-                            borderRadius: 4,
+                            borderRadius: 9999,
                             cursor: "pointer",
                             fontFamily: font,
                             justifyContent: "center",
@@ -670,6 +670,13 @@ function ThreadRow({ thread, isSelected, onClick }: {
   const lastMsg   = thread.messages[thread.messages.length - 1];
   const sender    = lastMsg.direction === "inbound" ? lastMsg.fromName : `You → ${lastMsg.toName}`;
   const senderRaw = lastMsg.direction === "inbound" ? lastMsg.fromName : "Maya Khanna";
+  const isUnread  = thread.unreadCount > 0;
+
+  // Background priority: selected > unread (subtle amber tint) > default.
+  // Left rail priority: selected (blue) > unread (amber) > none.
+  const bg = isSelected ? `${N}0D` : isUnread ? "#FFFBEB" : "transparent";
+  const hoverBg = isSelected ? `${N}0D` : isUnread ? "#FFF8E1" : "white";
+  const railColor = isSelected ? N : isUnread ? "#B45309" : "transparent";
 
   return (
     <button
@@ -678,15 +685,15 @@ function ThreadRow({ thread, isSelected, onClick }: {
       aria-current={isSelected ? "true" : undefined}
       className="w-full text-left transition-all outline-none"
       style={{
-        background: isSelected ? `${N}0D` : "transparent",
-        borderLeft: `3px solid ${isSelected ? N : "transparent"}`,
+        background: bg,
+        borderLeft: `3px solid ${railColor}`,
         borderBottom: `1px solid ${BDL}`,
         padding: "10px 14px",
         cursor: "pointer",
         fontFamily: font,
       }}
-      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "white"; }}
-      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
+      onMouseEnter={e => { e.currentTarget.style.background = hoverBg; }}
+      onMouseLeave={e => { e.currentTarget.style.background = bg; }}>
       <div className="flex items-start gap-2.5">
         {/* Avatar */}
         <span className="inline-flex items-center justify-center shrink-0"
@@ -712,10 +719,16 @@ function ThreadRow({ thread, isSelected, onClick }: {
                 {formatRelative(thread.lastActivityAt)}
               </span>
               {thread.unreadCount > 0 && (
-                <span aria-label={`${thread.unreadCount} unread`} style={{
-                  width: 8, height: 8, background: WARN,
-                  borderRadius: "50%", display: "inline-block",
-                }}/>
+                <span
+                  aria-label={`${thread.unreadCount} unread`}
+                  style={{
+                    background: "#FEF3C7", color: "#92400E",
+                    padding: "1px 6px", borderRadius: 9,
+                    fontSize: "0.52rem", fontWeight: 800,
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>
+                  {thread.unreadCount} New
+                </span>
               )}
             </div>
           </div>
@@ -924,7 +937,7 @@ function MessageBubble({ message, showDate }: { message: Message; showDate: bool
             <span className="inline-flex items-center gap-0.5"
               style={{
                 fontSize: "0.55rem", fontWeight: 700, color: dm.color,
-                background: dm.bg, padding: "1px 5px", borderRadius: 3,
+                background: dm.bg, padding: "1px 5px", borderRadius: 9999,
                 letterSpacing: "0.05em", textTransform: "uppercase",
               }}>
               {dm.icon}
@@ -962,7 +975,7 @@ function MessageBubble({ message, showDate }: { message: Message; showDate: bool
                   style={{
                     background: "white",
                     border: `1px solid ${BDL}`,
-                    borderRadius: 4,
+                    borderRadius: 9999,
                     fontSize: "0.66rem", color: TM, fontWeight: 600,
                   }}>
                   <Paperclip size={10} color={TT}/>

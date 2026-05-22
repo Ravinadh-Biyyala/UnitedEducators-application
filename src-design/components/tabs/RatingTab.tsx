@@ -19,7 +19,7 @@ const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 const OPTION_COLORS  = ["#6B8DD6", "#9B7EBD", "#6FAE93", "#D9A06B", "#7BABC4", "#C48BA0", "#8694D9", "#7FB89B"];
@@ -832,7 +832,7 @@ function FillInModal({
             <h2 style={{ fontSize: "0.92rem", fontWeight: 800, color: "white" }}>
               Fill in: {end.label}
               {end.multiUse && (
-                <span style={{ marginLeft: 8, fontSize: "0.66rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)", padding: "1px 6px", borderRadius: 4 }}>
+                <span style={{ marginLeft: 8, fontSize: "0.66rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)", padding: "1px 6px", borderRadius: 9999 }}>
                   #{String(seq).padStart(2, "0")}
                 </span>
               )}
@@ -1657,14 +1657,13 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                         className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all outline-none"
                         style={{
                           borderBottom: `1px solid ${BDL}`,
-                          borderLeft: isActive ? `3px solid ${cat.color}` : "3px solid transparent",
                           background: isActive ? `${cat.color}08` : isSel ? `${cat.color}03` : "white",
                         }}>
                         {/* Name + abbr + option count + premium range */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span style={{ fontSize: "0.80rem", fontWeight: 700, color: isActive ? cat.color : TD, lineHeight: 1.2 }}>{product.label}</span>
-                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: cat.color, background: `${cat.color}12`, border: `1px solid ${cat.color}25`, padding: "1px 5px", letterSpacing: "0.05em", borderRadius: 4 }}>{product.abbr}</span>
+                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: cat.color, background: `${cat.color}12`, border: `1px solid ${cat.color}25`, padding: "1px 5px", letterSpacing: "0.05em", borderRadius: 9999 }}>{product.abbr}</span>
                           </div>
                           {(() => {
                             const optsForRow = allOptions[pid] ?? [];
@@ -1677,7 +1676,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span style={{
                                   fontSize: "0.58rem", fontWeight: 700, color: cat.color,
-                                  background: `${cat.color}10`, padding: "1px 6px", borderRadius: 3,
+                                  background: `${cat.color}10`, padding: "1px 6px", borderRadius: 9999,
                                   letterSpacing: "0.04em",
                                 }}>
                                   {optCount} option{optCount !== 1 ? "s" : ""}
@@ -1740,8 +1739,8 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD }}>{product.label}</h2>
-                        <span style={{ fontSize: "0.60rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "2px 7px", letterSpacing: "0.07em", borderRadius: 4 }}>{product.abbr}</span>
-                        <span style={{ fontSize: "0.60rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 7px", borderRadius: 4 }}>{product.category}</span>
+                        <span style={{ fontSize: "0.60rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "2px 7px", letterSpacing: "0.07em", borderRadius: 9999 }}>{product.abbr}</span>
+                        <span style={{ fontSize: "0.60rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 7px", borderRadius: 9999 }}>{product.category}</span>
                       </div>
                       <p style={{ fontSize: "0.76rem", color: TT, marginTop: 3 }}>{product.desc}</p>
                     </div>
@@ -1829,7 +1828,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                     <span style={{
                                       fontSize: "0.52rem", fontWeight: 800, color: sm.color,
                                       background: sm.bg, border: `1px solid ${sm.border}`,
-                                      padding: "1px 6px", borderRadius: 3,
+                                      padding: "1px 6px", borderRadius: 9999,
                                       textTransform: "uppercase", letterSpacing: "0.07em",
                                       flexShrink: 0,
                                     }}>
@@ -1996,7 +1995,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                 style={{
                                   borderBottom: idx < opt.coverageItems.length - 1 ? `1px solid ${BDL}` : "none",
                                   background: isChecked ? `${product.categoryColor}04` : "white",
-                                  borderLeft: isChecked ? `3px solid ${product.categoryColor}` : "3px solid transparent",
                                 }}>
                                 {/* ── Top row: checkbox + label + price ── */}
                                 <div
@@ -2011,7 +2009,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span style={{ fontSize: "0.82rem", fontWeight: isChecked ? 700 : 500, color: isChecked ? TD : TM }}>{item.label}</span>
                                       {item.required && (
-                                        <span style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", flexShrink: 0, borderRadius: 4 }}>DEFAULT</span>
+                                        <span style={{ fontSize: "0.58rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", flexShrink: 0, borderRadius: 9999 }}>DEFAULT</span>
                                       )}
                                     </div>
                                     <p style={{ fontSize: "0.72rem", color: TT, marginTop: 2, lineHeight: 1.4 }}>{item.desc}</p>
@@ -2099,7 +2097,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                             <span style={{
                                               fontSize: "0.58rem", fontWeight: 800, color: TM,
                                               background: TH, border: `1px solid ${BDL}`,
-                                              padding: "1px 6px", borderRadius: 4,
+                                              padding: "1px 6px", borderRadius: 9999,
                                               fontVariantNumeric: "tabular-nums",
                                             }}>#{String(seq).padStart(2, "0")}</span>
                                           )}
@@ -2110,20 +2108,20 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                             {end.label}
                                           </a>
                                           {sIdx === 0 && (
-                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>DEFAULT</span>
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>DEFAULT</span>
                                           )}
                                           {end.fillIn && (
                                             filled ? (
-                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Filled</span>
                                             ) : (
-                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Fill-in</span>
                                             )
                                           )}
                                           {end.multiUse && sIdx === 0 && (
-                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Multi-use</span>
                                           )}
                                           {isOverridden && sIdx === 0 && (
-                                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>EDITED</span>
                                           )}
                                         </div>
                                         {sIdx === 0 && (
@@ -2150,7 +2148,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                   paddingRight: isOverridden ? 24 : 8,
                                                   border: `1px solid ${isOverridden ? `${G}80` : BD}`,
                                                   background: isOverridden ? `${G}08` : "white",
-                                                  borderRadius: 4,
+                                                  borderRadius: 9999,
                                                   fontSize: "0.72rem",
                                                   color: TD,
                                                   fontWeight: 600,
@@ -2235,7 +2233,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                         style={{
                                           borderTop: aIdx > 0 ? `1px dashed ${BDL}` : "none",
                                           background: `${product.categoryColor}04`,
-                                          borderLeft: `3px solid ${product.categoryColor}`,
                                         }}>
                                         {seqs.map((seq, sIdx) => {
                                           const filled = isAddedEndFilled(pid, optId, end.id, seq);
@@ -2249,7 +2246,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                     <span style={{
                                                       fontSize: "0.58rem", fontWeight: 800, color: TM,
                                                       background: TH, border: `1px solid ${BDL}`,
-                                                      padding: "1px 6px", borderRadius: 4,
+                                                      padding: "1px 6px", borderRadius: 9999,
                                                       fontVariantNumeric: "tabular-nums",
                                                     }}>#{String(seq).padStart(2, "0")}</span>
                                                   )}
@@ -2265,16 +2262,16 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                   )}
                                                   {end.fillIn && (
                                                     filled ? (
-                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Filled</span>
                                                     ) : (
-                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                                      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Fill-in</span>
                                                     )
                                                   )}
                                                   {end.multiUse && sIdx === 0 && (
-                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Multi-use</span>
                                                   )}
                                                   {sIdx === 0 && isOverridden && (
-                                                    <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>EDITED</span>
                                                   )}
                                                 </div>
                                                 {sIdx === 0 && (
@@ -2286,7 +2283,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                     <span style={{
                                                       fontSize: "0.62rem", fontWeight: 800, color: "white",
                                                       background: att.opt.color, padding: "1px 7px",
-                                                      letterSpacing: "0.04em", borderRadius: 4,
+                                                      letterSpacing: "0.04em", borderRadius: 9999,
                                                     }}>{att.opt.label}</span>
                                                   </div>
                                                 )}
@@ -2311,7 +2308,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                           paddingRight: isOverridden ? 24 : 8,
                                                           border: `1px solid ${isOverridden ? `${G}80` : BD}`,
                                                           background: isOverridden ? `${G}08` : "white",
-                                                          borderRadius: 4,
+                                                          borderRadius: 9999,
                                                           fontSize: "0.74rem",
                                                           color: product.categoryColor,
                                                           fontWeight: 700,
@@ -2456,7 +2453,6 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                       style={{
                                         borderTop: aIdx > 0 ? `1px dashed ${BDL}` : "none",
                                         background: att.isDefault ? "white" : `${product.categoryColor}04`,
-                                        borderLeft: att.isDefault ? "3px solid transparent" : `3px solid ${product.categoryColor}`,
                                       }}>
                                       {seqs.map((seq, sIdx) => {
                                         const filled = isScheduleFilled(pid, optId, sched.id, seq);
@@ -2470,7 +2466,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                   <span style={{
                                                     fontSize: "0.58rem", fontWeight: 800, color: TM,
                                                     background: TH, border: `1px solid ${BDL}`,
-                                                    padding: "1px 6px", borderRadius: 4,
+                                                    padding: "1px 6px", borderRadius: 9999,
                                                     fontVariantNumeric: "tabular-nums",
                                                   }}>#{String(seq).padStart(2, "0")}</span>
                                                 )}
@@ -2485,20 +2481,20 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>{sched.label}</span>
                                                 )}
                                                 {sIdx === 0 && att.isDefault && (
-                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>DEFAULT</span>
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}30`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>DEFAULT</span>
                                                 )}
                                                 {sched.fillIn && (
                                                   filled ? (
-                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Filled</span>
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#1A5C30", background: "#E8F5EC", border: "1px solid #93C8A0", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Filled</span>
                                                   ) : (
-                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                                                    <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Fill-in</span>
                                                   )
                                                 )}
                                                 {sched.multiUse && sIdx === 0 && (
-                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Multi-use</span>
                                                 )}
                                                 {sIdx === 0 && isOverridden && (
-                                                  <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>EDITED</span>
+                                                  <span style={{ fontSize: "0.58rem", fontWeight: 700, color: G, background: `${G}15`, border: `1px solid ${G}50`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>EDITED</span>
                                                 )}
                                               </div>
                                               {sIdx === 0 && (
@@ -2510,7 +2506,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                   <span style={{
                                                     fontSize: "0.62rem", fontWeight: 800, color: "white",
                                                     background: att.opt.color, padding: "1px 7px",
-                                                    letterSpacing: "0.04em", borderRadius: 4,
+                                                    letterSpacing: "0.04em", borderRadius: 9999,
                                                   }}>{optLabel}</span>
                                                 </div>
                                               )}
@@ -2535,7 +2531,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                                         paddingRight: isOverridden ? 24 : 8,
                                                         border: `1px solid ${isOverridden ? `${G}80` : BD}`,
                                                         background: isOverridden ? `${G}08` : "white",
-                                                        borderRadius: 4,
+                                                        borderRadius: 9999,
                                                         fontSize: "0.74rem",
                                                         color: TD,
                                                         fontWeight: 600,
@@ -2630,11 +2626,10 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                 style={{
                                   borderBottom: idx < MEMBER_BENEFITS.length - 1 ? `1px solid ${BDL}` : "none",
                                   background: selected ? `${product.categoryColor}04` : "white",
-                                  borderLeft: selected ? `3px solid ${product.categoryColor}` : "3px solid transparent",
                                 }}
                                 onClick={() => toggleMemberBenefit(svc.id)}>
                                 <div className="shrink-0 flex items-center justify-center mt-0.5"
-                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 3, transition: "all 0.12s" }}>
+                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 9999, transition: "all 0.12s" }}>
                                   {selected && <Check size={9} color="white" strokeWidth={3} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -2670,11 +2665,10 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                                 style={{
                                   borderBottom: idx < NOTIFICATIONS.length - 1 ? `1px solid ${BDL}` : "none",
                                   background: selected ? `${product.categoryColor}04` : "white",
-                                  borderLeft: selected ? `3px solid ${product.categoryColor}` : "3px solid transparent",
                                 }}
                                 onClick={() => toggleNotification(n.id)}>
                                 <div className="shrink-0 flex items-center justify-center mt-0.5"
-                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 3, transition: "all 0.12s" }}>
+                                  style={{ width: 16, height: 16, background: selected ? product.categoryColor : "white", border: `2px solid ${selected ? product.categoryColor : BD}`, borderRadius: 9999, transition: "all 0.12s" }}>
                                   {selected && <Check size={9} color="white" strokeWidth={3} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -2750,7 +2744,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                               return (
                                 <div key={o.id}
                                   className="flex items-center justify-between px-4 py-3 cursor-pointer"
-                                  style={{ borderBottom: i < opts.length - 1 ? `1px solid ${BDL}` : "none", background: isAct ? `${o.color}08` : "white", borderLeft: isAct ? `3px solid ${o.color}` : "3px solid transparent" }}
+                                  style={{ borderBottom: i < opts.length - 1 ? `1px solid ${BDL}` : "none", background: isAct ? `${o.color}08` : "white" }}
                                   onClick={() => setActiveOptId(prev => ({ ...prev, [pid]: o.id }))}>
                                   <div className="flex items-center gap-2">
                                     <span style={{ width: 8, height: 8, background: o.color, display: "inline-block", borderRadius: "50%" }} />
@@ -2895,7 +2889,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{prod.label}</span>
-                                <span style={{ fontSize: "0.60rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "1px 6px", borderRadius: 4 }}>{prod.abbr}</span>
+                                <span style={{ fontSize: "0.60rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "1px 6px", borderRadius: 9999 }}>{prod.abbr}</span>
                               </div>
                               <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4 }}>{prod.desc}</p>
                               <p style={{ fontSize: "0.68rem", color: TM, fontWeight: 600, marginTop: 4 }}>Base: {fmt(prod.basePremium)}</p>
@@ -3014,13 +3008,13 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{libEnd.label}</span>
                         {libEnd.fillIn && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Fill-in</span>
                         )}
                         {libEnd.multiUse && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Multi-use</span>
                         )}
                         {libEnd.premium > 0 && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}40`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Premium</span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}40`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Premium</span>
                         )}
                       </div>
                       <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4, marginTop: 2 }}>{libEnd.desc}</p>
@@ -3146,10 +3140,10 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span style={{ fontSize: "0.84rem", fontWeight: 700, color: TD }}>{libSched.label}</span>
                         {libSched.fillIn && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Fill-in</span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Fill-in</span>
                         )}
                         {libSched.multiUse && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4, textTransform: "uppercase" }}>Multi-use</span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#4A2D80", background: "#F0EEF8", border: "1px solid #C3B8E8", padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999, textTransform: "uppercase" }}>Multi-use</span>
                         )}
                       </div>
                       <p style={{ fontSize: "0.73rem", color: TT, lineHeight: 1.4, marginTop: 2 }}>{libSched.desc}</p>

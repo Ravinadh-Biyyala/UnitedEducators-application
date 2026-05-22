@@ -17,7 +17,7 @@ const BDL = "#DCE3EC";
 const TH  = "#F0F3F8";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 const fmt = (n: number) => "$" + n.toLocaleString("en-US");
@@ -325,7 +325,7 @@ function OptionCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "0.02em" }}>{opt.label}</span>
             {selected && (
-              <span className="inline-flex items-center gap-1" style={{ fontSize: "0.56rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}30`, padding: "1px 8px", letterSpacing: "0.08em", borderRadius: 4, textTransform: "uppercase" }}>
+              <span className="inline-flex items-center gap-1" style={{ fontSize: "0.56rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}30`, padding: "1px 8px", letterSpacing: "0.08em", borderRadius: 9999, textTransform: "uppercase" }}>
                 <CheckCircle2 size={9} /> Selected
               </span>
             )}
@@ -395,7 +395,7 @@ function OptionCard({
                   style={{ borderBottom: i < selectedItems.length - 1 ? `1px solid ${BDL}` : "none" }}>
                   <span style={{ fontSize: "0.78rem", color: TD, fontWeight: 600, flex: 1 }}>{ci.label}</span>
                   {ci.required && (
-                    <span style={{ fontSize: "0.54rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 4 }}>REQUIRED</span>
+                    <span style={{ fontSize: "0.54rem", fontWeight: 800, color: TT, border: `1px solid ${BD}`, padding: "1px 6px", letterSpacing: "0.06em", borderRadius: 9999 }}>REQUIRED</span>
                   )}
                   {!ci.required && ci.price > 0 && (
                     <span style={{ fontSize: "0.70rem", fontWeight: 700, color: "#B45309" }}>+{fmt(ci.price)}</span>
@@ -423,7 +423,7 @@ function OptionCard({
                     border: `1px solid ${e.kind === "Default" ? `${product.categoryColor}30` : `${N}30`}`,
                     padding: "1px 6px",
                     letterSpacing: "0.08em",
-                    borderRadius: 4,
+                    borderRadius: 9999,
                     textTransform: "uppercase",
                   }}>{e.kind}</span>
                 </div>
@@ -474,7 +474,7 @@ function OptionCard({
               {MOCK_NOTIFICATIONS.map((n, i) => (
                 <div key={n.code} className="flex items-center gap-3 px-3 py-2.5"
                   style={{ borderBottom: i < MOCK_NOTIFICATIONS.length - 1 ? `1px solid ${BDL}` : "none" }}>
-                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}25`, padding: "1px 7px", letterSpacing: "0.06em", borderRadius: 4, minWidth: 64, textAlign: "center" }}>{n.code}</span>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: N, background: `${N}10`, border: `1px solid ${N}25`, padding: "1px 7px", letterSpacing: "0.06em", borderRadius: 9999, minWidth: 64, textAlign: "center" }}>{n.code}</span>
                   <span style={{ fontSize: "0.76rem", color: TM, flex: 1 }}>{n.label.replace(`${n.code} - `, "")}</span>
                   <span style={{ fontSize: "0.68rem", color: TT }}>{n.edition}</span>
                 </div>
@@ -603,8 +603,8 @@ export function QuotePreviewPage() {
               <div>
                 <div className="flex items-center gap-3">
                   <h1 style={{ fontSize: "1.10rem", fontWeight: 800, color: TD }}>Quote Preview</h1>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "2px 10px", letterSpacing: "0.06em", borderRadius: 4 }}>{quoteNum}</span>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1A7A4A", background: "#E8F5E9", border: "1px solid #81C784", padding: "2px 8px", borderRadius: 4 }}>DRAFT</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: N, background: `${N}12`, border: `1px solid ${N}25`, padding: "2px 10px", letterSpacing: "0.06em", borderRadius: 9999 }}>{quoteNum}</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1A7A4A", background: "#E8F5E9", border: "1px solid #81C784", padding: "2px 8px", borderRadius: 9999 }}>DRAFT</span>
                 </div>
                 <p style={{ fontSize: "0.72rem", color: TT, marginTop: 3 }}>
                   Generated {today} · {products.length} product{products.length !== 1 ? "s" : ""} ·&nbsp;
@@ -705,9 +705,9 @@ export function QuotePreviewPage() {
                       {selState === "some" && <span style={{ width: 8, height: 2, background: "white", display: "block" }} />}
                     </div>
                     <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
-                      <span style={{ fontSize: "0.64rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "3px 10px", letterSpacing: "0.08em", borderRadius: 4 }}>{product.abbr}</span>
+                      <span style={{ fontSize: "0.64rem", fontWeight: 800, color: "white", background: product.categoryColor, padding: "3px 10px", letterSpacing: "0.08em", borderRadius: 9999 }}>{product.abbr}</span>
                       <span style={{ fontSize: "1.0rem", fontWeight: 800, color: TD }}>{product.label}</span>
-                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 8px", borderRadius: 4 }}>{product.category}</span>
+                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: product.categoryColor, background: `${product.categoryColor}12`, border: `1px solid ${product.categoryColor}25`, padding: "2px 8px", borderRadius: 9999 }}>{product.category}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span style={{ fontSize: "0.72rem", color: TT }}>

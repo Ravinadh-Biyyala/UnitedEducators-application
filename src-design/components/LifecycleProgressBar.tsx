@@ -13,7 +13,7 @@ const BDL    = "#DCE3EC";
 const TH     = "#F0F3F8";
 const TD     = "#1A2530";
 const TM     = "#4A5D6E";
-const TT     = "#7A8FA3";
+const TT     = "#5F7080";
 const GREEN  = "#15803D";
 const RED    = "#B91C1C";
 const AMBER  = "#B45309";
@@ -184,7 +184,7 @@ export function LifecycleProgressBar({
 
   return (
     <div style={{
-      background:"white", border:`1px solid ${BD}`, borderTop:`3px solid ${N}`,
+      background:"white", border:`1px solid ${BD}`,
       fontFamily:font,
     }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -201,7 +201,7 @@ export function LifecycleProgressBar({
         <div className="flex items-center gap-2">
           {currentSub && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1"
-              style={{ background:"#E0E7FF", borderRadius:3 }}>
+              style={{ background:"#E0E7FF", borderRadius:9999 }}>
               <Clock size={11} color={N}/>
               <span style={{ fontSize:"0.7rem", fontWeight:700, color:N }}>
                 Currently: {currentSub.label}
@@ -480,7 +480,7 @@ export function LifecycleProgressBar({
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center"
                   style={{
-                    width:26, height:26, borderRadius:4,
+                    width:26, height:26, borderRadius:9999,
                     background:selectedPalette.pillBg, color:selectedPalette.pillText,
                   }}>
                   {selected.icon}
@@ -495,7 +495,7 @@ export function LifecycleProgressBar({
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 shrink-0"
-              style={{ background:selectedPalette.pillBg, borderRadius:3 }}>
+              style={{ background:selectedPalette.pillBg, borderRadius:9999 }}>
               <span style={{
                 width:6, height:6, borderRadius:"50%",
                 background:selectedPalette.pillText,
@@ -560,7 +560,7 @@ export function LifecycleProgressBar({
                           {s.isTerminal && (
                             <span style={{
                               fontSize:"0.55rem", fontWeight:800, color:RED,
-                              background:"#FEE2E2", padding:"1px 6px", borderRadius:3,
+                              background:"#FEE2E2", padding:"1px 6px", borderRadius:9999,
                               textTransform:"uppercase", letterSpacing:"0.06em",
                             }}>
                               Terminal · Exits Flow
@@ -569,7 +569,7 @@ export function LifecycleProgressBar({
                           {isCurrent && !s.isTerminal && s.status === "active" && (
                             <span style={{
                               fontSize:"0.55rem", fontWeight:800, color:N,
-                              background:"#E0E7FF", padding:"1px 6px", borderRadius:3,
+                              background:"#E0E7FF", padding:"1px 6px", borderRadius:9999,
                               textTransform:"uppercase", letterSpacing:"0.06em",
                             }}>
                               Current
@@ -599,7 +599,7 @@ export function LifecycleProgressBar({
           {/* Terminal warning bar if any sub is terminal AND active is terminal */}
           {selected.subStages.some(s => s.status === "active" && s.isTerminal) && (
             <div className="mt-3 flex items-center gap-2 px-3 py-2"
-              style={{ background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:4 }}>
+              style={{ background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:9999 }}>
               <AlertCircle size={13} color={RED}/>
               <span style={{ fontSize:"0.74rem", color:RED, fontWeight:700 }}>
                 This stage entered a terminal sub-state — lifecycle has exited the standard flow.

@@ -1,14 +1,14 @@
 import { RouterProvider } from "react-router-dom";
 import { router } from "./routes";
 import { AuthProvider } from "./context/AuthContext";
-import { SiteAccessGate } from "./components/SiteAccessGate";
+import { NotificationsProvider } from "./context/NotificationsContext";
 
 export default function App() {
   return (
-    <SiteAccessGate>
-      <AuthProvider>
+    <AuthProvider>
+      <NotificationsProvider>
         <RouterProvider router={router} />
-      </AuthProvider>
-    </SiteAccessGate>
+      </NotificationsProvider>
+    </AuthProvider>
   );
 }

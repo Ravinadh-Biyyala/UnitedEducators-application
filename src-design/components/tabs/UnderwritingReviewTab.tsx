@@ -492,29 +492,29 @@ function ReviewList({
   }, [decisions]);
 
   return (
-    <div style={{ fontFamily: font }} className="flex flex-col gap-4">
-      {/* Header / overview strip */}
+    <div style={{ fontFamily: font }} className="flex flex-col gap-3">
+      {/* Header / overview strip — page-level title for this tab */}
       <div style={{
         background: "white",
         border: `1px solid ${BDL}`,
         borderRadius: 8,
-        padding: "14px 16px",
+        padding: "12px 14px",
         boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
       }}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span style={{
-              width: 30, height: 30, borderRadius: 7,
+              width: 34, height: 34, borderRadius: 8,
               background: `${N}12`, color: N,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
             }}>
-              <ClipboardCheck size={16}/>
+              <ClipboardCheck size={18}/>
             </span>
             <div>
-              <h2 style={{ fontSize: "0.95rem", fontWeight: 800, color: TD, lineHeight: 1.1 }}>
+              <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD, lineHeight: 1.15, letterSpacing: "-0.01em" }}>
                 Underwriting Review Checklist
               </h2>
-              <p style={{ fontSize: "0.7rem", color: TT, marginTop: 2 }}>
+              <p style={{ fontSize: "0.72rem", color: TT, marginTop: 3 }}>
                 6 dimensions · validated against submitted documents
               </p>
             </div>
@@ -635,7 +635,7 @@ function ChecklistRow({
       {/* Middle: title + meta */}
       <div style={{ minWidth: 0 }}>
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span style={{ fontSize: "0.86rem", fontWeight: 800, color: TD }}>
+          <span style={{ fontSize: "0.86rem", fontWeight: 700, color: TD }}>
             {item.title}
           </span>
           <StatusPill status={item.status}/>
@@ -1174,22 +1174,22 @@ function CompareChart({
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <div style={{ width: "100%", height: 8, background: "#EEF1F5", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: "100%", height: 8, background: "#EEF1F5", borderRadius: 9999, overflow: "hidden" }}>
                 <div style={{
                   width: ready ? `${curPct}%` : "0%",
                   height: "100%",
                   background: `linear-gradient(to right, ${N}, ${N}B3)`,
-                  borderRadius: 4,
+                  borderRadius: 9999,
                   transition: `width 0.85s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 70}ms`,
                   boxShadow: `2px 0 6px ${N}40`,
                 }}/>
               </div>
-              <div style={{ width: "100%", height: 6, background: "#EEF1F5", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: "100%", height: 6, background: "#EEF1F5", borderRadius: 9999, overflow: "hidden" }}>
                 <div style={{
                   width: ready ? `${benPct}%` : "0%",
                   height: "100%",
                   background: "#9DB2D6",
-                  borderRadius: 4,
+                  borderRadius: 9999,
                   transition: `width 0.85s cubic-bezier(0.22, 1, 0.36, 1) ${160 + i * 70}ms`,
                 }}/>
               </div>
@@ -1644,7 +1644,7 @@ function NewTaskModal({
                 const tc = TASK_TAG_COLORS[tag] ?? TASK_TAG_FALLBACK;
                 return (
                   <span key={tag} className="flex items-center gap-1 px-2 py-0.5"
-                    style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, borderRadius: 4 }}>
+                    style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, borderRadius: 9999 }}>
                     {tag}
                     <button onClick={() => removeTag(tag)}
                       style={{ color: tc.text, display: "flex", alignItems: "center", border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>

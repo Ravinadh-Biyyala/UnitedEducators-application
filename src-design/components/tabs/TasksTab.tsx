@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Clock, AlertCircle, CheckCircle2, Plus, User, X,
+  Clock, AlertCircle, AlertTriangle, CheckCircle2, Plus, User, X,
   ChevronDown, Search, ChevronRight, RotateCcw,
 } from "lucide-react";
 import { useSubmissionWorkspace } from "../../context/SubmissionWorkspaceContext";
@@ -12,7 +12,7 @@ const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
@@ -32,6 +32,10 @@ export interface Task {
   type: TaskType;
   notes?: string;
   completedAt?: string;
+  /** Days past due. Positive = overdue by N days; 0 = due today; negative = upcoming. */
+  daysOverdue?: number;
+  /** True if the task is escalated / blocked waiting on something. */
+  blocked?: boolean;
 }
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
@@ -47,13 +51,13 @@ export const ASSIGNEES = [
 
 /* ── Seed data ────────────────────────────────────────────────────────────── */
 export const SEED_TASKS: Task[] = [
-  { id: 1, title: "Obtain updated open claims detail from broker", assignee: "Sarah Mitchell", due: "Apr 20, 2024", priority: "High",   status: "Open", type: "Communication" },
-  { id: 2, title: "Verify background check policy documentation",  assignee: "James Owens",   due: "Apr 22, 2024", priority: "High",   status: "Open", type: "Compliance"    },
-  { id: 3, title: "Review GASB 68 pension liability report",       assignee: "Tom Lee",        due: "Apr 25, 2024", priority: "Medium", status: "Open", type: "Review"        },
-  { id: 4, title: "Confirm earthquake zone rating with surveyor",  assignee: "Sarah Mitchell", due: "Apr 28, 2024", priority: "Medium", status: "Open", type: "Underwriting"  },
-  { id: 5, title: "Run TIV adequacy check against 2024 appraisal",assignee: "Tom Lee",        due: "May 01, 2024", priority: "Low",    status: "Open", type: "Document"      },
-  { id: 6, title: "Send indicative quote to Gallagher",           assignee: "Sarah Mitchell", due: "May 05, 2024", priority: "High",   status: "Open", type: "Quote"         },
-  { id: 7, title: "Confirm COPE survey receipt for Lincoln HS",   assignee: "James Owens",    due: "May 08, 2024", priority: "Low",    status: "Done", type: "Follow-up",     completedAt: "May 3, 2024" },
+  { id: 1, title: "Obtain updated open claims detail from broker", assignee: "Sarah Mitchell", due: "May 18, 2026", priority: "High",   status: "Open", type: "Communication", daysOverdue: 3,  blocked: true  },
+  { id: 2, title: "Verify background check policy documentation",  assignee: "James Owens",   due: "May 19, 2026", priority: "High",   status: "Open", type: "Compliance",    daysOverdue: 2 },
+  { id: 3, title: "Review GASB 68 pension liability report",       assignee: "Tom Lee",        due: "May 21, 2026", priority: "Medium", status: "Open", type: "Review",        daysOverdue: 0 },
+  { id: 4, title: "Confirm earthquake zone rating with surveyor",  assignee: "Sarah Mitchell", due: "May 25, 2026", priority: "Medium", status: "Open", type: "Underwriting",  daysOverdue: -4 },
+  { id: 5, title: "Run TIV adequacy check against 2024 appraisal",assignee: "Tom Lee",        due: "May 28, 2026", priority: "Low",    status: "Open", type: "Document",      daysOverdue: -7 },
+  { id: 6, title: "Send indicative quote to Gallagher",           assignee: "Sarah Mitchell", due: "Jun 02, 2026", priority: "High",   status: "Open", type: "Quote",         daysOverdue: -12 },
+  { id: 7, title: "Confirm COPE survey receipt for Lincoln HS",   assignee: "James Owens",    due: "May 18, 2026", priority: "Low",    status: "Done", type: "Follow-up",     completedAt: "May 17, 2026" },
 ];
 
 /* ── Style helpers ────────────────────────────────────────────────────────── */
@@ -311,35 +315,130 @@ function ColHeaders() {
 
 /* ── Active task row ──────────────────────────────────────────────────────── */
 function ActiveRow({ task, onComplete }: { task: Task; onComplete: (id: number) => void }) {
-  const ps = priorityStyle(task.priority);
   const ts = typeStyle(task.type);
 
-  return (
-    <div className="grid px-5 py-3.5 items-center hover:bg-slate-50/60 transition-colors"
-      style={{ gridTemplateColumns: GRID }}>
+  const isOverdue   = (task.daysOverdue ?? -1) > 0;
+  const isDueToday  = task.daysOverdue === 0;
+  const isBlocked   = !!task.blocked;
+  // The row's primary tier: overdue beats due-today beats blocked.
+  const tier: "overdue" | "due-today" | "blocked" | "normal" =
+    isOverdue ? "overdue"
+    : isDueToday ? "due-today"
+    : isBlocked ? "blocked"
+    : "normal";
+  // Urgent = anything that needs the user's attention. Drives scale + action.
+  const isUrgent = tier !== "normal";
 
-      {/* Checkbox */}
+  const rowBg = tier === "overdue" || tier === "blocked" ? "#FEF2F2"
+              : tier === "due-today" ? "#FFFBEB"
+              : "white";
+  const railColor = tier === "overdue" || tier === "blocked" ? "#B91C1C"
+                  : tier === "due-today" ? "#B45309"
+                  : "transparent";
+  const railWidth = tier === "overdue" ? 5 : tier === "due-today" || tier === "blocked" ? 4 : 0;
+  const hoverBg = tier === "overdue" || tier === "blocked" ? "#FEE2E2"
+                : tier === "due-today" ? "#FEF3C7"
+                : "#F0F6FF";
+
+  // Scale boost for urgent rows — bigger padding, bigger title, etc.
+  const rowPadY      = isUrgent ? 18 : 12;
+  const titleSize    = tier === "overdue" ? "0.92rem" : isUrgent ? "0.88rem" : "0.82rem";
+  const titleWeight  = isUrgent ? 700 : 500;
+  const titleColor   = tier === "overdue" || tier === "blocked" ? "#7A1F1F"
+                     : tier === "due-today" ? "#92400E"
+                     : TD;
+
+  return (
+    <div
+      className="grid items-center transition-colors"
+      style={{
+        gridTemplateColumns: GRID,
+        background: rowBg,
+        padding: `${rowPadY}px 20px`,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = hoverBg; }}
+      onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}>
+
+      {/* Checkbox — urgency is already conveyed by the row rail, bg, title weight,
+          and the badges next to the title; no need for a redundant leading icon. */}
       <div className="flex items-center">
         <TaskCheckbox done={false} onToggle={() => onComplete(task.id)} />
       </div>
 
-      {/* Title + In Progress badge */}
-      <div className="flex flex-col gap-1 pr-4">
-        <p style={{ fontSize: "0.83rem", fontWeight: 600, color: TD, lineHeight: 1.4 }}>{task.title}</p>
+      {/* Title + urgency / blocked pills inline */}
+      <div className="flex flex-col gap-1.5 pr-4">
+        <p style={{
+          fontSize: titleSize,
+          fontWeight: titleWeight,
+          color: titleColor,
+          lineHeight: 1.35,
+          letterSpacing: tier === "overdue" ? "-0.005em" : "0",
+        }}>
+          {task.title}
+        </p>
+        {(isOverdue || isDueToday || isBlocked) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isOverdue && (
+              <span style={{
+                fontSize: "0.58rem", fontWeight: 800,
+                background: "#B91C1C", color: "white",
+                padding: "2px 8px", borderRadius: 9,
+                textTransform: "uppercase", letterSpacing: "0.05em",
+              }}>
+                Overdue · {task.daysOverdue}d
+              </span>
+            )}
+            {isDueToday && (
+              <span style={{
+                fontSize: "0.58rem", fontWeight: 800,
+                background: "#B45309", color: "white",
+                padding: "2px 8px", borderRadius: 9,
+                textTransform: "uppercase", letterSpacing: "0.05em",
+              }}>
+                Due today
+              </span>
+            )}
+            {/* BLOCKED pill only renders as the sole urgency badge — if a row is
+                already OVERDUE or DUE TODAY, don't stack a second redundant pill. */}
+            {isBlocked && !isOverdue && !isDueToday && (
+              <span style={{
+                fontSize: "0.58rem", fontWeight: 800,
+                background: "#7A1F1F", color: "white",
+                padding: "2px 8px", borderRadius: 9,
+                textTransform: "uppercase", letterSpacing: "0.05em",
+              }}>
+                Blocked
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Type — separate outlined badge */}
+      {/* Type chip — full chrome on urgent rows so it stays legible; very muted on normal rows */}
       <div>
-        <span style={{
-          fontSize: "0.72rem", fontWeight: 600,
-          background: "white", color: ts.text,
-          border: `1.5px solid ${ts.border}`,
-          padding: "3px 10px", borderRadius: 4,
-          display: "inline-block", width: "fit-content",
-          whiteSpace: "nowrap",
-        }}>
-          {task.type}
-        </span>
+        {isUrgent ? (
+          <span style={{
+            fontSize: "0.68rem", fontWeight: 600,
+            color: ts.text,
+            background: `${ts.text}10`,
+            border: `1px solid ${ts.border}`,
+            padding: "3px 10px",
+            borderRadius: 9999,
+            whiteSpace: "nowrap",
+            display: "inline-block",
+            width: "fit-content",
+          }}>
+            {task.type}
+          </span>
+        ) : (
+          <span style={{
+            fontSize: "0.7rem", fontWeight: 500,
+            color: TM,
+            whiteSpace: "nowrap",
+          }}>
+            {task.type}
+          </span>
+        )}
       </div>
 
       {/* Assignee */}
@@ -351,16 +450,59 @@ function ActiveRow({ task, onComplete }: { task: Task; onComplete: (id: number) 
         <span style={{ fontSize: "0.75rem", color: TM }}>{task.assignee.split(" ")[0]}</span>
       </div>
 
-      {/* Due date */}
+      {/* Due date — colored + bold on urgent rows; muted on normal */}
       <div className="flex items-center gap-1.5">
-        <Clock size={11} color={TT} />
-        <span style={{ fontSize: "0.72rem", color: TM }}>{task.due}</span>
+        <Clock size={11} color={isOverdue ? "#B91C1C" : isDueToday ? "#B45309" : TT}/>
+        <span style={{
+          fontSize: "0.72rem",
+          color: isOverdue ? "#7A1F1F" : isDueToday ? "#92400E" : TM,
+          fontWeight: isUrgent ? 700 : 500,
+        }}>
+          {task.due}
+        </span>
       </div>
 
-      {/* Priority */}
-      <span style={{ fontSize: "0.62rem", fontWeight: 700, background: ps.bg, color: ps.text, border: `1px solid ${ps.border}`, padding: "3px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-block", width: "fit-content" }}>
-        {task.priority}
-      </span>
+      {/* Last cell — urgent rows get an inline action button; normal rows show priority */}
+      {isUrgent ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); onComplete(task.id); }}
+          className="hover:brightness-95 transition-all"
+          style={{
+            background: tier === "overdue" || tier === "blocked" ? "#B91C1C" : "#B45309",
+            color: "white",
+            border: "none",
+            padding: "6px 12px",
+            borderRadius: 6,
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: font,
+            whiteSpace: "nowrap",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            width: "fit-content",
+          }}>
+            Resolve <ChevronRight size={11}/>
+        </button>
+      ) : task.priority === "High" ? (
+        <span style={{
+          fontSize: "0.55rem", fontWeight: 800,
+          background: "#FEF3C7", color: "#92400E",
+          padding: "2px 7px", borderRadius: 9,
+          textTransform: "uppercase", letterSpacing: "0.05em",
+          display: "inline-block", width: "fit-content",
+        }}>
+          High
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5"
+          style={{ fontSize: "0.7rem", fontWeight: 500, color: TM }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: task.priority === "Medium" ? "#B45309" : TT,
+          }}/>
+          {task.priority}
+        </span>
+      )}
     </div>
   );
 }
@@ -389,10 +531,10 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: number) =
       {/* Type */}
       <div>
         <span style={{
-          fontSize: "0.72rem", fontWeight: 600,
-          background: "white", color: ts.text,
-          border: `1.5px solid ${ts.border}`,
-          padding: "3px 10px", borderRadius: 4,
+          fontSize: "0.68rem", fontWeight: 600,
+          background: `${ts.text}10`, color: ts.text,
+          border: `1px solid ${ts.border}`,
+          padding: "3px 10px", borderRadius: 9999,
           display: "inline-block", width: "fit-content",
           whiteSpace: "nowrap", opacity: 0.6,
         }}>
@@ -425,15 +567,31 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: number) =
   );
 }
 
+/* ── Urgency tier — single source of truth for sort + banner + row treatment ── */
+type UrgencyTier = "overdue" | "due-today" | "blocked" | "normal";
+function urgencyTier(t: Task): UrgencyTier {
+  if ((t.daysOverdue ?? -1) > 0) return "overdue";
+  if (t.daysOverdue === 0) return "due-today";
+  if (t.blocked) return "blocked";
+  return "normal";
+}
+
 /* ── Main component ───────────────────────────────────────────────────────── */
 export function TasksTab() {
   const { tasks, addTask, completeTask, reopenTask } = useSubmissionWorkspace();
   const [search,        setSearch]       = useState("");
   const [showModal,     setShowModal]    = useState(false);
   const [completedOpen, setCompletedOpen] = useState(true);
+  const [urgentOnly,    setUrgentOnly]   = useState(false);
 
   const activeTasks    = tasks.filter(t => t.status !== "Done");
   const completedTasks = tasks.filter(t => t.status === "Done");
+
+  // Action-required counts surface across the whole list, not just the filtered view.
+  const overdueCount   = activeTasks.filter(t => (t.daysOverdue ?? -1) > 0).length;
+  const dueTodayCount  = activeTasks.filter(t => t.daysOverdue === 0).length;
+  const blockedCount   = activeTasks.filter(t => t.blocked && (t.daysOverdue ?? -1) <= 0).length;
+  const actionCount    = overdueCount + dueTodayCount + blockedCount;
 
   const applySearch = (list: Task[]) => {
     if (!search.trim()) return list;
@@ -445,7 +603,14 @@ export function TasksTab() {
     );
   };
 
-  const visibleActive = applySearch(activeTasks);
+  // Sort active tasks so urgent items dominate the top of the list, then apply
+  // the "show urgent only" filter if toggled, then apply search.
+  const tierRank: Record<UrgencyTier, number> = {
+    "overdue": 0, "due-today": 1, "blocked": 2, "normal": 3,
+  };
+  const sortedActive = [...activeTasks].sort((a, b) => tierRank[urgencyTier(a)] - tierRank[urgencyTier(b)]);
+  const urgentFiltered = urgentOnly ? sortedActive.filter(t => urgencyTier(t) !== "normal") : sortedActive;
+  const visibleActive    = applySearch(urgentFiltered);
   const visibleCompleted = applySearch(completedTasks);
 
   const handleAddTask = (partial: Omit<Task, "id" | "status" | "completedAt">) => {
@@ -469,7 +634,6 @@ export function TasksTab() {
         <div style={{
           background: "white",
           border: `1px solid ${BDL}`,
-          borderTop: `3px solid ${N}`,
           borderRadius: 8,
           overflow: "hidden",
           boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -509,6 +673,62 @@ export function TasksTab() {
               <Plus size={13} /> New task
             </button>
           </div>
+
+          {/* ── Action Required banner — only renders when there's urgent work.
+                 Lets the user pivot from "all tasks" to "urgent only" in one click. */}
+          {actionCount > 0 && (
+            <div
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                gap: 12, flexWrap: "wrap",
+                padding: "10px 20px",
+                background: overdueCount > 0 ? "#FEF2F2" : "#FFFBEB",
+                borderBottom: `1px solid ${overdueCount > 0 ? "#FECACA" : "#FDE68A"}`,
+                boxShadow: `inset 4px 0 0 ${overdueCount > 0 ? "#B91C1C" : "#B45309"}`,
+              }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <AlertCircle size={14} color={overdueCount > 0 ? "#B91C1C" : "#B45309"} />
+                <span style={{
+                  fontSize: "0.74rem", fontWeight: 800,
+                  color: overdueCount > 0 ? "#7A1F1F" : "#92400E",
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}>
+                  Action Required
+                </span>
+                <span style={{ width: 1, height: 12, background: overdueCount > 0 ? "#FCA5A5" : "#FCD34D" }}/>
+                <div className="flex items-center gap-2.5 flex-wrap" style={{ fontSize: "0.72rem" }}>
+                  {overdueCount > 0 && (
+                    <span style={{ color: "#7A1F1F" }}>
+                      <strong style={{ fontWeight: 800 }}>{overdueCount}</strong> overdue
+                    </span>
+                  )}
+                  {dueTodayCount > 0 && (
+                    <span style={{ color: "#92400E" }}>
+                      <strong style={{ fontWeight: 800 }}>{dueTodayCount}</strong> due today
+                    </span>
+                  )}
+                  {blockedCount > 0 && (
+                    <span style={{ color: "#7A1F1F" }}>
+                      <strong style={{ fontWeight: 800 }}>{blockedCount}</strong> blocked
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setUrgentOnly(v => !v)}
+                className="hover:brightness-95 transition-all"
+                style={{
+                  background: urgentOnly ? (overdueCount > 0 ? "#B91C1C" : "#B45309") : "white",
+                  color: urgentOnly ? "white" : (overdueCount > 0 ? "#7A1F1F" : "#92400E"),
+                  border: `1px solid ${overdueCount > 0 ? "#FCA5A5" : "#FCD34D"}`,
+                  padding: "5px 12px", borderRadius: 6,
+                  fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", fontFamily: font,
+                  whiteSpace: "nowrap",
+                }}>
+                {urgentOnly ? "Show all" : "Show urgent only"}
+              </button>
+            </div>
+          )}
 
           {/* Column headers */}
           <ColHeaders />

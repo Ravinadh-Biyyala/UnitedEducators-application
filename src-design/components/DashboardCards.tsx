@@ -8,7 +8,7 @@ export const BD   = "#C4CDD8";
 export const BDL  = "#DCE3EC";
 export const TD   = "#1A2530";
 export const TM   = "#4A5D6E";
-export const TT   = "#7A8FA3";
+export const TT   = "#5F7080";
 export const OK   = "#15803D";
 export const WARN = "#B45309";
 export const BAD  = "#B91C1C";
@@ -105,6 +105,8 @@ export function KPITile({ k, compact = false }: { k: KPI; compact?: boolean }) {
 }
 
 // ─── SectionCard (Dashboard-style card chrome) ──────────────────────────────
+// Colored top border is reserved for top-of-view stat cards; section panels
+// use a neutral border so primary KPIs dominate the hierarchy.
 export function SectionCard({
   title, icon, accent = N, action, children, noPad = false,
 }: {
@@ -119,23 +121,22 @@ export function SectionCard({
     <div style={{
       background: "white",
       border: `1px solid ${BDL}`,
-      borderTop: `3px solid ${accent}`,
       borderRadius: 8,
       overflow: "hidden",
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
     }}>
-      <div className="flex items-center justify-between px-5 py-3 flex-wrap gap-2"
+      <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2"
         style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && (
             <span className="inline-flex items-center justify-center"
-              style={{ width: 24, height: 24, borderRadius: 6, background: `${accent}12`, color: accent }}>
+              style={{ width: 26, height: 26, borderRadius: 6, background: `${accent}12`, color: accent }}>
               {icon}
             </span>
           )}
           <h3 style={{
-            fontSize: "0.74rem", fontWeight: 700, color: TD,
-            textTransform: "uppercase", letterSpacing: "0.08em",
+            fontSize: "0.86rem", fontWeight: 700, color: TD,
+            letterSpacing: "-0.005em",
           }}>
             {title}
           </h3>

@@ -12,7 +12,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 type EventType =
@@ -222,7 +222,6 @@ export function AuditTrailTab() {
       <div style={{
         background: "white",
         border: `1px solid ${BDL}`,
-        borderTop: `3px solid ${N}`,
         borderRadius: 8,
         overflow: "hidden",
         boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -232,7 +231,7 @@ export function AuditTrailTab() {
           <div className="flex items-center gap-2">
             <Clock size={14} color={N} />
             <div>
-              <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
                 Audit Trail
               </h3>
               <p style={{ fontSize: "0.70rem", color: TT, marginTop: 1 }}>
@@ -318,7 +317,7 @@ export function AuditTrailTab() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {/* Event type badge */}
                         <span className="flex items-center gap-1 px-2 py-0.5"
-                          style={{ background: es.bg, border: `1px solid ${es.border}`, borderRadius: 4, fontSize: "0.60rem", fontWeight: 700, color: es.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          style={{ background: es.bg, border: `1px solid ${es.border}`, borderRadius: 9999, fontSize: "0.60rem", fontWeight: 700, color: es.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           {es.icon}
                           {es.label}
                         </span>

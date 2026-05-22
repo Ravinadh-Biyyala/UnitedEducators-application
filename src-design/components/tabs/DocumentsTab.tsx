@@ -200,7 +200,6 @@ export function DocumentsTab() {
                         minWidth: 220,
                         padding: "12px 14px",
                         background: isSelected ? `${N}0D` : "transparent",
-                        borderLeft: `3px solid ${isSelected ? N : "transparent"}`,
                         borderRight: `1px solid ${BDL}`,
                         borderBottom: `1px solid ${BDL}`,
                         cursor: "pointer",
@@ -281,7 +280,7 @@ export function DocumentsTab() {
                   <span className="inline-flex items-center gap-1.5"
                     style={{
                       fontSize: "0.64rem", fontWeight: 700, color: OK,
-                      background: "#E8F5EC", padding: "3px 9px", borderRadius: 4,
+                      background: "#E8F5EC", padding: "3px 9px", borderRadius: 9999,
                     }}>
                     <CheckCircle2 size={11}/> {selectedMeta.uploaded + selectedMeta.inReview} Uploaded
                   </span>
@@ -289,7 +288,7 @@ export function DocumentsTab() {
                     <span className="inline-flex items-center gap-1.5"
                       style={{
                         fontSize: "0.64rem", fontWeight: 700, color: BAD,
-                        background: "#FEE2E2", padding: "3px 9px", borderRadius: 4,
+                        background: "#FEE2E2", padding: "3px 9px", borderRadius: 9999,
                       }}>
                       <AlertCircle size={11}/> {selectedMeta.missing} Missing
                     </span>
@@ -340,7 +339,7 @@ export function DocumentsTab() {
                         <span style={{
                           fontSize: "0.6rem", fontWeight: 800,
                           color: cc.text, background: cc.bg,
-                          padding: "2px 8px", borderRadius: 3,
+                          padding: "2px 8px", borderRadius: 9999,
                           textTransform: "uppercase", letterSpacing: "0.06em",
                         }}>
                           {group.category}
@@ -384,6 +383,7 @@ export function DocumentsTab() {
 function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) {
   const sm = statusMeta(doc.status);
   const isMissing = doc.status === "Missing";
+  const isMissingRequired = isMissing && doc.required;
   const [hover, setHover] = useState(false);
 
   return (
@@ -392,9 +392,10 @@ function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) 
       onMouseLeave={() => setHover(false)}
       style={{
         border: `1px solid ${hover ? `${N}40` : BDL}`,
+        borderLeft: isMissingRequired ? "3px solid #B91C1C" : `1px solid ${hover ? `${N}40` : BDL}`,
         borderRadius: 8,
         padding: "10px 12px",
-        background: isMissing ? "#FFFBFB" : hover ? "#FAFBFD" : "white",
+        background: isMissingRequired ? "#FEF2F2" : isMissing ? "#FFFBFB" : hover ? "#FAFBFD" : "white",
         boxShadow: hover ? "0 1px 4px rgba(15,23,42,0.06)" : "none",
         transition: "all 0.15s ease",
       }}>
@@ -434,7 +435,7 @@ function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) 
             </div>
 
             <span className="inline-flex items-center gap-1.5 shrink-0"
-              style={{ background: sm.bg, padding: "2px 8px", borderRadius: 4 }}>
+              style={{ background: sm.bg, padding: "2px 8px", borderRadius: 9999 }}>
               <span style={{ color: sm.color, display: "inline-flex" }}>{sm.icon}</span>
               <span style={{ fontSize: "0.64rem", fontWeight: 700, color: sm.color }}>
                 {sm.label}
@@ -445,13 +446,23 @@ function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (d: Doc) => void }) 
           <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
             <div className="flex items-center gap-1.5">
               {doc.required && (
-                <span style={{
-                  fontSize: "0.56rem", fontWeight: 800, color: N,
-                  background: `${N}10`, padding: "1px 6px", borderRadius: 3,
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                }}>
-                  Required
-                </span>
+                isMissingRequired ? (
+                  <span style={{
+                    fontSize: "0.56rem", fontWeight: 800, color: "#7A1F1F",
+                    background: "#FEE2E2", padding: "1px 6px", borderRadius: 9,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    Missing Required
+                  </span>
+                ) : (
+                  <span style={{
+                    fontSize: "0.56rem", fontWeight: 800, color: N,
+                    background: `${N}10`, padding: "1px 6px", borderRadius: 9999,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    Required
+                  </span>
+                )
               )}
             </div>
 

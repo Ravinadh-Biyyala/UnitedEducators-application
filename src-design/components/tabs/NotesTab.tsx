@@ -9,7 +9,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const TH  = "#F0F3F8";
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
@@ -185,7 +185,6 @@ export function NotesTab() {
       <div style={{
         background: "white",
         border: `1px solid ${BDL}`,
-        borderTop: `3px solid ${N}`,
         borderRadius: 8,
         overflow: "hidden",
         boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -300,7 +299,7 @@ export function NotesTab() {
                           const tc = TAG_COLORS[tag] ?? fallbackTag;
                           return (
                             <span key={tag}
-                              style={{ fontSize: "0.65rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, padding: "1px 8px", borderRadius: 4 }}>
+                              style={{ fontSize: "0.65rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, padding: "1px 8px", borderRadius: 9999 }}>
                               {tag}
                             </span>
                           );
@@ -320,7 +319,7 @@ export function NotesTab() {
                           background: note.pinned ? "#FFF8E6" : "white",
                           color: note.pinned ? "#8A5C00" : TM,
                           border: `1px solid ${note.pinned ? "#F0D88A" : BD}`,
-                          borderRadius: 4,
+                          borderRadius: 9999,
                           cursor: "pointer",
                           fontFamily: "'Source Sans 3', system-ui, sans-serif",
                         }}>
@@ -440,7 +439,7 @@ export function NotesTab() {
                     const tc = TAG_COLORS[tag] ?? fallbackTag;
                     return (
                       <span key={tag} className="flex items-center gap-1 px-2 py-0.5"
-                        style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, borderRadius: 4 }}>
+                        style={{ fontSize: "0.68rem", fontWeight: 700, background: tc.bg, color: tc.text, border: `1px solid ${tc.border}`, borderRadius: 9999 }}>
                         {tag}
                         <button onClick={() => removeTag(tag)} style={{ color: tc.text, display: "flex", alignItems: "center", borderRadius: 6 }}>
                           <X size={9} />
@@ -583,7 +582,7 @@ function NoteViewModal({
                     fontSize: "0.68rem", fontWeight: 700,
                     background: tc.bg, color: tc.text,
                     border: `1px solid ${tc.border}`,
-                    padding: "2px 9px", borderRadius: 4,
+                    padding: "2px 9px", borderRadius: 9999,
                   }}>
                   {tag}
                 </span>

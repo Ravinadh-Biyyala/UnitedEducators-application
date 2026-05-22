@@ -23,8 +23,8 @@ function RiskBar({ label, score, color }: { label: string; score: number; color:
           {score}<span style={{ fontWeight: 400, color: TT }}>/100</span>
         </span>
       </div>
-      <div style={{ width: "100%", height: 5, background: "#EEF1F5", borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${score}%`, background: color, borderRadius: 3, transition: "width 0.6s ease" }}/>
+      <div style={{ width: "100%", height: 5, background: "#EEF1F5", borderRadius: 9999, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${score}%`, background: color, borderRadius: 9999, transition: "width 0.6s ease" }}/>
       </div>
     </div>
   );

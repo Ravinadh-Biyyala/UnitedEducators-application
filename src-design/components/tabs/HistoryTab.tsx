@@ -7,7 +7,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 
 interface UWAction {
   year: string; policyNo: string; carrier: string; action: string;
@@ -88,11 +88,11 @@ export function HistoryTab() {
     <div className="space-y-5">
 
       {/* UW Action Timeline */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
         <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
           <RotateCcw size={14} color={N} />
           <div>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Underwriting Action History</h3>
+            <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Underwriting Action History</h3>
             <p style={{ fontSize: "0.72rem", color: TT, marginTop: 1 }}>Prior UW decisions, rate changes, and renewal actions — 2019 to present</p>
           </div>
         </div>
@@ -107,7 +107,7 @@ export function HistoryTab() {
                 className="px-5 py-5 hover:bg-slate-50/50 transition-colors"
                 style={{
                   borderBottom: i < uwHistory.length - 1 ? `1px solid ${BDL}` : "none",
-                  borderLeft: isFirst ? `4px solid ${G}` : `4px solid ${BDL}`,
+                  borderLeft: `4px solid ${BDL}`,
                 }}
               >
                 <div className="flex flex-col md:flex-row md:items-start gap-5">
@@ -156,11 +156,11 @@ export function HistoryTab() {
       </div>
 
       {/* Prior Application Responses */}
-      <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}`, borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
         <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
           <FileText size={14} color={N} />
           <div>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Prior Application Responses</h3>
+            <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Prior Application Responses</h3>
             <p style={{ fontSize: "0.72rem", color: TT, marginTop: 1 }}>Key application questions and insured responses — flagged items highlighted</p>
           </div>
         </div>

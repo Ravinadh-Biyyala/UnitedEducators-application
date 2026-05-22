@@ -20,7 +20,7 @@ const G   = "#C9A227";
 const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 export type RoleId = "uw" | "sr-uw" | "lead" | "director";

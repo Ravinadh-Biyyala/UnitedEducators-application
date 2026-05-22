@@ -9,7 +9,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 
 type Priority   = "High" | "Medium" | "Low";
 type TaskStatus = "Open" | "In Progress" | "Done";
@@ -17,6 +17,9 @@ type TaskStatus = "Open" | "In Progress" | "Done";
 interface Task {
   id: number; title: string; assignee: string; due: string;
   priority: Priority; status: TaskStatus;
+  /** Days past due. Positive = overdue; 0 = due today; negative = upcoming. */
+  daysOverdue?: number;
+  blocked?: boolean;
 }
 interface Note {
   id: number; author: string; role: string; date: string;
@@ -25,13 +28,13 @@ interface Note {
 }
 
 const tasks: Task[] = [
-  { id: 1, title: "Obtain updated open claims detail from broker", assignee: "Sarah Mitchell (UW)", due: "Apr 20, 2024", priority: "High",   status: "Open" },
-  { id: 2, title: "Verify background check policy documentation",  assignee: "James Owens (Ops)",  due: "Apr 22, 2024", priority: "High",   status: "Open" },
-  { id: 3, title: "Review GASB 68 pension liability report",       assignee: "Tom Lee (UW)",       due: "Apr 25, 2024", priority: "Medium", status: "In Progress" },
-  { id: 4, title: "Confirm earthquake zone rating with surveyor",  assignee: "Sarah Mitchell (UW)",due: "Apr 28, 2024", priority: "Medium", status: "Open" },
-  { id: 5, title: "Run TIV adequacy check against 2024 appraisal",assignee: "Tom Lee (UW)",       due: "May 01, 2024", priority: "Low",    status: "Open" },
-  { id: 6, title: "Send indicative quote to Gallagher",           assignee: "Sarah Mitchell (UW)",due: "May 05, 2024", priority: "High",   status: "In Progress" },
-  { id: 7, title: "Confirm COPE survey receipt for Lincoln HS",   assignee: "James Owens (Ops)",  due: "May 08, 2024", priority: "Low",    status: "Done" },
+  { id: 1, title: "Obtain updated open claims detail from broker", assignee: "Sarah Mitchell (UW)", due: "May 18, 2026", priority: "High",   status: "Open",        daysOverdue: 3,  blocked: true },
+  { id: 2, title: "Verify background check policy documentation",  assignee: "James Owens (Ops)",  due: "May 19, 2026", priority: "High",   status: "Open",        daysOverdue: 2 },
+  { id: 3, title: "Review GASB 68 pension liability report",       assignee: "Tom Lee (UW)",       due: "May 21, 2026", priority: "Medium", status: "In Progress", daysOverdue: 0 },
+  { id: 4, title: "Confirm earthquake zone rating with surveyor",  assignee: "Sarah Mitchell (UW)",due: "May 25, 2026", priority: "Medium", status: "Open",        daysOverdue: -4 },
+  { id: 5, title: "Run TIV adequacy check against 2024 appraisal",assignee: "Tom Lee (UW)",       due: "May 28, 2026", priority: "Low",    status: "Open",        daysOverdue: -7 },
+  { id: 6, title: "Send indicative quote to Gallagher",           assignee: "Sarah Mitchell (UW)",due: "Jun 02, 2026", priority: "High",   status: "In Progress", daysOverdue: -12 },
+  { id: 7, title: "Confirm COPE survey receipt for Lincoln HS",   assignee: "James Owens (Ops)",  due: "May 18, 2026", priority: "Low",    status: "Done" },
 ];
 
 const notes: Note[] = [
@@ -95,10 +98,10 @@ export function NotesTasksTab() {
       <div className="md:col-span-3 space-y-5">
 
         {/* ── Submission Status Tracker ─────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <GitBranch size={14} color={N} />
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
               Submission Status Tracker
             </h3>
           </div>
@@ -143,11 +146,11 @@ export function NotesTasksTab() {
         </div>
 
         {/* ── Notes & Communications ───────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <div className="flex items-center gap-2">
               <MessageSquare size={14} color={N} />
-              <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes & Communications</h3>
+              <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Notes & Communications</h3>
             </div>
             <span style={{ fontSize: "0.72rem", color: TT }}>{notes.length} entries</span>
           </div>
@@ -232,10 +235,10 @@ export function NotesTasksTab() {
       <div className="md:col-span-2 space-y-5">
 
         {/* ── Workflow Actions ──────────────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <ArrowRightLeft size={14} color={N} />
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Workflow Actions</h3>
+            <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Workflow Actions</h3>
           </div>
           <div className="p-4 space-y-2.5">
             {[
@@ -272,11 +275,11 @@ export function NotesTasksTab() {
         </div>
 
         {/* ── Open Tasks ───────────────────────────────────────────────── */}
-        <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${N}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
           <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
             <div className="flex items-center gap-2">
               <CheckSquare size={14} color={N} />
-              <h3 style={{ fontSize: "0.82rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.06em" }}>Open Tasks</h3>
+              <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>Open Tasks</h3>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
@@ -290,32 +293,101 @@ export function NotesTasksTab() {
           {tasks.map((task, idx) => {
             const ps  = priorityStyle(task.priority);
             const tss = taskStatusStyle(task.status);
+            const isOverdue  = (task.daysOverdue ?? -1) > 0 && task.status !== "Done";
+            const isDueToday = task.daysOverdue === 0 && task.status !== "Done";
+            const rowBg = isOverdue ? "#FEF2F2" : isDueToday ? "#FFFBEB" : "white";
+            const railColor = isOverdue ? "#B91C1C" : isDueToday ? "#B45309" : null;
             return (
               <div
                 key={task.id}
-                className="px-5 py-4 hover:bg-slate-50/60 transition-colors"
+                className="px-5 py-4 transition-colors"
                 style={{
                   borderBottom: idx < tasks.length - 1 ? `1px solid ${BDL}` : "none",
                   opacity: task.status === "Done" ? 0.65 : 1,
+                  background: rowBg,
                 }}
               >
                 <div className="flex items-start gap-2.5 mb-1.5">
                   <div className="shrink-0 mt-0.5">{tss.icon}</div>
-                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: task.status === "Done" ? TT : TD, lineHeight: 1.4, textDecoration: task.status === "Done" ? "line-through" : "none" }}>
-                    {task.title}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p style={{
+                      fontSize: "0.82rem",
+                      fontWeight: isOverdue ? 700 : 600,
+                      color: task.status === "Done" ? TT : isOverdue ? "#7A1F1F" : TD,
+                      lineHeight: 1.4,
+                      textDecoration: task.status === "Done" ? "line-through" : "none",
+                    }}>
+                      {task.title}
+                    </p>
+                    {(isOverdue || isDueToday || task.blocked) && (
+                      <div className="flex items-center gap-1.5 flex-wrap" style={{ marginTop: 4 }}>
+                        {isOverdue && (
+                          <span style={{
+                            fontSize: "0.52rem", fontWeight: 800,
+                            background: "#FEE2E2", color: "#7A1F1F",
+                            padding: "1px 6px", borderRadius: 9,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                          }}>
+                            Overdue · {task.daysOverdue}d
+                          </span>
+                        )}
+                        {isDueToday && (
+                          <span style={{
+                            fontSize: "0.52rem", fontWeight: 800,
+                            background: "#FEF3C7", color: "#92400E",
+                            padding: "1px 6px", borderRadius: 9,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                          }}>
+                            Due today
+                          </span>
+                        )}
+                        {task.blocked && (
+                          <span style={{
+                            fontSize: "0.52rem", fontWeight: 800,
+                            background: "#FEE2E2", color: "#7A1F1F",
+                            padding: "1px 6px", borderRadius: 9,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                          }}>
+                            Blocked
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-1 pl-6">
                   <div className="flex items-center gap-2">
                     <span style={{ fontSize: "0.62rem", color: TT }}>{task.assignee}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, background: ps.bg, color: ps.text, border: `1px solid ${ps.border}`, padding: "1px 5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      {task.priority}
-                    </span>
+                    {task.priority === "High" ? (
+                      <span style={{
+                        fontSize: "0.55rem", fontWeight: 800,
+                        background: "#FEF3C7", color: "#92400E",
+                        padding: "1px 6px", borderRadius: 9,
+                        textTransform: "uppercase", letterSpacing: "0.05em",
+                      }}>
+                        High
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1"
+                        style={{ fontSize: "0.62rem", fontWeight: 500, color: TM }}>
+                        <span style={{
+                          width: 5, height: 5, borderRadius: "50%",
+                          background: task.priority === "Medium" ? "#B45309" : TT,
+                        }}/>
+                        {task.priority}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1">
-                      <Clock size={10} color={TT} />
-                      <span style={{ fontSize: "0.62rem", color: TT }}>{task.due}</span>
+                      <Clock size={10} color={isOverdue ? "#B91C1C" : isDueToday ? "#B45309" : TT} />
+                      <span style={{
+                        fontSize: "0.62rem",
+                        color: isOverdue ? "#7A1F1F" : isDueToday ? "#92400E" : TT,
+                        fontWeight: isOverdue || isDueToday ? 700 : 400,
+                      }}>
+                        {task.due}
+                      </span>
                     </div>
                   </div>
                 </div>

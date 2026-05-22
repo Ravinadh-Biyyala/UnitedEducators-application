@@ -4,12 +4,15 @@ import {
   Filter, ChevronDown, ChevronLeft, ChevronRight, ArrowUpRight,
   AlertTriangle, CheckCircle2, Clock, TrendingUp, TrendingDown,
   Users, ShieldCheck, AlertCircle, MapPin, DollarSign, Activity,
-  Award, Inbox, Plus, Sparkles, Sun, Calendar,
+  Award, Inbox, Plus, Sun, Mail, Reply, Minus,
+  ArrowUp, ArrowDown, ArrowUpDown, Eye, UserPlus, MessageSquare, MoreHorizontal,
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
-import { PrimaryWhiteButton, GhostButton } from "../components/DashboardCards";
+import { PrimaryWhiteButton } from "../components/DashboardCards";
+import { Sparkline } from "../components/Sparkline";
+import { typo, weight } from "../styles/typography";
 import { PageRegister } from "../components/companion/PageRegister";
 import { newId, now } from "../components/companion/CompanionContext";
 import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
@@ -22,7 +25,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const BG  = "#EEF1F6";
 const OK  = "#15803D";
 const WARN= "#B45309";
@@ -94,6 +97,29 @@ const ALL_ALERTS: Alert[] = [
   { id:6, type:"missing-doc", title:"Missing: Background Check Policy",body:"SUB-7838 (Chicago Lab) — compliance doc outstanding.",  submission:"SUB-7838", severity:"info",     time:"3d ago"  },
 ];
 
+interface Correspondence {
+  id: string;
+  from: string;
+  fromInitials: string;
+  fromOrg: string;
+  subject: string;
+  preview: string;
+  submission: string;
+  time: string;
+  unread: boolean;
+  awaitingReply: boolean;
+  overdue: boolean;
+  channel: "email" | "portal";
+}
+
+const ALL_CORRESPONDENCE: Correspondence[] = [
+  { id:"c1", from:"David Chen",     fromInitials:"DC", fromOrg:"Hub International",    subject:"Re: SUB-7835 — Safety questionnaire attached", preview:"Hi Sarah — questionnaire is in. One field is blank on page 3, can we proceed or wait for an updated copy?", submission:"SUB-7835", time:"8 min ago",  unread:true,  awaitingReply:true,  overdue:false, channel:"email"  },
+  { id:"c2", from:"Linda Park",     fromInitials:"LP", fromOrg:"Aon",                   subject:"Quote acceptance — SUB-7836 (MIT)",            preview:"Client has signed off on the indicative quote. Please send binders and confirm effective date.",         submission:"SUB-7836", time:"1 hour ago",  unread:true,  awaitingReply:true,  overdue:false, channel:"email"  },
+  { id:"c3", from:"Mark Sullivan",  fromInitials:"MS", fromOrg:"Marsh McLennan",         subject:"COPE survey scheduled for next week",          preview:"Surveyor confirmed for Tuesday 9am at SUB-7830 (San Diego City). FYI no action needed.",                    submission:"SUB-7830", time:"3 hours ago", unread:false, awaitingReply:false, overdue:false, channel:"email"  },
+  { id:"c4", from:"Jenna Roberts",  fromInitials:"JR", fromOrg:"Willis Towers Watson",   subject:"Pricing pushback on Austin ISD renewal",       preview:"Broker is asking for a 6% rate concession on SUB-7831. Loss ratio supports holding firm — your call.",       submission:"SUB-7831", time:"Yesterday",   unread:true,  awaitingReply:true,  overdue:true,  channel:"email"  },
+  { id:"c5", from:"Tom Lee",        fromInitials:"TL", fromOrg:"Internal",               subject:"Bound — paperwork sent to ops",                preview:"Denver PS bound at $158K, effective Jul 1. Cert request mirrored to ops queue.",                            submission:"SUB-7833", time:"Yesterday",   unread:false, awaitingReply:false, overdue:false, channel:"portal" },
+];
+
 const PIPELINE_DATA = [
   { month:"Oct", submitted:8,  quoted:6,  bound:4  },
   { month:"Nov", submitted:11, quoted:8,  bound:5  },
@@ -110,34 +136,98 @@ const TEAM_STATS = [
   { name:"James Owens",     initials:"JO", role:"UW Analyst",     inReview:2, quoted:4,  bound:2, hitRatio:"66%", daysToQuote:"4.9d" },
 ];
 
-const KPIS: Record<RoleId, { label:string; value:string; sub:string; trend:"up"|"down"|"none"; accent:string; icon:React.ReactNode }[]> = {
+// ─── KPI model ────────────────────────────────────────────────────────────────
+// Each KPI carries:
+//   - `series`       — recent 6-point history for the sparkline
+//   - `goodDirection`— "up" / "down" / "neutral": semantic of which way is good.
+//                      Drives delta colouring (green vs red) so an UP arrow on
+//                      "Days to Quote" reads as bad without the user having to
+//                      think about it.
+//   - `benchmark`    — comparison context (team avg, target, SLA)
+//   - `insight`      — short contextual judgment derived from where this KPI
+//                      sits vs its benchmark + trend
+type KpiTone = "good" | "warn" | "info";
+interface Kpi {
+  label: string;
+  value: string;
+  sub: string;
+  trend: "up" | "down" | "none";
+  accent: string;
+  icon: React.ReactNode;
+  series: number[];
+  goodDirection: "up" | "down" | "neutral";
+  benchmark?: string;
+  insight?: { tone: KpiTone; text: string };
+}
+
+const KPIS: Record<RoleId, Kpi[]> = {
   "uw": [
-    { label:"My In Review",       value:"5",      sub:"+1 vs. last week", trend:"up",   accent:N,   icon:<Inbox size={16}/>          },
-    { label:"Quoted This Month",  value:"7",      sub:"+2 vs. last month",trend:"up",   accent:OK,  icon:<CheckCircle2 size={16}/>   },
-    { label:"Bound This Month",   value:"3",      sub:"$454K premium",    trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>},
-    { label:"Avg. Days to Quote", value:"3.8d",   sub:"−0.4d vs. team",   trend:"down", accent:OK,  icon:<Clock size={16}/>          },
-    { label:"Hit Ratio (YTD)",    value:"71%",    sub:"+3pp vs. last yr", trend:"up",   accent:G,   icon:<Award size={16}/>          },
+    { label:"My In Review",       value:"5",      sub:"+1 vs. last week", trend:"up",   accent:N,         icon:<Inbox size={16}/>,
+      series:[3,4,4,5,4,5],         goodDirection:"neutral",
+      benchmark:"Team avg 3.5",     insight:{ tone:"info",  text:"Above team avg"   } },
+    { label:"Quoted This Month",  value:"7",      sub:"+2 vs. last month",trend:"up",   accent:OK,        icon:<CheckCircle2 size={16}/>,
+      series:[3,4,5,5,6,7],         goodDirection:"up",
+      benchmark:"Target 6/mo",      insight:{ tone:"good",  text:"Ahead of target"  } },
+    { label:"Bound This Month",   value:"3",      sub:"$454K premium",    trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>,
+      series:[1,2,1,2,3,3],         goodDirection:"up",
+      benchmark:"Avg 2.5/mo",       insight:{ tone:"good",  text:"Strong month"     } },
+    { label:"Avg. Days to Quote", value:"3.8d",   sub:"−0.4d vs. team",   trend:"down", accent:OK,        icon:<Clock size={16}/>,
+      series:[4.6,4.4,4.2,4.1,3.9,3.8], goodDirection:"down",
+      benchmark:"Team avg 4.2d",    insight:{ tone:"good",  text:"Below team avg"   } },
+    { label:"Hit Ratio (YTD)",    value:"71%",    sub:"+3pp vs. last yr", trend:"up",   accent:G,         icon:<Award size={16}/>,
+      series:[68,69,70,70,71,71],   goodDirection:"up",
+      benchmark:"Team avg 68%",     insight:{ tone:"good",  text:"Above team avg"   } },
   ],
   "sr-uw": [
-    { label:"My In Review",       value:"4",      sub:"Active",           trend:"up",   accent:N,   icon:<Inbox size={16}/>          },
-    { label:"Quoted This Month",  value:"9",      sub:"+1 vs. last month",trend:"up",   accent:OK,  icon:<CheckCircle2 size={16}/>   },
-    { label:"Bound This Month",   value:"4",      sub:"$1.45M premium",   trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>},
-    { label:"Avg. Days to Quote", value:"3.2d",   sub:"Best on team",     trend:"down", accent:OK,  icon:<Clock size={16}/>          },
-    { label:"Hit Ratio (YTD)",    value:"74%",    sub:"+6pp vs. last yr", trend:"up",   accent:G,   icon:<Award size={16}/>          },
+    { label:"My In Review",       value:"4",      sub:"Active",           trend:"none", accent:N,         icon:<Inbox size={16}/>,
+      series:[5,4,5,4,4,4],         goodDirection:"neutral",
+      benchmark:"Team avg 3.5",     insight:{ tone:"info",  text:"Steady"           } },
+    { label:"Quoted This Month",  value:"9",      sub:"+1 vs. last month",trend:"up",   accent:OK,        icon:<CheckCircle2 size={16}/>,
+      series:[6,7,7,8,8,9],         goodDirection:"up",
+      benchmark:"Target 8/mo",      insight:{ tone:"good",  text:"Ahead of target"  } },
+    { label:"Bound This Month",   value:"4",      sub:"$1.45M premium",   trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>,
+      series:[2,3,3,4,3,4],         goodDirection:"up",
+      benchmark:"Avg 3/mo",         insight:{ tone:"good",  text:"Above pace"       } },
+    { label:"Avg. Days to Quote", value:"3.2d",   sub:"Best on team",     trend:"down", accent:OK,        icon:<Clock size={16}/>,
+      series:[3.9,3.8,3.6,3.5,3.3,3.2], goodDirection:"down",
+      benchmark:"Team avg 4.2d",    insight:{ tone:"good",  text:"Team leader"      } },
+    { label:"Hit Ratio (YTD)",    value:"74%",    sub:"+6pp vs. last yr", trend:"up",   accent:G,         icon:<Award size={16}/>,
+      series:[68,70,71,72,73,74],   goodDirection:"up",
+      benchmark:"Team avg 68%",     insight:{ tone:"good",  text:"Top quartile"     } },
   ],
   "lead": [
-    { label:"Team In Review",     value:"12",     sub:"Across 4 UWs",     trend:"up",   accent:N,   icon:<Inbox size={16}/>          },
-    { label:"Team Quoted",        value:"19",     sub:"$4.2M pipeline",   trend:"up",   accent:OK,  icon:<CheckCircle2 size={16}/>   },
-    { label:"Bound YTD",          value:"31",     sub:"$3.1M premium",    trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>},
-    { label:"Avg. Days to Quote", value:"4.1d",   sub:"−0.6 vs. Q1",      trend:"down", accent:OK,  icon:<Clock size={16}/>          },
-    { label:"Team Hit Ratio",     value:"72%",    sub:"+4pp vs. last yr", trend:"up",   accent:G,   icon:<Award size={16}/>          },
+    { label:"Team In Review",     value:"12",     sub:"Across 4 UWs",     trend:"up",   accent:N,         icon:<Inbox size={16}/>,
+      series:[10,11,11,12,11,12],   goodDirection:"neutral",
+      benchmark:"Capacity 16",      insight:{ tone:"info",  text:"75% utilised"     } },
+    { label:"Team Quoted",        value:"19",     sub:"$4.2M pipeline",   trend:"up",   accent:OK,        icon:<CheckCircle2 size={16}/>,
+      series:[13,15,16,17,18,19],   goodDirection:"up",
+      benchmark:"Target 18/mo",     insight:{ tone:"good",  text:"Ahead of plan"    } },
+    { label:"Bound YTD",          value:"31",     sub:"$3.1M premium",    trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>,
+      series:[18,21,24,27,29,31],   goodDirection:"up",
+      benchmark:"vs Q1 LY +18%",    insight:{ tone:"good",  text:"Outpacing LY"     } },
+    { label:"Avg. Days to Quote", value:"4.1d",   sub:"−0.6 vs. Q1",      trend:"down", accent:OK,        icon:<Clock size={16}/>,
+      series:[4.7,4.6,4.5,4.3,4.2,4.1], goodDirection:"down",
+      benchmark:"SLA ≤5d",          insight:{ tone:"good",  text:"Within SLA"       } },
+    { label:"Team Hit Ratio",     value:"72%",    sub:"+4pp vs. last yr", trend:"up",   accent:G,         icon:<Award size={16}/>,
+      series:[67,68,69,70,71,72],   goodDirection:"up",
+      benchmark:"Target 70%",       insight:{ tone:"good",  text:"Above target"     } },
   ],
   "director": [
-    { label:"Active Submissions", value:"47",     sub:"Portfolio-wide",   trend:"up",   accent:N,   icon:<Inbox size={16}/>          },
-    { label:"Quoted Pipeline",    value:"$8.4M",  sub:"23 accounts",      trend:"up",   accent:OK,  icon:<DollarSign size={16}/>     },
-    { label:"Bound YTD",          value:"$3.1M",  sub:"31 policies",      trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>},
-    { label:"Portfolio Hit Ratio",value:"69%",    sub:"+2pp vs. last yr", trend:"up",   accent:G,   icon:<Award size={16}/>          },
-    { label:"Avg. Days to Quote", value:"4.1d",   sub:"Within SLA (≤5d)", trend:"down", accent:OK,  icon:<Clock size={16}/>          },
+    { label:"Active Submissions", value:"47",     sub:"Portfolio-wide",   trend:"up",   accent:N,         icon:<Inbox size={16}/>,
+      series:[40,42,44,45,46,47],   goodDirection:"neutral",
+      benchmark:"Capacity 60",      insight:{ tone:"info",  text:"78% utilised"     } },
+    { label:"Quoted Pipeline",    value:"$8.4M",  sub:"23 accounts",      trend:"up",   accent:OK,        icon:<DollarSign size={16}/>,
+      series:[6.1,6.8,7.2,7.7,8.0,8.4], goodDirection:"up",
+      benchmark:"Target $7M",       insight:{ tone:"good",  text:"+20% vs target"   } },
+    { label:"Bound YTD",          value:"$3.1M",  sub:"31 policies",      trend:"up",   accent:"#005B99", icon:<ShieldCheck size={16}/>,
+      series:[1.6,2.0,2.4,2.7,2.9,3.1], goodDirection:"up",
+      benchmark:"vs LY +14%",       insight:{ tone:"good",  text:"Outpacing LY"     } },
+    { label:"Portfolio Hit Ratio",value:"69%",    sub:"+2pp vs. last yr", trend:"up",   accent:G,         icon:<Award size={16}/>,
+      series:[66,67,67,68,68,69],   goodDirection:"up",
+      benchmark:"Industry 65%",     insight:{ tone:"good",  text:"Above industry"   } },
+    { label:"Avg. Days to Quote", value:"4.1d",   sub:"Within SLA (≤5d)", trend:"down", accent:OK,        icon:<Clock size={16}/>,
+      series:[4.6,4.5,4.4,4.3,4.2,4.1], goodDirection:"down",
+      benchmark:"SLA ≤5d",          insight:{ tone:"good",  text:"Within SLA"       } },
   ],
 };
 
@@ -175,21 +265,20 @@ function SectionCard({title,icon,accent=N,action,children,noPad=false}: {
     <div style={{
       background:"white",
       border:`1px solid ${BDL}`,
-      borderTop:`3px solid ${accent}`,
       borderRadius:8,
       overflow:"hidden",
       boxShadow:"0 1px 2px rgba(15,23,42,0.04)",
     }}>
-      <div className="flex items-center justify-between px-5 py-3"
+      <div className="flex items-center justify-between px-5 py-3.5"
         style={{ borderBottom:`1px solid ${BDL}`, background:"#FAFBFD" }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && (
             <span className="inline-flex items-center justify-center"
-              style={{ width:24, height:24, borderRadius:6, background:`${accent}12`, color:accent }}>
+              style={{ width:26, height:26, borderRadius:6, background:`${accent}12`, color:accent }}>
               {icon}
             </span>
           )}
-          <h3 style={{ fontSize:"0.74rem", fontWeight:700, color:TD, textTransform:"uppercase", letterSpacing:"0.08em" }}>
+          <h3 style={{ ...typo.bodyLg, fontWeight: weight.bold, color:TD, letterSpacing:"-0.005em" }}>
             {title}
           </h3>
         </div>
@@ -273,11 +362,11 @@ function PipelineChart({ data }: { data: typeof PIPELINE_DATA }) {
             style={{ paddingRight: i === arr.length - 1 ? 0 : 18 }}>
             <span className="inline-flex items-center" style={{ gap: 8 }}>
               {l.kind === "swatch" ? (
-                <span style={{ width: 11, height: 11, borderRadius: 3, background: l.color }}/>
+                <span style={{ width: 11, height: 11, borderRadius: 9999, background: l.color }}/>
               ) : (
                 <span style={{ width: 18, height: 2.5, background: l.color, borderRadius: 2 }}/>
               )}
-              <span style={{ fontSize: "0.74rem", color: TM, fontWeight: 600, whiteSpace: "nowrap" }}>
+              <span style={{ ...typo.bodySm, color: TM, fontWeight: weight.semibold, whiteSpace: "nowrap" }}>
                 {l.label}
               </span>
             </span>
@@ -572,17 +661,13 @@ function PipelineChart({ data }: { data: typeof PIPELINE_DATA }) {
             minWidth: 130,
           }}>
           <div className="flex items-center justify-between gap-3 mb-1.5">
-            <span style={{
-              fontSize: "0.62rem", fontWeight: 800, color: TT,
-              textTransform: "uppercase", letterSpacing: "0.08em",
-            }}>
+            <span style={{ ...typo.overline, color: TT }}>
               {data[hoverIdx].month}
             </span>
             {hoverIdx === data.length - 1 && (
               <span style={{
-                fontSize: "0.5rem", fontWeight: 800, color: N, background: `${N}10`,
-                padding: "1px 5px", borderRadius: 3,
-                textTransform: "uppercase", letterSpacing: "0.06em",
+                ...typo.overline, color: N, background: `${N}10`,
+                padding: "1px 6px", borderRadius: 9999,
               }}>
                 Current
               </span>
@@ -597,10 +682,10 @@ function PipelineChart({ data }: { data: typeof PIPELINE_DATA }) {
               <div key={r.label} className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1.5">
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: r.color }}/>
-                  <span style={{ fontSize: "0.66rem", color: TM, fontWeight: 600 }}>{r.label}</span>
+                  <span style={{ ...typo.caption, color: TM, fontWeight: weight.semibold }}>{r.label}</span>
                 </span>
                 <span style={{
-                  fontSize: "0.74rem", fontWeight: 800, color: TD,
+                  ...typo.bodySm, fontWeight: weight.heavy, color: TD,
                   fontVariantNumeric: "tabular-nums",
                 }}>
                   {r.value}
@@ -611,10 +696,10 @@ function PipelineChart({ data }: { data: typeof PIPELINE_DATA }) {
               style={{ borderTop: `1px dashed ${BDL}` }}>
               <span className="inline-flex items-center gap-1.5">
                 <span style={{ width: 8, height: 2, background: G, borderRadius: 1 }}/>
-                <span style={{ fontSize: "0.62rem", color: TT, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Conv.</span>
+                <span style={{ ...typo.overline, color: TT }}>Conv.</span>
               </span>
               <span style={{
-                fontSize: "0.78rem", fontWeight: 800,
+                ...typo.body, fontWeight: weight.heavy,
                 color: convPoints[hoverIdx].conv >= 50 ? OK : convPoints[hoverIdx].conv >= 40 ? WARN : BAD,
                 fontVariantNumeric: "tabular-nums",
               }}>
@@ -640,17 +725,13 @@ function PipelineTile({
   return (
     <div style={{ background: "white", padding: 16 }}>
       <div className="flex items-center justify-between mb-2">
-        <span style={{
-          fontSize: "0.62rem", fontWeight: 800, color: TT,
-          textTransform: "uppercase", letterSpacing: "0.1em",
-        }}>
+        <span style={{ ...typo.overline, color: TT }}>
           {month}
         </span>
         {isCurrent && (
           <span style={{
-            fontSize: "0.5rem", fontWeight: 800, color: N, background: `${N}10`,
-            padding: "1px 5px", borderRadius: 3,
-            textTransform: "uppercase", letterSpacing: "0.06em",
+            ...typo.overline, color: N, background: `${N}10`,
+            padding: "1px 6px", borderRadius: 9999,
           }}>
             Current
           </span>
@@ -659,20 +740,20 @@ function PipelineTile({
 
       <div className="space-y-1">
         <div className="flex items-baseline justify-between">
-          <span style={{ fontSize: "0.65rem", color: TT, fontWeight: 600 }}>Submitted</span>
-          <span style={{ fontSize: "0.86rem", fontWeight: 800, color: TD, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ ...typo.caption, color: TT, fontWeight: weight.semibold }}>Submitted</span>
+          <span style={{ ...typo.bodyLg, fontWeight: weight.heavy, color: TD, fontVariantNumeric: "tabular-nums" }}>
             {submitted}
           </span>
         </div>
         <div className="flex items-baseline justify-between">
-          <span style={{ fontSize: "0.65rem", color: TT, fontWeight: 600 }}>Quoted</span>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#005B99", fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ ...typo.caption, color: TT, fontWeight: weight.semibold }}>Quoted</span>
+          <span style={{ ...typo.body, fontWeight: weight.bold, color: "#005B99", fontVariantNumeric: "tabular-nums" }}>
             {quoted}
           </span>
         </div>
         <div className="flex items-baseline justify-between">
-          <span style={{ fontSize: "0.65rem", color: TT, fontWeight: 600 }}>Bound</span>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: OK, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ ...typo.caption, color: TT, fontWeight: weight.semibold }}>Bound</span>
+          <span style={{ ...typo.body, fontWeight: weight.bold, color: OK, fontVariantNumeric: "tabular-nums" }}>
             {bound}
           </span>
         </div>
@@ -680,14 +761,11 @@ function PipelineTile({
 
       <div className="mt-2.5 pt-2" style={{ borderTop: `1px dashed ${BDL}` }}>
         <div className="flex items-baseline justify-between">
-          <span style={{
-            fontSize: "0.58rem", color: TT, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
+          <span style={{ ...typo.overline, color: TT }}>
             Conv.
           </span>
           <span style={{
-            fontSize: "0.72rem", fontWeight: 800, color: convColor,
+            ...typo.bodySm, fontWeight: weight.heavy, color: convColor,
             fontVariantNumeric: "tabular-nums",
           }}>
             {conv}%
@@ -699,10 +777,61 @@ function PipelineTile({
 }
 
 // ─── KPI Tile (modern, with minimal hover fill) ───────────────────────────────
-function KPITile({ k }: { k: { label:string; value:string; sub:string; trend:"up"|"down"|"none"; accent:string; icon:React.ReactNode } }) {
+// ─── Quick action button (table row hover affordance) ────────────────────────
+// Icon-only button used inside the Submissions table row's trailing cell.
+// Title attribute gives a tooltip; stopPropagation must be handled by the
+// containing td so the row click doesn't fire underneath it.
+function SubmissionQuickAction({
+  title, icon, onClick,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="inline-flex items-center justify-center transition-all hover:bg-[#E8EEFC] hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1"
+      style={{
+        width:28, height:28, borderRadius:6,
+        background:"transparent",
+        border:"none",
+        color:TM,
+        cursor:"pointer",
+      }}>
+      {icon}
+    </button>
+  );
+}
+
+function KPITile({ k }: { k: Kpi }) {
   const [hovered, setHovered] = useState(false);
-  const TrendArrow = k.trend === "down" ? TrendingDown : TrendingUp;
-  const trendColor = k.trend === "none" ? TT : OK;
+
+  // Goodness of the current trend, given which direction is good for this KPI.
+  // "neutral" KPIs (e.g. queue counts) never read as bad — they get a muted
+  // grey treatment instead of red/green so a +1 doesn't alarm the user.
+  const goodness: "good" | "bad" | "neutral" =
+    k.goodDirection === "neutral" || k.trend === "none" ? "neutral"
+    : (k.goodDirection === "up"   && k.trend === "up")
+      || (k.goodDirection === "down" && k.trend === "down")  ? "good"
+    : "bad";
+
+  const TrendArrow = k.trend === "down" ? TrendingDown : k.trend === "up" ? TrendingUp : Minus;
+  const trendColor = goodness === "good" ? OK : goodness === "bad" ? BAD : TT;
+
+  const insightToneColor: Record<KpiTone, string> = {
+    good: OK,
+    warn: WARN,
+    info: TM,
+  };
+  const insightToneBg: Record<KpiTone, string> = {
+    good: "#E8F5EC",
+    warn: "#FEF3C7",
+    info: "#F0F3F8",
+  };
 
   return (
     <div
@@ -712,7 +841,7 @@ function KPITile({ k }: { k: { label:string; value:string; sub:string; trend:"up
       onBlur={() => setHovered(false)}
       tabIndex={0}
       role="group"
-      aria-label={`${k.label}: ${k.value}, ${k.sub}`}
+      aria-label={`${k.label}: ${k.value}, ${k.sub}${k.insight ? `, ${k.insight.text}` : ""}${k.benchmark ? `, ${k.benchmark}` : ""}`}
       style={{
         background: hovered
           ? `linear-gradient(135deg, white 0%, ${k.accent}08 100%)`
@@ -738,11 +867,10 @@ function KPITile({ k }: { k: { label:string; value:string; sub:string; trend:"up
           : `linear-gradient(90deg, ${k.accent}, ${k.accent}66)`,
         transition: "height 0.2s ease, background 0.2s ease",
       }}/>
+
+      {/* Row 1: label + icon */}
       <div className="flex items-start justify-between gap-2">
-        <p style={{
-          fontSize:"0.6rem", fontWeight:700, color:TT,
-          textTransform:"uppercase", letterSpacing:"0.09em", lineHeight:1.3,
-        }}>
+        <p style={{ ...typo.overline, color:TT }}>
           {k.label}
         </p>
         <span className="inline-flex items-center justify-center"
@@ -756,20 +884,64 @@ function KPITile({ k }: { k: { label:string; value:string; sub:string; trend:"up
           {k.icon}
         </span>
       </div>
-      <p style={{
-        fontSize:"1.7rem", fontWeight:800,
-        color: hovered ? k.accent : TD,
-        lineHeight:1.1, marginTop:6,
-        fontVariantNumeric:"tabular-nums",
-        transition: "color 0.2s ease",
-      }}>
-        {k.value}
-      </p>
-      <div className="inline-flex items-center gap-1 mt-2"
-        style={{ fontSize:"0.66rem", color:trendColor, fontWeight:600 }}>
-        {k.trend !== "none" && <TrendArrow size={11}/>}
+
+      {/* Row 2: big value + sparkline on the right */}
+      <div className="flex items-end justify-between gap-3" style={{ marginTop:8 }}>
+        <p style={{
+          ...typo.display,
+          color: hovered ? k.accent : TD,
+          fontVariantNumeric:"tabular-nums",
+          transition: "color 0.2s ease",
+        }}>
+          {k.value}
+        </p>
+        <div style={{ flexShrink:0, marginBottom:4 }}>
+          <Sparkline
+            data={k.series}
+            stroke={goodness === "bad" ? BAD : goodness === "good" ? OK : k.accent}
+            fill={goodness === "bad" ? BAD : goodness === "good" ? OK : k.accent}
+            tone={goodness}
+            width={72}
+            height={24}
+          />
+        </div>
+      </div>
+
+      {/* Row 3: delta arrow + sub text */}
+      <div className="inline-flex items-center gap-1 mt-1.5"
+        style={{ ...typo.caption, color:trendColor, fontWeight: weight.semibold }}>
+        <TrendArrow size={11}/>
         <span>{k.sub}</span>
       </div>
+
+      {/* Row 4: insight + benchmark — divider then a single dense line.
+          Insight gets a tone-tied chip; benchmark is plain caption text. */}
+      {(k.insight || k.benchmark) && (
+        <div className="flex items-center gap-2 mt-2.5 pt-2 flex-wrap"
+          style={{ borderTop:`1px dashed ${BDL}` }}>
+          {k.insight && (
+            <span style={{
+              ...typo.caption, fontWeight: weight.bold,
+              color: insightToneColor[k.insight.tone],
+              background: insightToneBg[k.insight.tone],
+              padding:"2px 8px", borderRadius:9999,
+              display:"inline-flex", alignItems:"center", gap:4,
+              whiteSpace:"nowrap",
+            }}>
+              <span style={{
+                width:5, height:5, borderRadius:"50%",
+                background: insightToneColor[k.insight.tone],
+              }}/>
+              {k.insight.text}
+            </span>
+          )}
+          {k.benchmark && (
+            <span style={{ ...typo.caption, color:TT, whiteSpace:"nowrap" }}>
+              {k.benchmark}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -788,6 +960,21 @@ export function Dashboard() {
   const [subPage, setSubPage]             = useState(1);
   const SUB_PER_PAGE = 5;
 
+  // Sort state for the Submissions table. Clicking the same column toggles
+  // direction; clicking a different column resets to descending. Null = no
+  // explicit sort (existing array order is preserved).
+  type SortableSubCol =
+    | "id" | "member" | "type" | "assignee" | "premium" | "status" | "priority" | "effective";
+  const [subSort, setSubSort] = useState<{ col: SortableSubCol; dir: "asc" | "desc" } | null>(null);
+  const cycleSort = (col: SortableSubCol) => {
+    setSubSort(prev => {
+      if (!prev || prev.col !== col) return { col, dir: "desc" };
+      if (prev.dir === "desc")        return { col, dir: "asc" };
+      return null; // third click clears the sort
+    });
+    setSubPage(1);
+  };
+
   const myName = ROLE_NAMES[activeRole];
   const firstName = myName.split(" ")[0];
   const kpis   = KPIS[activeRole];
@@ -799,8 +986,38 @@ export function Dashboard() {
     if (subTab === "team" && activeRole !== "director") list = list.filter(s => s.assignee !== "Patricia Hoffman");
     if (search) list = list.filter(s => s.member.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()));
     if (statusFilter !== "All") list = list.filter(s => s.status === statusFilter);
+
+    if (subSort) {
+      // Priority sort uses a rank so Critical→High→Medium→Low orders correctly.
+      // Numeric premium uses premiumVal (already on each row).
+      // Effective date uses Date parsing; falls back to string compare on NaN.
+      const PRIORITY_RANK: Record<Priority, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+      const STATUS_RANK: Record<SubStatus, number> = { "In Review":0, "Pending Info":1, "Quoted":2, "Bound":3, "Declined":4 };
+      const sign = subSort.dir === "asc" ? 1 : -1;
+      list = [...list].sort((a, b) => {
+        let cmp = 0;
+        switch (subSort.col) {
+          case "id":        cmp = a.id.localeCompare(b.id); break;
+          case "member":    cmp = a.member.localeCompare(b.member); break;
+          case "type":      cmp = a.type.localeCompare(b.type); break;
+          case "assignee":  cmp = a.assignee.localeCompare(b.assignee); break;
+          case "premium":   cmp = a.premiumVal - b.premiumVal; break;
+          case "status":    cmp = STATUS_RANK[a.status] - STATUS_RANK[b.status]; break;
+          case "priority":  cmp = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]; break;
+          case "effective": {
+            const da = Date.parse(a.effectiveDate);
+            const db = Date.parse(b.effectiveDate);
+            cmp = (isNaN(da) || isNaN(db))
+              ? a.effectiveDate.localeCompare(b.effectiveDate)
+              : da - db;
+            break;
+          }
+        }
+        return cmp * sign;
+      });
+    }
     return list;
-  }, [subTab, search, statusFilter, activeRole, myName]);
+  }, [subTab, search, statusFilter, activeRole, myName, subSort]);
 
   const totalSubPages  = Math.ceil(submissions.length / SUB_PER_PAGE);
   const paginatedSubs  = submissions.slice((subPage - 1) * SUB_PER_PAGE, subPage * SUB_PER_PAGE);
@@ -837,7 +1054,7 @@ export function Dashboard() {
       search={search}
       onSearchChange={setSearch}
     >
-      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+      <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
         style={{ fontFamily:font, color:TD, minHeight:"100%", background:BG }}>
 
         <PageRegister
@@ -904,21 +1121,20 @@ export function Dashboard() {
             background:`radial-gradient(circle, ${G}25 0%, transparent 65%)`,
             borderRadius:"50%",
           }}/>
-          <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-center justify-between gap-4 flex-wrap">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5 flex items-center justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
                 <Sun size={14} color="#FCD34D"/>
                 <span style={{
-                  fontSize:"0.62rem", fontWeight:800, letterSpacing:"0.1em",
-                  textTransform:"uppercase", color:"#C7D2FE",
+                  ...typo.overline, color:"#C7D2FE",
                 }}>
                   {today}
                 </span>
               </div>
-              <h1 style={{ fontSize:"1.55rem", fontWeight:800, lineHeight:1.15, letterSpacing:"-0.01em" }}>
+              <h1 style={{ ...typo.h1, color:"white" }}>
                 {greeting}, {firstName}.
               </h1>
-              <p style={{ fontSize:"0.84rem", color:"#C7D2FE", marginTop:6, maxWidth:600 }}>
+              <p style={{ ...typo.body, color:"#C7D2FE", marginTop:8, maxWidth:600 }}>
                 {critCount > 0
                   ? `You have ${critCount} critical alert${critCount>1?"s":""} and ${overdueCount} overdue task${overdueCount!==1?"s":""} waiting.`
                   : "Your queue is clear of critical alerts. Nice work."}
@@ -938,8 +1154,322 @@ export function Dashboard() {
           {kpis.map((k, i) => <KPITile key={i} k={k}/>)}
         </div>
 
-        {/* ── MAIN CONTENT — stacked full-width sections ──────────────────── */}
+        {/* ── MAIN CONTENT — actionable surfaces first, informational at the bottom ── */}
         <div className="space-y-4 sm:space-y-6">
+
+            {/* ── TOP ACTIONABLE ROW: Open Tasks | Alerts & Flags ─────────
+                Pulled to the top per feedback: most actionable / operationally
+                critical sections appear first. Critical alerts and overdue
+                tasks are the strongest action triggers. */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+              {/* ── OPEN TASKS ───────────────────────────────────────────── */}
+              <SectionCard
+                title="Open Tasks"
+                icon={<CheckCircle2 size={13}/>}
+                accent={N}
+                noPad
+                action={
+                  <div className="flex items-center gap-1">
+                    {([
+                      { id:"all"     as const, label:"All"     },
+                      { id:"mine"    as const, label:"Mine"    },
+                      { id:"overdue" as const, label:"Overdue" },
+                    ]).map(f => (
+                      <button key={f.id} onClick={() => setTaskFilter(f.id)}
+                        className="inline-flex items-center px-2 py-1 transition-all"
+                        style={{
+                          ...typo.caption, fontWeight: weight.bold,
+                          background: taskFilter===f.id ? `${N}10` : "transparent",
+                          color: taskFilter===f.id ? N : TT,
+                          border:"none", borderRadius:4, cursor:"pointer", fontFamily:font,
+                        }}>
+                        {f.label}
+                        {f.id === "overdue" && overdueCount > 0 && (
+                          <span style={{
+                            marginLeft:4, background:BAD, color:"white", borderRadius:9999,
+                            ...typo.overline,
+                            display:"inline-flex", alignItems:"center", justifyContent:"center",
+                            minWidth:18, height:18, padding:"0 5px",
+                          }}>
+                            {overdueCount}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                }>
+                <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                  {tasks.length === 0 ? (
+                    <p className="px-5 py-8 text-center" style={{ ...typo.body, color:TT }}>
+                      No tasks match.
+                    </p>
+                  ) : tasks.map((task, i) => {
+                    const pc = priorityColor(task.priority);
+                    return (
+                      <div key={task.id}
+                        className="px-4 py-3 transition-colors cursor-pointer group hover:bg-[#F0F6FF]"
+                        style={{
+                          background:"white",
+                          borderBottom: i < tasks.length - 1 ? `1px solid #EEF1F5` : "none",
+                        }}>
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <p style={{
+                            ...typo.body, fontWeight: weight.semibold,
+                            color: task.overdue ? WARN : TD,
+                          }}>
+                            {task.title}
+                          </p>
+                          {task.priority === "Critical" || task.priority === "High" ? (
+                            <span className="inline-flex items-center gap-1 shrink-0"
+                              style={{
+                                background: task.priority === "Critical" ? "#FEE2E2" : "#FEF3C7",
+                                color:      task.priority === "Critical" ? "#7A1F1F" : "#92400E",
+                                padding:"1px 7px", borderRadius:9,
+                                ...typo.overline,
+                              }}>
+                              {task.priority}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 shrink-0"
+                              style={{ ...typo.caption, fontWeight: weight.medium, color:TM }}>
+                              <span style={{ width:5, height:5, borderRadius:"50%", background:pc }}/>
+                              {task.priority}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span style={{
+                            ...typo.caption, fontWeight: weight.bold, color:N,
+                            fontFamily:"ui-monospace, monospace",
+                          }}>
+                            {task.submission}
+                          </span>
+                          <div className="inline-flex items-center gap-1"
+                            style={{
+                              ...typo.caption, color: task.overdue ? BAD : TT,
+                              fontWeight: task.overdue ? weight.bold : weight.medium,
+                            }}>
+                            {task.overdue ? <AlertCircle size={10}/> : <Clock size={10}/>}
+                            {task.due}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-2.5 flex items-center justify-between"
+                  style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
+                  <span style={{ ...typo.caption, color:TT }}>
+                    {ALL_TASKS.length} total tasks
+                  </span>
+                  <button onClick={() => navigate("/tasks")}
+                    className="inline-flex items-center gap-1 hover:underline"
+                    style={{
+                      ...typo.caption, color:N, fontWeight: weight.bold,
+                      background:"none", border:"none", cursor:"pointer", fontFamily:font,
+                    }}>
+                    View all <ArrowUpRight size={9}/>
+                  </button>
+                </div>
+              </SectionCard>
+
+              {/* ── ALERTS & FLAGS ───────────────────────────────────────── */}
+              <SectionCard
+                title="Alerts & Flags"
+                icon={<AlertTriangle size={13}/>}
+                accent={G}
+                noPad
+                action={
+                  <div className="flex items-center gap-1">
+                    {([
+                      { id:"all"      as const, label:"All"      },
+                      { id:"critical" as const, label:"Critical" },
+                      { id:"warning"  as const, label:"Warning"  },
+                    ]).map(f => (
+                      <button key={f.id} onClick={() => setAlertFilter(f.id)}
+                        className="px-2 py-1 transition-all"
+                        style={{
+                          ...typo.caption, fontWeight: weight.bold,
+                          background: alertFilter===f.id ? `${G}20` : "transparent",
+                          color: alertFilter===f.id ? "#8A5C00" : TT,
+                          border:"none", borderRadius:4, cursor:"pointer", fontFamily:font,
+                        }}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                }>
+                <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                  {alerts.map((alert, i) => {
+                    const sv = alertSev(alert.severity);
+                    return (
+                      <div key={alert.id}
+                        onClick={() => navigate("/submission/" + alert.submission)}
+                        className="px-4 py-3 cursor-pointer transition-colors group hover:bg-[#F0F6FF]"
+                        style={{
+                          borderBottom: i < alerts.length - 1 ? `1px solid #EEF1F5` : "none",
+                          background: "white",
+                        }}>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span style={{
+                              width:6, height:6, borderRadius:"50%",
+                              background: sv.dot, flexShrink:0,
+                            }}/>
+                            <p style={{ ...typo.body, fontWeight: weight.bold, color:TD }}>
+                              {alert.title}
+                            </p>
+                          </div>
+                          <span style={{ ...typo.caption, color:TT, flexShrink:0 }}>
+                            {alert.time}
+                          </span>
+                        </div>
+                        <p style={{ ...typo.bodySm, color:TM, marginBottom:4 }}>
+                          {alert.body}
+                        </p>
+                        <span style={{
+                          ...typo.caption, fontWeight: weight.bold, color:N,
+                          fontFamily:"ui-monospace, monospace",
+                        }}>
+                          {alert.submission} →
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-2.5 flex items-center justify-between"
+                  style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
+                  <span style={{ ...typo.caption, color:TT }}>
+                    {critCount} critical · {warnCount} warnings
+                  </span>
+                  <button className="inline-flex items-center gap-1 hover:underline"
+                    style={{
+                      ...typo.caption, color:N, fontWeight: weight.bold,
+                      background:"none", border:"none", cursor:"pointer", fontFamily:font,
+                    }}>
+                    View all <ArrowUpRight size={9}/>
+                  </button>
+                </div>
+              </SectionCard>
+
+            </div>
+
+            {/* ── CORRESPONDENCE ─────────────────────────────────────────
+                Inbox-style surface for broker/account messages awaiting
+                reply. Sits above Submissions per user request. */}
+            <SectionCard
+              title="Correspondence"
+              icon={<Mail size={13}/>}
+              accent={N}
+              noPad
+              action={
+                <span style={{ ...typo.caption, color:TT, fontWeight: weight.semibold }}>
+                  <strong style={{ color:N, fontWeight: weight.heavy }}>
+                    {ALL_CORRESPONDENCE.filter(c => c.unread).length}
+                  </strong> unread · {ALL_CORRESPONDENCE.filter(c => c.awaitingReply).length} awaiting reply
+                </span>
+              }>
+              {ALL_CORRESPONDENCE.slice(0, 5).map((c, i, arr) => {
+                const isLast = i === arr.length - 1;
+                return (
+                  <div key={c.id}
+                    onClick={() => navigate("/submission/" + c.submission)}
+                    className="px-5 py-3 cursor-pointer transition-colors group hover:bg-[#F0F6FF]"
+                    style={{
+                      borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
+                      background: c.unread ? "#FAFBFD" : "white",
+                      display:"flex", alignItems:"flex-start", gap:12,
+                    }}>
+                    {/* Sender avatar */}
+                    <span className="inline-flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width:32, height:32, marginTop:2,
+                        background: c.unread ? `${N}15` : `${TT}15`,
+                        color: c.unread ? N : TM,
+                        ...typo.overline,
+                      }}>
+                      {c.fromInitials}
+                    </span>
+
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p style={{
+                          ...typo.body, fontWeight: c.unread ? weight.heavy : weight.semibold,
+                          color:TD,
+                        }}>
+                          {c.from}
+                          <span style={{ fontWeight: weight.medium, color:TM }}> · {c.fromOrg}</span>
+                        </p>
+                        {c.unread && (
+                          <span style={{
+                            width:6, height:6, borderRadius:"50%", background:N, flexShrink:0,
+                          }}/>
+                        )}
+                        {c.overdue && (
+                          <span style={{
+                            ...typo.overline,
+                            color:"white", background:BAD,
+                            padding:"3px 8px 3px 9px", borderRadius:9999,
+                            display:"inline-flex", alignItems:"center",
+                          }}>
+                            Overdue reply
+                          </span>
+                        )}
+                        {!c.overdue && c.awaitingReply && (
+                          <span style={{
+                            ...typo.overline,
+                            color:WARN, background:"#FEF3C7",
+                            padding:"3px 8px 3px 9px", borderRadius:9999,
+                            display:"inline-flex", alignItems:"center", gap:3,
+                          }}>
+                            <Reply size={9}/> Awaiting reply
+                          </span>
+                        )}
+                      </div>
+                      <p style={{
+                        ...typo.bodySm, fontWeight: c.unread ? weight.bold : weight.semibold,
+                        color:TD, marginTop:4,
+                      }} className="group-hover:underline">
+                        {c.subject}
+                      </p>
+                      <p style={{
+                        ...typo.bodySm, color:TM, marginTop:2,
+                        overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box",
+                        WebkitLineClamp:1, WebkitBoxOrient:"vertical",
+                      }}>
+                        {c.preview}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2" style={{ ...typo.caption, color:TT }}>
+                        <span style={{
+                          fontFamily:"ui-monospace, monospace", fontWeight:700, color:N,
+                        }}>
+                          {c.submission}
+                        </span>
+                        <span>·</span>
+                        <span>{c.time}</span>
+                        <span>·</span>
+                        <span style={{ textTransform:"capitalize" }}>{c.channel}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="px-5 py-2.5 flex items-center justify-between"
+                style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
+                <span style={{ ...typo.caption, color:TT }}>
+                  {ALL_CORRESPONDENCE.length} threads · {ALL_CORRESPONDENCE.filter(c => c.overdue).length} overdue
+                </span>
+                <button onClick={() => navigate("/inbox")}
+                  className="inline-flex items-center gap-1 hover:underline"
+                  style={{
+                    ...typo.caption, color:N, fontWeight: weight.bold,
+                    background:"none", border:"none", cursor:"pointer", fontFamily:font,
+                  }}>
+                  Open inbox <ArrowUpRight size={9}/>
+                </button>
+              </div>
+            </SectionCard>
 
             {/* ── SUBMISSIONS TABLE ──────────────────────────────────────── */}
             <SectionCard
@@ -949,8 +1479,8 @@ export function Dashboard() {
               noPad
               action={
                 <span style={{
-                  fontSize:"0.68rem", fontWeight:800, background:`${N}10`, color:N,
-                  padding:"2px 9px", borderRadius:10, letterSpacing:"0.02em",
+                  ...typo.overline, background:`${N}10`, color:N,
+                  padding:"2px 9px", borderRadius:10,
                 }}>
                   {submissions.length}
                 </span>
@@ -968,7 +1498,7 @@ export function Dashboard() {
                       onClick={() => { setSubTab(t.id); setSubPage(1); }}
                       className="px-3 py-1.5 transition-all"
                       style={{
-                        fontSize:"0.74rem", fontWeight: subTab===t.id ? 700 : 500,
+                        ...typo.body, fontWeight: subTab===t.id ? weight.bold : weight.medium,
                         background: subTab===t.id ? `${N}10` : "transparent",
                         color: subTab===t.id ? N : TM,
                         border:"none", borderRadius:5, cursor:"pointer", fontFamily:font,
@@ -981,7 +1511,7 @@ export function Dashboard() {
                   <button onClick={() => setShowStatusDrop(v => !v)}
                     className="inline-flex items-center gap-2 px-3 py-1.5"
                     style={{
-                      border:`1px solid ${BD}`, borderRadius:5, fontSize:"0.74rem", color:TM,
+                      border:`1px solid ${BD}`, borderRadius:5, ...typo.bodySm, color:TM,
                       background:"white", cursor:"pointer", fontFamily:font,
                     }}>
                     <Filter size={12} color={TT}/>
@@ -999,8 +1529,8 @@ export function Dashboard() {
                           onClick={() => { setStatusFilter(s); setShowStatusDrop(false); setSubPage(1); }}
                           className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors"
                           style={{
-                            fontSize:"0.76rem", color: statusFilter===s ? N : TM,
-                            fontWeight: statusFilter===s ? 700 : 500,
+                            ...typo.bodySm, color: statusFilter===s ? N : TM,
+                            fontWeight: statusFilter===s ? weight.bold : weight.medium,
                             border:"none", background:"transparent", cursor:"pointer",
                             fontFamily:font,
                           }}>
@@ -1017,22 +1547,62 @@ export function Dashboard() {
                 <table className="w-full" style={{ borderCollapse:"collapse" }}>
                   <thead>
                     <tr style={{ background:"#FAFBFD" }}>
-                      {["ID","Member","Type","Assignee","Premium","Status","Priority","Effective",""].map(h => (
-                        <th key={h} className="px-4 py-2.5 text-left whitespace-nowrap"
-                          style={{
-                            fontSize:"0.58rem", fontWeight:700, color:TT,
-                            textTransform:"uppercase", letterSpacing:"0.09em",
-                            borderBottom:`1px solid ${BDL}`,
-                          }}>
-                          {h}
-                        </th>
-                      ))}
+                      {([
+                        { label:"ID",        col:"id"        as const },
+                        { label:"Member",    col:"member"    as const },
+                        { label:"Type",      col:"type"      as const },
+                        { label:"Assignee",  col:"assignee"  as const },
+                        { label:"Premium",   col:"premium"   as const },
+                        { label:"Status",    col:"status"    as const },
+                        { label:"Priority",  col:"priority"  as const },
+                        { label:"Effective", col:"effective" as const },
+                        { label:"",          col:null                  },
+                      ]).map((h, i) => {
+                        // Non-sortable cell (the trailing action column).
+                        if (!h.col) {
+                          return (
+                            <th key={i} className="px-4 py-2.5 text-right whitespace-nowrap"
+                              style={{
+                                ...typo.overline, color:TT,
+                                borderBottom:`1px solid ${BDL}`,
+                              }}/>
+                          );
+                        }
+                        const active = subSort?.col === h.col;
+                        const dir = active ? subSort!.dir : null;
+                        const Arrow = dir === "asc" ? ArrowUp : dir === "desc" ? ArrowDown : ArrowUpDown;
+                        return (
+                          <th key={i}
+                            onClick={() => cycleSort(h.col)}
+                            aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
+                            className="px-4 py-2.5 text-left whitespace-nowrap select-none cursor-pointer hover:bg-[#F0F3F8] transition-colors group"
+                            style={{
+                              ...typo.overline,
+                              color: active ? N : TT,
+                              borderBottom: `1px solid ${BDL}`,
+                            }}>
+                            <span style={{
+                              display:"inline-flex", alignItems:"center", gap:5,
+                            }}>
+                              {h.label}
+                              <Arrow
+                                size={11}
+                                style={{
+                                  opacity: active ? 1 : 0.35,
+                                  transition: "opacity 0.15s ease",
+                                }}
+                                className={active ? "" : "group-hover:!opacity-70"}
+                              />
+                            </span>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedSubs.length === 0 ? (
                       <tr><td colSpan={9} className="px-5 py-10 text-center"
-                        style={{ fontSize:"0.82rem", color:TT }}>
+                        style={{ ...typo.body, color:TT }}>
                         No submissions match current filters.
                       </td></tr>
                     ) : paginatedSubs.map((s, idx) => {
@@ -1040,31 +1610,34 @@ export function Dashboard() {
                       const pc = priorityColor(s.priority);
                       const isMine = s.assignee === myName;
                       const isLast = idx === paginatedSubs.length - 1;
+                      // Urgency rails removed per feedback: colored borders are
+                      // reserved for the KPI strip at the top. Urgency now reads
+                      // through the existing Priority and Docs ⚠ chips inline.
                       return (
                         <tr key={s.id}
                           onClick={() => navigate("/submission/" + s.id)}
-                          className="cursor-pointer hover:bg-slate-50 transition-colors group"
+                          className="cursor-pointer hover:bg-[#F0F6FF] transition-colors group"
                           style={{ borderBottom: isLast ? "none" : `1px solid #EEF1F5` }}>
                           <td className="px-4 py-3">
                             <span style={{
-                              fontSize:"0.72rem", fontWeight:700, color:N,
+                              ...typo.bodySm, fontWeight: weight.bold, color:N,
                               fontFamily:"ui-monospace, monospace",
                             }}>
                               {s.id}
                             </span>
                           </td>
                           <td className="px-4 py-3" style={{ maxWidth:230 }}>
-                            <p style={{ fontSize:"0.8rem", fontWeight:600, color:TD, lineHeight:1.3 }}
+                            <p style={{ ...typo.body, fontWeight: weight.semibold, color:TD }}
                               className="group-hover:underline">
                               {s.member}
                             </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <MapPin size={9} color={TT}/>
-                              <span style={{ fontSize:"0.65rem", color:TT }}>{s.state}</span>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <MapPin size={10} color={TT}/>
+                              <span style={{ ...typo.caption, color:TT }}>{s.state}</span>
                               {!s.docsComplete && (
                                 <span style={{
-                                  fontSize:"0.55rem", fontWeight:800, background:"#FEE2E2",
-                                  color:BAD, padding:"1px 5px", borderRadius:3,
+                                  ...typo.overline, background:"#FEE2E2",
+                                  color:BAD, padding:"1px 6px", borderRadius:9999,
                                 }}>
                                   Docs ⚠
                                 </span>
@@ -1072,7 +1645,7 @@ export function Dashboard() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span style={{ fontSize:"0.68rem", color:TM, fontWeight:500 }}>
+                            <span style={{ ...typo.bodySm, color:TM }}>
                               {s.type}
                             </span>
                           </td>
@@ -1083,12 +1656,12 @@ export function Dashboard() {
                                   width:22, height:22,
                                   background: isMine ? `${N}15` : "#E2E8F0",
                                   color: isMine ? N : TM,
-                                  fontSize:"0.55rem", fontWeight:800,
+                                  ...typo.overline,
                                 }}>
                                 {s.assigneeInitials}
                               </span>
                               <span style={{
-                                fontSize:"0.72rem", color:TD, fontWeight:500, whiteSpace:"nowrap",
+                                ...typo.bodySm, color:TD, whiteSpace:"nowrap",
                               }}>
                                 {s.assignee.split(" ")[0]}
                               </span>
@@ -1096,38 +1669,107 @@ export function Dashboard() {
                           </td>
                           <td className="px-4 py-3"
                             style={{
-                              fontSize:"0.8rem", fontWeight:700, color:TD,
+                              ...typo.body, fontWeight: weight.bold, color:TD,
                               whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums",
                             }}>
                             {s.premium}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1.5"
-                              style={{
-                                background:ss.bg, padding:"2px 8px", borderRadius:4,
-                                whiteSpace:"nowrap",
-                              }}>
-                              <span className="rounded-full shrink-0"
-                                style={{ width:5, height:5, background:ss.dot }}/>
-                              <span style={{ fontSize:"0.66rem", fontWeight:700, color:ss.text }}>
-                                {s.status}
+                            {s.status === "Declined" ? (
+                              <span className="inline-flex items-center gap-1.5"
+                                style={{
+                                  background:ss.bg, padding:"2px 8px", borderRadius:9999,
+                                  whiteSpace:"nowrap",
+                                }}>
+                                <span className="rounded-full shrink-0"
+                                  style={{ width:5, height:5, background:ss.dot }}/>
+                                <span style={{ ...typo.caption, fontWeight: weight.bold, color:ss.text }}>
+                                  {s.status}
+                                </span>
                               </span>
-                            </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5" style={{ whiteSpace:"nowrap" }}>
+                                <span className="rounded-full shrink-0"
+                                  style={{ width:6, height:6, background:ss.dot }}/>
+                                <span style={{ ...typo.caption, fontWeight: weight.semibold, color:ss.text }}>
+                                  {s.status}
+                                </span>
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1.5"
-                              style={{ fontSize:"0.62rem", fontWeight:700, color:pc }}>
-                              <span style={{ width:5, height:5, borderRadius:"50%", background:pc }}/>
-                              {s.priority}
-                            </span>
+                            {s.priority === "Critical" || s.priority === "High" ? (
+                              <span className="inline-flex items-center gap-1"
+                                style={{
+                                  background: s.priority === "Critical" ? "#FEE2E2" : "#FEF3C7",
+                                  color:      s.priority === "Critical" ? "#7A1F1F" : "#92400E",
+                                  padding:"2px 8px", borderRadius:9,
+                                  ...typo.overline,
+                                  whiteSpace:"nowrap",
+                                }}>
+                                <span style={{
+                                  width:5, height:5, borderRadius:"50%",
+                                  background: s.priority === "Critical" ? BAD : WARN,
+                                }}/>
+                                {s.priority}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5"
+                                style={{ ...typo.caption, fontWeight: weight.medium, color:TM }}>
+                                <span style={{ width:5, height:5, borderRadius:"50%", background:pc }}/>
+                                {s.priority}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3"
-                            style={{ fontSize:"0.7rem", color:TM, whiteSpace:"nowrap" }}>
+                            style={{ ...typo.caption, color:TM, whiteSpace:"nowrap" }}>
                             {s.effectiveDate}
                           </td>
-                          <td className="px-4 py-3">
-                            <ChevronRight size={13} color={BD}
-                              className="transition-colors group-hover:text-blue-600"/>
+                          {/* Quick actions — hidden by default, fade in on row
+                              hover. Each button stops propagation so it doesn't
+                              also trigger the row's navigate-on-click. The
+                              chevron sits underneath at rest and fades out as
+                              the action cluster fades in. */}
+                          <td className="px-4 py-3 text-right"
+                            onClick={e => e.stopPropagation()}
+                            style={{ position:"relative", width: 168, minWidth: 168 }}>
+                            <div
+                              className="inline-flex items-center justify-end gap-1 transition-opacity opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                              aria-label={`Quick actions for ${s.id}`}
+                              style={{ width:"100%" }}>
+                              <SubmissionQuickAction
+                                title="Open submission"
+                                icon={<Eye size={14}/>}
+                                onClick={() => navigate("/submission/" + s.id)}
+                              />
+                              <SubmissionQuickAction
+                                title="Reassign"
+                                icon={<UserPlus size={14}/>}
+                                onClick={() => { /* stub: would open reassign popover */ }}
+                              />
+                              <SubmissionQuickAction
+                                title="Add note"
+                                icon={<MessageSquare size={14}/>}
+                                onClick={() => navigate("/submission/" + s.id + "?tab=notes")}
+                              />
+                              <SubmissionQuickAction
+                                title="More actions"
+                                icon={<MoreHorizontal size={14}/>}
+                                onClick={() => { /* stub: would open menu */ }}
+                              />
+                            </div>
+                            {/* Persistent chevron at rest, fades out when actions
+                                are revealed so they don't visually collide. */}
+                            <ChevronRight
+                              size={15}
+                              color={TT}
+                              className="transition-opacity group-hover:opacity-0"
+                              style={{
+                                position:"absolute",
+                                right: 16, top:"50%", transform:"translateY(-50%)",
+                                pointerEvents:"none",
+                              }}
+                            />
                           </td>
                         </tr>
                       );
@@ -1139,12 +1781,12 @@ export function Dashboard() {
               {/* Pagination */}
               <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-3"
                 style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
-                <span style={{ fontSize:"0.72rem", color:TT }}>
-                  Showing <span style={{ fontWeight:700, color:TD }}>{submissions.length === 0 ? 0 : (subPage - 1) * SUB_PER_PAGE + 1}</span>
-                  {" – "}
-                  <span style={{ fontWeight:700, color:TD }}>{Math.min(subPage * SUB_PER_PAGE, submissions.length)}</span>
+                <span style={{ ...typo.bodySm, color: TM }}>
+                  <span style={{ fontWeight: weight.bold, color: TD }}>{submissions.length === 0 ? 0 : (subPage - 1) * SUB_PER_PAGE + 1}</span>
+                  {"–"}
+                  <span style={{ fontWeight: weight.bold, color: TD }}>{Math.min(subPage * SUB_PER_PAGE, submissions.length)}</span>
                   {" of "}
-                  <span style={{ fontWeight:700, color:N }}>{submissions.length}</span>
+                  <span style={{ fontWeight: weight.bold, color: TD }}>{submissions.length}</span>
                 </span>
                 <div className="flex items-center gap-1">
                   <button
@@ -1153,7 +1795,7 @@ export function Dashboard() {
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
                     style={{
                       border:`1px solid ${BDL}`, background:"white", borderRadius:5,
-                      fontSize:"0.7rem", fontWeight:600, color: subPage === 1 ? TT : TM,
+                      ...typo.bodySm, fontWeight: weight.semibold, color: subPage === 1 ? TT : TM,
                       cursor: subPage === 1 ? "not-allowed" : "pointer", fontFamily:font,
                     }}>
                     <ChevronLeft size={12}/> Prev
@@ -1170,7 +1812,7 @@ export function Dashboard() {
                       pages.push(totalSubPages);
                     }
                     return pages.map((p, i) => p === "…" ? (
-                      <span key={`e-${i}`} style={{ width:28, textAlign:"center", fontSize:"0.7rem", color:TT, lineHeight:"30px" }}>…</span>
+                      <span key={`e-${i}`} style={{ width:28, textAlign:"center", ...typo.bodySm, color:TT, lineHeight:"30px" }}>…</span>
                     ) : (
                       <button key={p} onClick={() => setSubPage(p as number)}
                         className="hover:brightness-95 transition-all"
@@ -1179,7 +1821,7 @@ export function Dashboard() {
                           background: p === subPage ? N : "white",
                           color: p === subPage ? "white" : TM,
                           border:`1px solid ${p === subPage ? N : BDL}`,
-                          fontSize:"0.72rem", fontWeight: p === subPage ? 800 : 500,
+                          ...typo.bodySm, fontWeight: p === subPage ? weight.heavy : weight.medium,
                           cursor:"pointer", fontFamily:font,
                           boxShadow: p === subPage ? `0 2px 6px ${N}30` : "none",
                         }}>
@@ -1193,7 +1835,7 @@ export function Dashboard() {
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
                     style={{
                       border:`1px solid ${BDL}`, background:"white", borderRadius:5,
-                      fontSize:"0.7rem", fontWeight:600,
+                      ...typo.bodySm, fontWeight: weight.semibold,
                       color: subPage === totalSubPages || totalSubPages === 0 ? TT : N,
                       cursor: subPage === totalSubPages || totalSubPages === 0 ? "not-allowed" : "pointer",
                       fontFamily:font,
@@ -1204,266 +1846,97 @@ export function Dashboard() {
               </div>
             </SectionCard>
 
-            {/* ── OPEN TASKS ─────────────────────────────────────────────── */}
-            <SectionCard
-              title="Open Tasks"
-              icon={<CheckCircle2 size={13}/>}
-              accent={N}
-              noPad
-              action={
-                <div className="flex items-center gap-1">
-                  {([
-                    { id:"all"     as const, label:"All"     },
-                    { id:"mine"    as const, label:"Mine"    },
-                    { id:"overdue" as const, label:"Overdue" },
-                  ]).map(f => (
-                    <button key={f.id} onClick={() => setTaskFilter(f.id)}
-                      className="inline-flex items-center px-2 py-1 transition-all"
-                      style={{
-                        fontSize:"0.6rem", fontWeight:700,
-                        background: taskFilter===f.id ? `${N}10` : "transparent",
-                        color: taskFilter===f.id ? N : TT,
-                        border:"none", borderRadius:4, cursor:"pointer", fontFamily:font,
-                      }}>
-                      {f.label}
-                      {f.id === "overdue" && overdueCount > 0 && (
-                        <span style={{
-                          marginLeft:4, background:BAD, color:"white", borderRadius:8,
-                          padding:"0 4px", fontSize:"0.52rem", fontWeight:800,
-                        }}>
-                          {overdueCount}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              }>
-              {tasks.length === 0 ? (
-                <p className="px-5 py-8 text-center" style={{ fontSize:"0.8rem", color:TT }}>
-                  No tasks match.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-px"
-                  style={{ background:BDL }}>
-                  {tasks.map((task) => {
-                    const pc = priorityColor(task.priority);
-                    return (
-                      <div key={task.id}
-                        className="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
-                        style={{
-                          background: task.overdue ? "#FFFBF0" : "white",
-                          borderLeft: task.overdue ? `3px solid ${WARN}` : "3px solid transparent",
-                        }}>
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <p style={{
-                            fontSize:"0.8rem", fontWeight:600,
-                            color: task.overdue ? WARN : TD, lineHeight:1.35,
-                          }}>
-                            {task.title}
-                          </p>
-                          <span className="inline-flex items-center gap-1 shrink-0"
-                            style={{ fontSize:"0.6rem", fontWeight:700, color:pc }}>
-                            <span style={{ width:5, height:5, borderRadius:"50%", background:pc }}/>
-                            {task.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span style={{
-                            fontSize:"0.66rem", fontWeight:700, color:N,
-                            fontFamily:"ui-monospace, monospace",
-                          }}>
-                            {task.submission}
-                          </span>
-                          <div className="inline-flex items-center gap-1"
+            {/* ── BOTTOM INFORMATIONAL ROW ─────────────────────────────────
+                Team Performance + Portfolio Snapshot anchor the bottom of
+                the page. These are informational/historical — they sit
+                below actionable content per the prioritization feedback. */}
+            {(() => {
+              const portfolio = (
+                <SectionCard title="Portfolio Snapshot" icon={<Activity size={13}/>} accent={N}>
+                  <div className="px-5 py-1">
+                    {[
+                      { label:"Total Submissions (MTD)", value:"22",     icon:<Inbox size={13}/>,         tint:`${N}10`,        color:N        },
+                      { label:"Quoted Pipeline",         value:"$4.2M",  icon:<DollarSign size={13}/>,    tint:"#E8F5EC",       color:OK       },
+                      { label:"Bound YTD",               value:"$3.1M",  icon:<ShieldCheck size={13}/>,   tint:"#E8F0F9",       color:"#005B99"},
+                      { label:"Avg. Appetite Score",     value:"81/100", icon:<Award size={13}/>,         tint:`${G}18`,        color:G        },
+                      { label:"Submissions in SLA",      value:"91%",    icon:<CheckCircle2 size={13}/>,  tint:"#E8F5EC",       color:OK       },
+                      { label:"Docs Incomplete",         value:"4 subs", icon:<AlertCircle size={13}/>,   tint:"#FFFBEB",       color:WARN     },
+                    ].map((s, i) => (
+                      <div key={i}
+                        className="flex items-center justify-between py-2.5 group hover:bg-slate-50 transition-colors -mx-2 px-2 rounded cursor-pointer"
+                        style={{ borderBottom: i < 5 ? `1px solid #EEF1F5` : "none" }}>
+                        <div className="flex items-center gap-2.5">
+                          <span className="inline-flex items-center justify-center"
                             style={{
-                              fontSize:"0.66rem", color: task.overdue ? BAD : TT,
-                              fontWeight: task.overdue ? 700 : 500,
+                              width:24, height:24, borderRadius:6,
+                              background:s.tint, color:s.color,
                             }}>
-                            {task.overdue ? <AlertCircle size={10}/> : <Clock size={10}/>}
-                            {task.due}
-                          </div>
+                            {s.icon}
+                          </span>
+                          <span style={{ ...typo.bodySm, color:TM, fontWeight: weight.medium }}>{s.label}</span>
+                        </div>
+                        <span style={{ ...typo.body, fontWeight: weight.heavy, color:TD, fontVariantNumeric:"tabular-nums" }}>
+                          {s.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+              );
+
+              const teamPerf = (
+                <SectionCard title="Team Performance" icon={<Users size={13}/>} accent={N} noPad>
+                  <div className="grid grid-cols-6 px-5 py-2.5"
+                    style={{ background:"#FAFBFD", borderBottom:`1px solid ${BDL}` }}>
+                    {["Underwriter","In Review","Quoted","Bound","Hit Ratio","Days to Quote"].map(h => (
+                      <span key={h} style={{ ...typo.overline, color:TT }}>
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                  {TEAM_STATS.map((m, i) => (
+                    <div key={m.name}
+                      className="grid grid-cols-6 px-5 py-3 hover:bg-slate-50 transition-colors"
+                      style={{ borderBottom: i < TEAM_STATS.length - 1 ? `1px solid #EEF1F5` : "none" }}>
+                      <div className="flex items-center gap-2.5">
+                        <span className="inline-flex items-center justify-center rounded-full shrink-0"
+                          style={{
+                            width:28, height:28,
+                            background: i === 0 ? `${G}20` : `${N}10`,
+                            color: i === 0 ? G : N,
+                            ...typo.overline,
+                          }}>
+                          {m.initials}
+                        </span>
+                        <div className="min-w-0">
+                          <p style={{ ...typo.bodySm, fontWeight: weight.semibold, color:TD }}>{m.name.split(" ")[0]}</p>
+                          <p style={{ ...typo.caption, color:TT }}>{m.role}</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="px-5 py-2.5 flex items-center justify-between"
-                style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
-                <span style={{ fontSize:"0.65rem", color:TT }}>
-                  {ALL_TASKS.length} total tasks
-                </span>
-                <button onClick={() => navigate("/tasks")}
-                  className="inline-flex items-center gap-1 hover:underline"
-                  style={{
-                    fontSize:"0.66rem", color:N, fontWeight:700,
-                    background:"none", border:"none", cursor:"pointer", fontFamily:font,
-                  }}>
-                  View all <ArrowUpRight size={9}/>
-                </button>
-              </div>
-            </SectionCard>
-
-            {/* ── TEAM PERFORMANCE ────────────────────────────────────────── */}
-            {showTeamView && (
-              <SectionCard title="Team Performance" icon={<Users size={13}/>} accent={N} noPad>
-                <div className="grid grid-cols-6 px-5 py-2.5"
-                  style={{ background:"#FAFBFD", borderBottom:`1px solid ${BDL}` }}>
-                  {["Underwriter","In Review","Quoted","Bound","Hit Ratio","Days to Quote"].map(h => (
-                    <span key={h} style={{
-                      fontSize:"0.58rem", fontWeight:700, color:TT,
-                      textTransform:"uppercase", letterSpacing:"0.08em",
-                    }}>
-                      {h}
-                    </span>
-                  ))}
-                </div>
-                {TEAM_STATS.map((m, i) => (
-                  <div key={m.name}
-                    className="grid grid-cols-6 px-5 py-3 hover:bg-slate-50 transition-colors"
-                    style={{ borderBottom: i < TEAM_STATS.length - 1 ? `1px solid #EEF1F5` : "none" }}>
-                    <div className="flex items-center gap-2.5">
-                      <span className="inline-flex items-center justify-center rounded-full shrink-0"
-                        style={{
-                          width:28, height:28,
-                          background: i === 0 ? `${G}20` : `${N}10`,
-                          color: i === 0 ? G : N,
-                          fontSize:"0.6rem", fontWeight:800,
+                      <div className="flex items-center"><span style={{ ...typo.bodyLg, fontWeight: weight.heavy, color:N, fontVariantNumeric:"tabular-nums" }}>{m.inReview}</span></div>
+                      <div className="flex items-center"><span style={{ ...typo.bodyLg, fontWeight: weight.heavy, color:"#005B99", fontVariantNumeric:"tabular-nums" }}>{m.quoted}</span></div>
+                      <div className="flex items-center"><span style={{ ...typo.bodyLg, fontWeight: weight.heavy, color:OK, fontVariantNumeric:"tabular-nums" }}>{m.bound}</span></div>
+                      <div className="flex items-center"><span style={{ ...typo.body, fontWeight: weight.bold, color:TD }}>{m.hitRatio}</span></div>
+                      <div className="flex items-center">
+                        <span style={{
+                          ...typo.body, fontWeight: weight.bold,
+                          color: parseFloat(m.daysToQuote) <= 4 ? OK : WARN,
                         }}>
-                        {m.initials}
-                      </span>
-                      <div className="min-w-0">
-                        <p style={{ fontSize:"0.78rem", fontWeight:600, color:TD }}>{m.name.split(" ")[0]}</p>
-                        <p style={{ fontSize:"0.62rem", color:TT }}>{m.role}</p>
+                          {m.daysToQuote}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center"><span style={{ fontSize:"0.92rem", fontWeight:800, color:N, fontVariantNumeric:"tabular-nums" }}>{m.inReview}</span></div>
-                    <div className="flex items-center"><span style={{ fontSize:"0.92rem", fontWeight:800, color:"#005B99", fontVariantNumeric:"tabular-nums" }}>{m.quoted}</span></div>
-                    <div className="flex items-center"><span style={{ fontSize:"0.92rem", fontWeight:800, color:OK, fontVariantNumeric:"tabular-nums" }}>{m.bound}</span></div>
-                    <div className="flex items-center"><span style={{ fontSize:"0.8rem", fontWeight:700, color:TD }}>{m.hitRatio}</span></div>
-                    <div className="flex items-center">
-                      <span style={{
-                        fontSize:"0.8rem", fontWeight:700,
-                        color: parseFloat(m.daysToQuote) <= 4 ? OK : WARN,
-                      }}>
-                        {m.daysToQuote}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </SectionCard>
-            )}
-            {/* ── ALERTS & PORTFOLIO — 2-col side by side ───────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-
-            {/* ── ALERTS & FLAGS ─────────────────────────────────────────── */}
-            <SectionCard
-              title="Alerts & Flags"
-              icon={<AlertTriangle size={13}/>}
-              accent={G}
-              noPad
-              action={
-                <div className="flex items-center gap-1">
-                  {([
-                    { id:"all"      as const, label:"All"      },
-                    { id:"critical" as const, label:"Critical" },
-                    { id:"warning"  as const, label:"Warning"  },
-                  ]).map(f => (
-                    <button key={f.id} onClick={() => setAlertFilter(f.id)}
-                      className="px-2 py-1 transition-all"
-                      style={{
-                        fontSize:"0.6rem", fontWeight:700,
-                        background: alertFilter===f.id ? `${G}20` : "transparent",
-                        color: alertFilter===f.id ? "#8A5C00" : TT,
-                        border:"none", borderRadius:4, cursor:"pointer", fontFamily:font,
-                      }}>
-                      {f.label}
-                    </button>
                   ))}
+                </SectionCard>
+              );
+
+              return showTeamView ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {teamPerf}
+                  {portfolio}
                 </div>
-              }>
-              {/* Scrollable list — caps card height to match Portfolio Snapshot */}
-              <div style={{ maxHeight: 240, overflowY: "auto" }}>
-              {alerts.map((alert, i) => {
-                const sv = alertSev(alert.severity);
-                return (
-                  <div key={alert.id}
-                    onClick={() => navigate("/submission/" + alert.submission)}
-                    className="px-4 py-3 cursor-pointer hover:brightness-95 transition-all"
-                    style={{
-                      borderBottom: i < alerts.length - 1 ? `1px solid #EEF1F5` : "none",
-                      background: sv.bg,
-                      borderLeft: `3px solid ${sv.dot}`,
-                    }}>
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p style={{ fontSize:"0.76rem", fontWeight:700, color:TD, lineHeight:1.3 }}>
-                        {alert.title}
-                      </p>
-                      <span style={{ fontSize:"0.6rem", color:TT, flexShrink:0 }}>
-                        {alert.time}
-                      </span>
-                    </div>
-                    <p style={{ fontSize:"0.7rem", color:TM, lineHeight:1.5, marginBottom:4 }}>
-                      {alert.body}
-                    </p>
-                    <span style={{
-                      fontSize:"0.62rem", fontWeight:700, color:N,
-                      fontFamily:"ui-monospace, monospace",
-                    }}>
-                      {alert.submission} →
-                    </span>
-                  </div>
-                );
-              })}
-              </div>
-              <div className="px-5 py-2.5 flex items-center justify-between"
-                style={{ borderTop:`1px solid ${BDL}`, background:"#FAFBFD" }}>
-                <span style={{ fontSize:"0.65rem", color:TT }}>
-                  {critCount} critical · {warnCount} warnings
-                </span>
-                <button className="inline-flex items-center gap-1 hover:underline"
-                  style={{
-                    fontSize:"0.66rem", color:N, fontWeight:700,
-                    background:"none", border:"none", cursor:"pointer", fontFamily:font,
-                  }}>
-                  View all <ArrowUpRight size={9}/>
-                </button>
-              </div>
-            </SectionCard>
-
-            {/* ── PORTFOLIO SNAPSHOT ─────────────────────────────────────── */}
-            <SectionCard title="Portfolio Snapshot" icon={<Activity size={13}/>} accent={N}>
-              <div className="px-5 py-1">
-                {[
-                  { label:"Total Submissions (MTD)", value:"22",     icon:<Inbox size={13}/>,         tint:`${N}10`,        color:N        },
-                  { label:"Quoted Pipeline",         value:"$4.2M",  icon:<DollarSign size={13}/>,    tint:"#E8F5EC",       color:OK       },
-                  { label:"Bound YTD",               value:"$3.1M",  icon:<ShieldCheck size={13}/>,   tint:"#E8F0F9",       color:"#005B99"},
-                  { label:"Avg. Appetite Score",     value:"81/100", icon:<Award size={13}/>,         tint:`${G}18`,        color:G        },
-                  { label:"Submissions in SLA",      value:"91%",    icon:<CheckCircle2 size={13}/>,  tint:"#E8F5EC",       color:OK       },
-                  { label:"Docs Incomplete",         value:"4 subs", icon:<AlertCircle size={13}/>,   tint:"#FFFBEB",       color:WARN     },
-                ].map((s, i) => (
-                  <div key={i}
-                    className="flex items-center justify-between py-2.5 group hover:bg-slate-50 transition-colors -mx-2 px-2 rounded cursor-pointer"
-                    style={{ borderBottom: i < 5 ? `1px solid #EEF1F5` : "none" }}>
-                    <div className="flex items-center gap-2.5">
-                      <span className="inline-flex items-center justify-center"
-                        style={{
-                          width:24, height:24, borderRadius:6,
-                          background:s.tint, color:s.color,
-                        }}>
-                        {s.icon}
-                      </span>
-                      <span style={{ fontSize:"0.76rem", color:TM, fontWeight:500 }}>{s.label}</span>
-                    </div>
-                    <span style={{ fontSize:"0.82rem", fontWeight:800, color:TD, fontVariantNumeric:"tabular-nums" }}>
-                      {s.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-
-            </div>{/* ── close Alerts + Portfolio 2-col grid ─────────────── */}
+              ) : portfolio;
+            })()}
         </div>
       </div>
     </AppShell>

@@ -1,5 +1,49 @@
 :root {
   --font-size: 16px;
+
+  /* ─── Typography scale ─────────────────────────────────────────────────
+     Defined per design-system feedback. Every text element on a workbench
+     surface should resolve to ONE of these tokens — no arbitrary values.
+     Each token pairs a size, a default weight, and a default line-height
+     so hierarchy is consistent without a second hardcoded weight prop.
+
+     Token        rem        px    Default use
+     -------------------------------------------------------------------
+     overline     0.6875rem  11    UPPERCASE labels (badges, KPI labels)
+     caption      0.75rem    12    Metadata, timestamps, helper text
+     body-sm      0.8125rem  13    Table cells, secondary body
+     body         0.875rem   14    Default body text
+     body-lg      1rem       16    Emphasized body (card titles)
+     h4           1.0625rem  17    Section card headers
+     h3           1.25rem    20    Sub-page titles
+     h2           1.5rem     24    Slim page-header titles
+     h1           1.875rem   30    Hero page titles
+     display      2rem       32    Hero KPI values
+  */
+  --text-overline:  0.6875rem;
+  --text-caption:   0.75rem;
+  --text-body-sm:   0.8125rem;
+  --text-body:      0.875rem;
+  --text-body-lg:   1rem;
+  --text-h4:        1.0625rem;
+  --text-h3:        1.25rem;
+  --text-h2:        1.5rem;
+  --text-h1:        1.875rem;
+  --text-display:   2rem;
+
+  /* Paired line-heights (data-dense screens need tighter heading leading
+     and slightly looser body leading than Tailwind defaults). */
+  --leading-tight:  1.15;
+  --leading-snug:   1.25;
+  --leading-normal: 1.4;
+  --leading-relaxed:1.5;
+
+  /* Paired weights. Use these instead of arbitrary 600/700/800. */
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-heavy:    800;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -20,8 +64,6 @@
   --input: transparent;
   --input-background: #f3f3f5;
   --switch-background: #cbced4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -135,4 +177,40 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+
+.submission-tabs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD3DD transparent;
+}
+.submission-tabs-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.submission-tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.submission-tabs-scroll::-webkit-scrollbar-thumb {
+  background-color: #CBD3DD;
+  border-radius: 3px;
+}
+.submission-tabs-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #9AA5B5;
+}
+
+.submissions-filter-popover {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD3DD transparent;
+}
+.submissions-filter-popover::-webkit-scrollbar {
+  width: 6px;
+}
+.submissions-filter-popover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.submissions-filter-popover::-webkit-scrollbar-thumb {
+  background-color: #CBD3DD;
+  border-radius: 3px;
+}
+.submissions-filter-popover::-webkit-scrollbar-thumb:hover {
+  background-color: #9AA5B5;
 }

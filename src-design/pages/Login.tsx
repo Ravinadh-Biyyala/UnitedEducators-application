@@ -16,7 +16,7 @@ const GD   = "#A8841C";
 const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
 const TD   = "#1A2530";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ─── Role cards config ────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ const BDL = "#DCE3EC";
 const TH  = "#F0F3F8";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 /* ── Label/Value row ────────────────────────────────────────────────────── */
@@ -29,22 +29,20 @@ function Section({ title, accent = N, badge, icon, children }: {
     <div style={{
       background: "white",
       border: `1px solid ${BDL}`,
-      borderTop: `3px solid ${accent}`,
       borderRadius: 8,
       overflow: "hidden",
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
     }}>
-      <div className="flex items-center justify-between px-5 py-3"
+      <div className="flex items-center justify-between px-5 py-3.5"
         style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && (
             <span className="inline-flex items-center justify-center"
-              style={{ width: 24, height: 24, borderRadius: 6, background: `${accent}12`, color: accent }}>
+              style={{ width: 26, height: 26, borderRadius: 6, background: `${accent}12`, color: accent }}>
               {icon}
             </span>
           )}
-          <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD,
-            textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
             {title}
           </h3>
         </div>
@@ -327,7 +325,6 @@ export function MemberBrokerTab() {
           style={{
             background: "white",
             border: `1px solid ${activeView === "member" ? N : BD}`,
-            borderTop: `3px solid ${N}`,
             outline: "none",
             boxShadow: activeView === "member" ? `0 0 0 2px ${N}22` : "none",
             borderRadius: 6,
@@ -358,7 +355,6 @@ export function MemberBrokerTab() {
           style={{
             background: "white",
             border: `1px solid ${activeView === "brokerage" ? N : BD}`,
-            borderTop: `3px solid ${G}`,
             outline: "none",
             boxShadow: activeView === "brokerage" ? `0 0 0 2px ${N}22` : "none",
             borderRadius: 6,

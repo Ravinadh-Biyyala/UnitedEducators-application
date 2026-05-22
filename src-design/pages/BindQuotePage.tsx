@@ -16,7 +16,7 @@ const BDL = "#DCE3EC";
 const TH  = "#F0F3F8";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const OK  = "#15803D";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
@@ -313,7 +313,7 @@ export function BindQuotePage() {
 
               {/* Action bar */}
               <div className="flex items-center justify-between px-6 py-4 flex-wrap gap-3"
-                style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${G}`, borderRadius: 8 }}>
+                style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8 }}>
                 <div className="flex items-start gap-2.5">
                   <Building2 size={16} color={N} style={{ flexShrink: 0, marginTop: 2 }} />
                   <div>
@@ -328,7 +328,7 @@ export function BindQuotePage() {
                 <div className="flex items-center gap-3">
                   {!allProductsHaveSelection && (
                     <span className="inline-flex items-center gap-1.5"
-                      style={{ fontSize: "0.70rem", color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "4px 10px", borderRadius: 4 }}>
+                      style={{ fontSize: "0.70rem", color: "#8A5C00", background: "#FFF8E6", border: "1px solid #F0D88A", padding: "4px 10px", borderRadius: 9999 }}>
                       <AlertCircle size={11} /> Select an option for every product
                     </span>
                   )}

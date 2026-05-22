@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Filter, RotateCcw, Download, Plus,
   Check, Users, User,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppShell,
@@ -14,6 +14,7 @@ import type { RoleId } from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
 import { CreateSubmissionModal } from "../components/CreateSubmissionModal";
 import { PrimaryWhiteButton, GhostButton } from "../components/DashboardCards";
+import { typo } from "../styles/typography";
 import { PageRegister } from "../components/companion/PageRegister";
 import { newId, now } from "../components/companion/CompanionContext";
 import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
@@ -24,7 +25,7 @@ const G   = "#C9A227";
 const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TH  = "#F0F3F8";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const TM  = "#4A5D6E";
 const TD  = "#1A2530";
 const BG  = "#EEF1F6";
@@ -139,12 +140,14 @@ const EMPTY_FILTERS: Filters = {
 };
 
 /** Accordion section — defined at module level so its useState survives parent re-renders */
-function FilterSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function FilterSection({ title, count, children, isOpen, onToggle }: {
+  title: string; count?: number; children: React.ReactNode;
+  isOpen: boolean; onToggle: () => void;
+}) {
   return (
     <div style={{ borderBottom:`1px solid ${BDL}` }}>
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -153,9 +156,9 @@ function FilterSection({ title, count, children }: { title: string; count?: numb
             <span style={{ background:N, color:"white", fontSize:"0.52rem", fontWeight:800, padding:"1px 5px", borderRadius:10 }}>{count}</span>
           )}
         </div>
-        {open ? <ChevronUp size={13} color={TT}/> : <ChevronDown size={13} color={TT}/>}
+        {isOpen ? <ChevronUp size={13} color={TT}/> : <ChevronDown size={13} color={TT}/>}
       </button>
-      {open && <div className="px-5 pb-4">{children}</div>}
+      {isOpen && <div className="px-5 pb-4">{children}</div>}
     </div>
   );
 }
@@ -178,6 +181,8 @@ function CheckRow({ label, checked, onToggle, dot, small }: {
 }
 
 // ─── Filter panel ─────────────────────────────────────────────────────────────
+type FilterSectionKey = "stage" | "kind" | "underwriter" | "date" | "premium";
+
 function FilterPanel({
   filters, onChange, onReset,
 }: {
@@ -185,6 +190,13 @@ function FilterPanel({
   onChange: (f: Filters) => void;
   onReset: () => void;
 }) {
+  // Accordion: only one section open at a time. Keeps the dropdown a predictable
+  // height so expanded content never overflows or visually overlaps neighbouring
+  // sections / the popover boundary / the chat companion button.
+  const [openSection, setOpenSection] = useState<FilterSectionKey | null>("stage");
+  const toggleSection = (key: FilterSectionKey) =>
+    setOpenSection(prev => prev === key ? null : key);
+
   const toggle = <K extends keyof Filters>(key: K, val: string) => {
     const arr = filters[key] as string[];
     onChange({ ...filters, [key]: arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val] });
@@ -206,29 +218,12 @@ function FilterPanel({
         </button>
       </div>
 
-      {/* Keyword search */}
-      <div className="px-5 py-3" style={{ borderBottom:`1px solid ${BDL}` }}>
-        <label style={{ display:"block", fontSize:"0.62rem", fontWeight:700, color:TT, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>
-          Keyword Search
-        </label>
-        <div className="relative">
-          <Search size={13} color={TT} style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)" }}/>
-          <input
-            value={filters.search}
-            onChange={e => onChange({ ...filters, search: e.target.value })}
-            placeholder="Member, broker, sub ID…"
-            style={{ width:"100%", paddingLeft:30, paddingRight:8, paddingTop:7, paddingBottom:7, border:`1px solid ${BD}`, borderRadius:6, fontSize:"0.76rem", fontFamily:font, outline:"none", color:TD }}
-          />
-          {filters.search && (
-            <button onClick={() => onChange({ ...filters, search:"" })} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)" }}>
-              <X size={11} color={TT}/>
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Keyword Search removed from the dropdown — the toolbar's main search
+          box covers the same field, so this was duplicate. */}
 
       {/* Stage */}
-      <FilterSection title="Stage" count={filters.statuses.length}>
+      <FilterSection title="Stage" count={filters.statuses.length}
+        isOpen={openSection === "stage"} onToggle={() => toggleSection("stage")}>
         {STATUSES.map(s => {
           const cfg = STATUS_CFG[s];
           return <CheckRow key={s} label={s} checked={filters.statuses.includes(s)} onToggle={() => toggle("statuses", s)} dot={cfg.dot}/>;
@@ -236,7 +231,8 @@ function FilterPanel({
       </FilterSection>
 
       {/* Kind — Individual vs Group */}
-      <FilterSection title="Kind" count={filters.kinds.length}>
+      <FilterSection title="Kind" count={filters.kinds.length}
+        isOpen={openSection === "kind"} onToggle={() => toggleSection("kind")}>
         {KINDS.map(k => (
           <CheckRow
             key={k}
@@ -249,14 +245,16 @@ function FilterPanel({
       </FilterSection>
 
       {/* Assigned Underwriter */}
-      <FilterSection title="Assigned Underwriter" count={filters.assignedTo.length}>
+      <FilterSection title="Assigned Underwriter" count={filters.assignedTo.length}
+        isOpen={openSection === "underwriter"} onToggle={() => toggleSection("underwriter")}>
         {UW_LIST.map(u => (
           <CheckRow key={u} label={u} checked={filters.assignedTo.includes(u)} onToggle={() => toggle("assignedTo", u)}/>
         ))}
       </FilterSection>
 
       {/* Submission Date */}
-      <FilterSection title="Submission Date" count={(filters.dateFrom?1:0)+(filters.dateTo?1:0)}>
+      <FilterSection title="Submission Date" count={(filters.dateFrom?1:0)+(filters.dateTo?1:0)}
+        isOpen={openSection === "date"} onToggle={() => toggleSection("date")}>
         <div className="space-y-2">
           <div>
             <label style={{ display:"block", fontSize:"0.62rem", fontWeight:700, color:TT, marginBottom:4 }}>From</label>
@@ -274,7 +272,8 @@ function FilterPanel({
       </FilterSection>
 
       {/* Premium */}
-      <FilterSection title="Premium" count={(filters.premiumFrom?1:0)+(filters.premiumTo?1:0)}>
+      <FilterSection title="Premium" count={(filters.premiumFrom?1:0)+(filters.premiumTo?1:0)}
+        isOpen={openSection === "premium"} onToggle={() => toggleSection("premium")}>
         <div className="space-y-2">
           <div>
             <label style={{ display:"block", fontSize:"0.62rem", fontWeight:700, color:TT, marginBottom:4 }}>From ($)</label>
@@ -319,16 +318,14 @@ function KpiTile({ label, value, sub, accent, selected = false, onClick }: {
       aria-label={`${label}: ${value}${sub ? " — " + sub : ""}${clickable ? (active ? " (filter active)" : " (filter)") : ""}`}
       style={{
         textAlign: "left", width: "100%", fontFamily: "inherit",
-        background: active
-          ? `linear-gradient(135deg, ${accent}12 0%, ${accent}06 100%)`
-          : hovered && clickable
-          ? `linear-gradient(135deg, white 0%, ${accent}08 100%)`
-          : "white",
+        // Active state keeps a plain white background — selection is conveyed
+        // entirely by the colored border + top accent + ring shadow.
+        background: "white",
         border: `1.5px solid ${active ? accent : hovered && clickable ? `${accent}40` : BDL}`,
         borderRadius: 10,
         padding: "14px 16px",
         boxShadow: active
-          ? `0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
+          ? `0 0 0 1px ${accent}, 0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
           : hovered && clickable
           ? `0 2px 6px ${accent}14, 0 1px 2px rgba(15,23,42,0.04)`
           : "0 1px 2px rgba(15,23,42,0.04)",
@@ -375,11 +372,41 @@ export function Submissions() {
   const [showFilter, setShowFilter] = useState(false);
   const [sortKey, setSortKey]   = useState<SortKey>("needByDate");
   const [sortDir, setSortDir]   = useState<SortDir>("desc");
-  const [viewTab, setViewTab]   = useState<"my" | "team" | "all">("all");
+  const [viewTab, setViewTab]   = useState<"my" | "team" | "all">("my");
   const [page, setPage]         = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submissions, setSubmissions] = useState(ALL_SUBMISSIONS);
   const PER_PAGE = 5;
+
+  // ── Filters dropdown anchoring ────────────────────────────────────────────
+  // We position the desktop dropdown with `position: fixed` aligned to the
+  // table's actual right edge (read off the toolbar) so the popover always
+  // covers the rightmost columns of the table — no chevrons / row tails
+  // peeking past the popover's right border.
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const filterBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; right: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!showFilter) return;
+    const update = () => {
+      const btn = filterBtnRef.current;
+      const tb  = toolbarRef.current;
+      if (!btn || !tb) return;
+      const btnRect = btn.getBoundingClientRect();
+      const tbRect  = tb.getBoundingClientRect();
+      setPopoverPos({
+        top:   btnRect.bottom + 8,
+        right: Math.max(window.innerWidth - tbRect.right, 0),
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [showFilter]);
 
   // ── filtering ──────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -413,8 +440,23 @@ export function Submissions() {
       if (!isNaN(max)) data = data.filter(s => s.estimatedPremium <= max);
     }
 
+    // Urgency pre-sort: surface action-needed submissions to the top regardless
+    // of the user's chosen sort key. Critical (high+active or blocked+aging) →
+    // Warning (aging or medium) → Normal. Within each tier, the user's sort applies.
+    const urgencyTier = (s: Submission) => {
+      const isActiveStage = s.status === "In Review" || s.status === "Pending Info" || s.status === "New";
+      const isBlockedAging = s.status === "Pending Info" && s.daysInQueue >= 14;
+      const isHighPriorityActive = s.priority === "High" && isActiveStage;
+      const isAging = isActiveStage && s.daysInQueue >= 21;
+      if (isHighPriorityActive || isBlockedAging) return 0;
+      if (isAging) return 1;
+      return 2;
+    };
+
     // sort
     data.sort((a, b) => {
+      const tierDiff = urgencyTier(a) - urgencyTier(b);
+      if (tierDiff !== 0) return tierDiff;
       let va: number | string = 0, vb: number | string = 0;
       if (sortKey === "needByDate")        { va = a.needByDate; vb = b.needByDate; }
       else if (sortKey === "effective")         { va = a.effective; vb = b.effective; }
@@ -547,7 +589,7 @@ export function Submissions() {
       <div style={{ fontFamily:font, color:TD }}>
 
         {/* ── HERO + KPI STRIP (Dashboard structure, original Submissions content) ─── */}
-        <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+        <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
           style={{ background:"#EEF1F6" }}>
 
           {/* Gradient hero */}
@@ -562,7 +604,7 @@ export function Submissions() {
               background:`radial-gradient(circle, ${G}25 0%, transparent 65%)`,
               borderRadius:"50%",
             }}/>
-            <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-start justify-between gap-3 flex-wrap">
+            <div className="relative px-4 sm:px-5 py-4 sm:py-5 flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <h1 style={{ fontSize:"1.35rem", fontWeight:800, color:"white", lineHeight:1.2 }}>Submissions</h1>
                 <p style={{ fontSize:"0.80rem", color:"rgba(255,255,255,0.6)", marginTop:4 }}>
@@ -619,17 +661,18 @@ export function Submissions() {
           </div>
 
           {/* ── SUBMISSIONS CARD (Dashboard-style chrome) ──────────────────── */}
-          <div style={{
-            background:"white",
-            border:`1px solid ${BDL}`,
-            borderTop:`3px solid ${N}`,
-            borderRadius:8,
-            overflow:"hidden",
-            boxShadow:"0 1px 2px rgba(15,23,42,0.04)",
-          }}>
+          <div
+            ref={toolbarRef}
+            style={{
+              background:"white",
+              border:`1px solid ${BDL}`,
+              borderRadius:8,
+              overflow:"hidden",
+              boxShadow:"0 1px 2px rgba(15,23,42,0.04)",
+            }}>
 
         {/* ── TOOLBAR ─────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 sm:px-8 py-3 gap-3 flex-wrap"
+        <div className="flex items-center justify-between px-3 sm:px-5 py-3 gap-3 flex-wrap"
           style={{ background:"white", borderBottom:`1px solid ${BDL}` }}>
           {/* View tabs */}
           <div className="flex items-center">
@@ -643,7 +686,7 @@ export function Submissions() {
                   borderBottom:`2px solid ${viewTab===tab?G:"transparent"}`,
                   marginBottom:-1,
                 }}>
-                {tab==="my"?"My Queue":tab==="team"?"My Team":"All"}
+                {tab==="my"?"My Submissions":tab==="team"?"My Team":"All"}
               </button>
             ))}
           </div>
@@ -688,6 +731,7 @@ export function Submissions() {
               {activeFilterCount > 0 && ` (${activeFilterCount} filter${activeFilterCount>1?"s":""})`}
             </span>
             <button
+              ref={filterBtnRef}
               onClick={() => setShowFilter(v => !v)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2"
               onMouseEnter={(e) => { e.currentTarget.style.background = showFilter ? `${N}14` : "#FAFBFD"; }}
@@ -709,12 +753,50 @@ export function Submissions() {
                 </span>
               )}
             </button>
+
           </div>
         </div>
 
+        {/* Desktop filter dropdown — fixed to the viewport, right edge aligned
+            to the toolbar's right edge (i.e. the table's right edge), so no
+            row chevrons or tail content peek past the popover's right border. */}
+        {showFilter && popoverPos && (
+          <>
+            <div
+              className="hidden lg:block"
+              onClick={() => setShowFilter(false)}
+              style={{
+                position: "fixed", inset: 0, zIndex: 40,
+                background: "transparent",
+              }}
+            />
+            <div
+              className="hidden lg:block submissions-filter-popover"
+              style={{
+                position: "fixed",
+                top: popoverPos.top,
+                right: popoverPos.right,
+                width: 380,
+                maxHeight: "70vh",
+                overflowY: "auto",
+                background: "white",
+                border: `1px solid ${BDL}`,
+                borderRadius: 10,
+                boxShadow: "0 18px 40px rgba(15,23,42,0.22), 0 4px 8px rgba(15,23,42,0.08)",
+                zIndex: 50,
+              }}>
+              <FilterPanel
+                filters={filters}
+                onChange={f => { setFilters(f); setPage(1); }}
+                onReset={() => { setFilters(EMPTY_FILTERS); setPage(1); }}
+              />
+            </div>
+          </>
+        )}
+
         {/* Active filter chips */}
         {chipsList.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap px-4 sm:px-8 py-2.5"
+          <div className="flex items-center gap-2 flex-wrap px-3 sm:px-5 py-2.5"
             style={{ background:"#F8FAFC", borderBottom:`1px solid ${BDL}` }}>
             <span style={{ fontSize:"0.62rem", fontWeight:700, color:TT, textTransform:"uppercase", letterSpacing:"0.08em" }}>
               Active:
@@ -728,39 +810,36 @@ export function Submissions() {
           </div>
         )}
 
-        {/* ── BODY: filter panel + table ─────────────────────────────────── */}
+        {/* ── BODY: table only — desktop filter is now a dropdown above ────── */}
         <div className="flex items-start">
 
-          {/* Mobile filter backdrop */}
+          {/* Mobile-only filter drawer (desktop uses the dropdown anchored to the Filters button) */}
           {showFilter && (
-            <div
-              className="fixed inset-0 z-30 lg:hidden"
-              style={{ background:"rgba(15,23,42,0.4)" }}
-              onClick={() => setShowFilter(false)}
-            />
-          )}
-
-          {/* Filter panel — mobile: fixed drawer, desktop: sticky inline */}
-          {showFilter && (
-            <div className="fixed top-0 left-0 h-full z-40 overflow-y-auto bg-white shadow-2xl lg:shadow-none lg:relative lg:top-auto lg:left-auto lg:h-auto lg:z-auto"
-              style={{ width:272, borderRight:`1px solid ${BDL}`, maxHeight:"100vh" }}>
-              {/* Mobile header */}
-              <div className="flex items-center justify-between px-5 py-3 lg:hidden"
-                style={{ background:N, borderBottom:"1px solid rgba(255,255,255,0.15)", minHeight:56 }}>
-                <span style={{ fontSize:"0.72rem", fontWeight:700, color:"white", textTransform:"uppercase", letterSpacing:"0.08em" }}>Filters</span>
-                <button
-                  onClick={() => setShowFilter(false)}
-                  className="flex items-center justify-center"
-                  style={{ width:28, height:28, background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.25)" }}>
-                  <X size={14} color="white" />
-                </button>
-              </div>
-              <FilterPanel
-                filters={filters}
-                onChange={f => { setFilters(f); setPage(1); }}
-                onReset={() => { setFilters(EMPTY_FILTERS); setPage(1); }}
+            <>
+              <div
+                className="fixed inset-0 z-30 lg:hidden"
+                style={{ background:"rgba(15,23,42,0.4)" }}
+                onClick={() => setShowFilter(false)}
               />
-            </div>
+              <div className="fixed top-0 left-0 h-full z-40 overflow-y-auto bg-white shadow-2xl lg:hidden"
+                style={{ width:272, borderRight:`1px solid ${BDL}`, maxHeight:"100vh" }}>
+                <div className="flex items-center justify-between px-5 py-3"
+                  style={{ background:N, borderBottom:"1px solid rgba(255,255,255,0.15)", minHeight:56 }}>
+                  <span style={{ fontSize:"0.72rem", fontWeight:700, color:"white", textTransform:"uppercase", letterSpacing:"0.08em" }}>Filters</span>
+                  <button
+                    onClick={() => setShowFilter(false)}
+                    className="flex items-center justify-center"
+                    style={{ width:28, height:28, background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.25)" }}>
+                    <X size={14} color="white" />
+                  </button>
+                </div>
+                <FilterPanel
+                  filters={filters}
+                  onChange={f => { setFilters(f); setPage(1); }}
+                  onReset={() => { setFilters(EMPTY_FILTERS); setPage(1); }}
+                />
+              </div>
+            </>
           )}
 
           {/* Table */}
@@ -772,7 +851,7 @@ export function Submissions() {
             {/* Column headers */}
             <div style={{ background:"#FAFBFD", borderBottom:`1px solid ${BDL}`, position:"sticky", top:0, zIndex:5 }}>
               <div className="grid px-5 py-2.5"
-                style={{ gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(85px, 0.8fr) minmax(70px, 0.65fr) minmax(90px, 0.8fr)`, gap:"0 16px", alignItems:"center", justifyItems:"start" }}>
+                style={{ gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(90px, 0.8fr) minmax(140px, 1.05fr) minmax(105px, 0.85fr)`, gap:"0 16px", alignItems:"center", justifyItems:"start" }}>
                 <ColLabel>Member / Institution</ColLabel>
                 <ColLabel>Type</ColLabel>
                 <ColLabel>Products</ColLabel>
@@ -802,9 +881,15 @@ export function Submissions() {
             ) : paginated.map((sub, idx) => {
               const sc  = STATUS_CFG[sub.status];
               const isLast = idx === paginated.length - 1;
-              const priorityColor =
-                sub.priority === "High"   ? "#DC2626" :
-                sub.priority === "Medium" ? "#E07800" : null;
+              // Urgency flags still drive the "Need By Date" pill (Critical /
+              // High Priority / Aging). The left urgency rail has been removed
+              // per design feedback — colored chrome is reserved for the KPI
+              // strip up top. These booleans stay because the pill is still
+              // useful as inline content.
+              const isActiveStage = sub.status === "In Review" || sub.status === "Pending Info" || sub.status === "New";
+              const isBlockedAging = sub.status === "Pending Info" && sub.daysInQueue >= 14;
+              const isHighPriorityActive = sub.priority === "High" && isActiveStage;
+              const isAging = isActiveStage && sub.daysInQueue >= 21;
               const MAX_PRODUCTS = 3;
               const visibleProducts = sub.products.slice(0, MAX_PRODUCTS);
               const overflowCount  = sub.products.length - MAX_PRODUCTS;
@@ -812,61 +897,37 @@ export function Submissions() {
                 <div
                   key={sub.id}
                   onClick={() => navigate(`/submission/${sub.subId}`)}
-                  className="grid px-5 py-2.5 cursor-pointer transition-colors hover:bg-slate-50 group"
+                  className="grid px-5 py-2.5 cursor-pointer transition-colors hover:bg-[#F0F6FF] group"
                   style={{
-                    gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(85px, 0.8fr) minmax(70px, 0.65fr) minmax(90px, 0.8fr)`,
+                    gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(90px, 0.8fr) minmax(140px, 1.05fr) minmax(105px, 0.85fr)`,
                     gap:"0 16px",
                     alignItems:"center",
                     borderBottom: isLast ? "none" : `1px solid ${BDL}`,
                     background:"white",
-                    position:"relative",
                   }}
                 >
-                  {/* Priority marker — subtle left rail, only when High/Medium */}
-                  {priorityColor && (
-                    <span
-                      aria-hidden
-                      style={{
-                        position:"absolute", left:0, top:10, bottom:10,
-                        width:2, background:priorityColor, borderRadius:1,
-                      }}
-                    />
-                  )}
-
                   {/* Member */}
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <p style={{
-                        fontSize:"0.86rem", fontWeight:600, color:TD,
+                        fontSize:"0.88rem", fontWeight:600, color:TD,
                         whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
                         lineHeight:1.3,
                         minWidth: 0,
                       }} className="group-hover:underline group-hover:decoration-blue-600">
                         {sub.member}
                       </p>
-                      <span style={{
-                        fontSize:"0.66rem", fontWeight:700, color:TM,
-                        background:"#F0F3F8", border:`1px solid ${BDL}`,
-                        padding:"1px 6px", borderRadius:4,
-                        fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
-                        whiteSpace:"nowrap", flexShrink:0,
-                      }}>
-                        M-{sub.memberNumber}
-                      </span>
                       {sub.kind === "Group" && (
                         <span
                           className="inline-flex items-center gap-1 shrink-0"
                           title={`${sub.memberCount ?? 0} members in this group submission`}
                           style={{
-                            background:"#7B2FBE12", color:"#7B2FBE",
-                            border:"1px solid #7B2FBE40",
-                            fontSize:"0.56rem", fontWeight:800,
-                            padding:"1px 6px", borderRadius:3,
-                            letterSpacing:"0.05em", textTransform:"uppercase",
+                            color:"#7B2FBE",
+                            fontSize:"0.62rem", fontWeight:700,
                             whiteSpace:"nowrap",
                           }}
                         >
-                          <Users size={9}/>
+                          <Users size={10}/>
                           Group · {sub.memberCount ?? "?"}
                         </span>
                       )}
@@ -875,10 +936,12 @@ export function Submissions() {
                       <span style={{
                         fontSize:"0.66rem", fontWeight:600, color:N,
                         fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
-                        letterSpacing:"0.01em",
                         whiteSpace:"nowrap",
                       }}>
                         {sub.subId}
+                      </span>
+                      <span style={{ fontSize:"0.66rem", color:TT, fontWeight:400, fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                        · M-{sub.memberNumber}
                       </span>
                       <span style={{ width:2, height:2, borderRadius:9999, background:BD }}/>
                       <span style={{ fontSize:"0.68rem", color:TT, fontWeight:500 }}>{sub.state}</span>
@@ -903,40 +966,44 @@ export function Submissions() {
                     </span>
                   </div>
 
-                  {/* Products — uniform neutral chips, no icons, capped at 3 + overflow */}
-                  <div className="flex items-center gap-1">
-                    {visibleProducts.map(p => (
-                      <span key={p}
-                        style={{
-                          background:"#F1F4F8", color:TM,
-                          fontSize:"0.62rem", fontWeight:700,
-                          padding:"3px 6px", borderRadius:3,
-                          letterSpacing:"0.02em",
-                        }}>
-                        {p}
-                      </span>
-                    ))}
+                  {/* Products — plain mono text, dot-separated, capped at 3 + overflow */}
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span style={{
+                      fontSize:"0.72rem", fontWeight:500, color:TM,
+                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                    }}>
+                      {visibleProducts.join(" · ")}
+                    </span>
                     {overflowCount > 0 && (
                       <span style={{
-                        fontSize:"0.62rem", fontWeight:600, color:TT,
-                        padding:"3px 2px",
+                        fontSize:"0.66rem", fontWeight:500, color:TT,
+                        whiteSpace:"nowrap",
                       }}>
                         +{overflowCount}
                       </span>
                     )}
                   </div>
 
-                  {/* Stage — soft pill, no border */}
+                  {/* Stage — dot+text for normal states; keep filled pill only for Declined */}
                   <div>
-                    <span className="inline-flex items-center gap-1.5"
-                      style={{
-                        background:sc.bg, padding:"3px 8px", borderRadius:3,
-                      }}>
-                      <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
-                      <span style={{ fontSize:"0.68rem", fontWeight:600, color:sc.text, whiteSpace:"nowrap" }}>
-                        {sub.status}
+                    {sub.status === "Declined" ? (
+                      <span className="inline-flex items-center gap-1.5"
+                        style={{
+                          background:sc.bg, padding:"3px 8px", borderRadius:9999,
+                        }}>
+                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
+                        <span style={{ fontSize:"0.68rem", fontWeight:600, color:sc.text, whiteSpace:"nowrap" }}>
+                          {sub.status}
+                        </span>
                       </span>
-                    </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5" style={{ whiteSpace:"nowrap" }}>
+                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
+                        <span style={{ fontSize:"0.72rem", fontWeight:500, color:sc.text }}>
+                          {sub.status}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Underwriter — soft round avatar */}
@@ -1002,11 +1069,32 @@ export function Submissions() {
                     </span>
                   </div>
 
-                  {/* Need By Date */}
-                  <div>
+                  {/* Need By Date — three-tier urgency pill:
+                      Critical (was blocked-aging) > High Priority > Aging. */}
+                  <div className="flex flex-col items-start gap-0.5">
                     <span style={{ fontSize:"0.74rem", color:TM, whiteSpace:"nowrap", fontWeight:500 }}>
                       {sub.needByDate ? new Date(sub.needByDate).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—"}
                     </span>
+                    {(isBlockedAging || isAging || isHighPriorityActive) && (
+                      <span style={{
+                        background: isBlockedAging ? "#FEE2E2"
+                          : isHighPriorityActive ? "#FEE2E2"
+                          : "#FEF3C7",
+                        color: isBlockedAging ? "#7A1F1F"
+                          : isHighPriorityActive ? "#7A1F1F"
+                          : "#92400E",
+                        // Asymmetric padding compensates for trailing
+                        // letter-spacing on the last uppercase character.
+                        padding:"3px 8px 3px 9px", borderRadius:9999,
+                        ...typo.overline,
+                        display:"inline-flex", alignItems:"center",
+                        whiteSpace:"nowrap",
+                      }}>
+                        {isBlockedAging ? "Critical"
+                          : isHighPriorityActive ? "High Priority"
+                          : "Aging · " + sub.daysInQueue + "d"}
+                      </span>
+                    )}
                   </div>
 
                   {/* Effective Date */}
@@ -1014,7 +1102,7 @@ export function Submissions() {
                     <span style={{ fontSize:"0.74rem", color:TM, whiteSpace:"nowrap", fontWeight:500 }}>
                       {sub.effective ? new Date(sub.effective).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"}) : "—"}
                     </span>
-                    <ChevronRight size={14} color={BD} className="shrink-0 transition-colors group-hover:text-blue-600"/>
+                    <ChevronRight size={16} color={TT} className="shrink-0 transition-all group-hover:text-blue-600 group-hover:translate-x-0.5"/>
                   </div>
                 </div>
               );
@@ -1027,23 +1115,16 @@ export function Submissions() {
               <div className="flex items-center justify-between px-6 py-4"
                 style={{ background: "white", borderTop: `2px solid ${BDL}` }}>
 
-                {/* Left: range info */}
-                <div className="flex items-center gap-3">
-                  <span style={{ fontSize: "0.74rem", color: TT }}>
-                    Showing{" "}
-                    <span style={{ fontWeight: 700, color: TD }}>{(page - 1) * PER_PAGE + 1}</span>
-                    {" – "}
-                    <span style={{ fontWeight: 700, color: TD }}>{Math.min(page * PER_PAGE, filtered.length)}</span>
-                    {" of "}
-                    <span style={{ fontWeight: 700, color: N }}>{filtered.length}</span>
-                    {" submission"}{filtered.length !== 1 ? "s" : ""}
-                  </span>
-                  <span style={{ width: 1, height: 14, background: BDL, display: "inline-block" }} />
-                  <span style={{ fontSize: "0.70rem", color: TT }}>
-                    Page <span style={{ fontWeight: 700, color: TD }}>{page}</span> of{" "}
-                    <span style={{ fontWeight: 700, color: TD }}>{totalPages}</span>
-                  </span>
-                </div>
+                {/* Range info — the current page is conveyed by the numbered
+                    buttons on the right; no need to also spell out "Page X of Y". */}
+                <span style={{ fontSize: "0.78rem", color: TM }}>
+                  <span style={{ fontWeight: 700, color: TD }}>{(page - 1) * PER_PAGE + 1}</span>
+                  {"–"}
+                  <span style={{ fontWeight: 700, color: TD }}>{Math.min(page * PER_PAGE, filtered.length)}</span>
+                  {" of "}
+                  <span style={{ fontWeight: 700, color: TD }}>{filtered.length}</span>
+                  {" submission"}{filtered.length !== 1 ? "s" : ""}
+                </span>
 
                 {/* Right: prev / page numbers / next */}
                 <div className="flex items-center gap-1">

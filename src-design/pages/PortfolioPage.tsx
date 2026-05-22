@@ -24,7 +24,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ── Mock data ────────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ function SectionCard({ title, icon, accent = N, action, children, noPad = false 
   action?: React.ReactNode; children: React.ReactNode; noPad?: boolean;
 }) {
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}`, borderRadius: 8, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+    <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2"
         style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
         <div className="flex items-center gap-2.5">
@@ -172,7 +172,7 @@ function SectionCard({ title, icon, accent = N, action, children, noPad = false 
               {icon}
             </span>
           )}
-          <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.08em" }}>{title}</h3>
+          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>{title}</h3>
         </div>
         {action}
       </div>
@@ -199,7 +199,7 @@ export function PortfolioPage() {
 
   return (
     <AppShell activePage="portfolio" role={role} onRoleChange={() => {}}>
-      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+      <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
         style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
         <PageRegister
@@ -295,7 +295,7 @@ export function PortfolioPage() {
             background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
             borderRadius: "50%",
           }} />
-          <div className="relative px-5 sm:px-7 py-5 sm:py-6">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5">
             <h1 style={{ fontSize: "1.55rem", fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.01em" }}>
               Portfolio Analytics
             </h1>

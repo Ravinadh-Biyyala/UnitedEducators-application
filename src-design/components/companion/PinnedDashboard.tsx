@@ -1,4 +1,4 @@
-import { Sparkles, X, ArrowUpRight, BarChart3 } from "lucide-react";
+﻿import { Sparkles, X, ArrowUpRight, BarChart3 } from "lucide-react";
 import { useCompanion, type PinnedViz, type VizSpec } from "./CompanionContext";
 
 const N    = "#0123D4";
@@ -6,7 +6,7 @@ const G    = "#C9A227";
 const BDL  = "#DCE3EC";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 export function PinnedDashboard() {
@@ -37,7 +37,7 @@ export function PinnedDashboard() {
           <span style={{
             fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em",
             fontWeight: 800, color: TT, background: "#F0F3F8",
-            padding: "2px 6px", borderRadius: 4,
+            padding: "2px 6px", borderRadius: 9999,
           }}>{pinned.length}</span>
         </div>
         <p style={{ fontSize: 11, color: TT, margin: 0 }}>
@@ -205,8 +205,8 @@ function BarsMini({ viz }: { viz: Extract<VizSpec, { kind: "bars" }> }) {
       {viz.series.slice(0, 8).map((s, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
           <span style={{ width: 78, color: TM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.label}</span>
-          <div style={{ flex: 1, height: 8, background: "#EEF1F6", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: `${(s.value / max) * 100}%`, height: "100%", background: N, borderRadius: 4 }} />
+          <div style={{ flex: 1, height: 8, background: "#EEF1F6", borderRadius: 9999, overflow: "hidden" }}>
+            <div style={{ width: `${(s.value / max) * 100}%`, height: "100%", background: N, borderRadius: 9999 }} />
           </div>
           <span style={{ width: 36, textAlign: "right", fontWeight: 700, color: TD, fontFamily: "ui-monospace, monospace" }}>{s.value}{viz.unit ? "" : ""}</span>
         </div>

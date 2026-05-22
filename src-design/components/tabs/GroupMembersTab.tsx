@@ -132,7 +132,7 @@ export function GroupMembersTab() {
               className="flex items-center gap-1.5 shrink-0"
               style={{
                 background: "#FFF8E6", border: "1px solid #F0D88A",
-                padding: "4px 10px", borderRadius: 4,
+                padding: "4px 10px", borderRadius: 9999,
               }}
             >
               <Flag size={12} color="#8A5C00"/>
@@ -204,7 +204,7 @@ export function GroupMembersTab() {
                       style={{
                         background: ts.bg, color: ts.color,
                         border: `1px solid ${ts.border}`,
-                        padding: "2px 9px", borderRadius: 4,
+                        padding: "2px 9px", borderRadius: 9999,
                         fontSize: "0.66rem", fontWeight: 800,
                         textTransform: "uppercase", letterSpacing: "0.06em",
                       }}
@@ -261,7 +261,7 @@ export function GroupMembersTab() {
                       background: active ? `${N}10` : "white",
                       color: active ? N : TM,
                       fontSize: "0.66rem", fontWeight: 700,
-                      padding: "3px 9px", borderRadius: 4,
+                      padding: "3px 9px", borderRadius: 9999,
                       cursor: "pointer", fontFamily: font,
                     }}
                   >
@@ -296,14 +296,21 @@ export function GroupMembersTab() {
               {visible.map((m, i, arr) => {
                 const isLast = i === arr.length - 1;
                 const ts     = TIER_STYLE[m.ruleTier];
+                // Critical: Referred tier OR >=2 issues. Warning: any other issues.
+                const isMemberCritical = m.ruleTier === "Referred" || m.issues.length >= 2;
+                const isMemberWarning  = !isMemberCritical && m.issues.length > 0;
                 return (
                   <tr
                     key={m.id}
                     className="hover:bg-slate-50 transition-colors cursor-pointer"
                     style={{
                       borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
-                      background: m.issues.length ? "#FFFBF0" : "white",
-                      borderLeft: m.issues.length ? `3px solid ${WARN}` : "3px solid transparent",
+                      background: isMemberCritical ? "#FEF2F2" : isMemberWarning ? "#FFFBF0" : "white",
+                      borderLeft: isMemberCritical
+                        ? "3px solid #B91C1C"
+                        : isMemberWarning
+                          ? `3px solid ${WARN}`
+                          : "3px solid transparent",
                     }}
                   >
                     <td className="px-4 py-3" style={{ fontSize: "0.82rem", fontWeight: 700, color: TD }}>
@@ -326,7 +333,7 @@ export function GroupMembersTab() {
                             style={{
                               background: "#F1F4F8", color: TM,
                               fontSize: "0.60rem", fontWeight: 700,
-                              padding: "2px 6px", borderRadius: 3,
+                              padding: "2px 6px", borderRadius: 9999,
                               letterSpacing: "0.02em",
                             }}
                           >
@@ -348,18 +355,27 @@ export function GroupMembersTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className="inline-flex items-center gap-1.5"
-                        style={{
-                          background: ts.bg, color: ts.color,
-                          border: `1px solid ${ts.border}`,
-                          padding: "2px 8px", borderRadius: 4,
-                          fontSize: "0.64rem", fontWeight: 800,
-                          textTransform: "uppercase", letterSpacing: "0.06em",
-                        }}
-                      >
-                        {m.ruleTier}
-                      </span>
+                      {m.ruleTier === "Referred" || m.ruleTier === "Decline" ? (
+                        <span
+                          className="inline-flex items-center gap-1.5"
+                          style={{
+                            background: ts.bg, color: ts.color,
+                            border: `1px solid ${ts.border}`,
+                            padding: "2px 8px", borderRadius: 9999,
+                            fontSize: "0.64rem", fontWeight: 800,
+                            textTransform: "uppercase", letterSpacing: "0.06em",
+                          }}
+                        >
+                          {m.ruleTier}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5" style={{ whiteSpace: "nowrap" }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: ts.color }}/>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 500, color: ts.color }}>
+                            {m.ruleTier}
+                          </span>
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3" style={{ minWidth: 200 }}>
                       {m.issues.length === 0 ? (
@@ -367,14 +383,33 @@ export function GroupMembersTab() {
                           <CheckCircle2 size={11}/> Ready
                         </span>
                       ) : (
-                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                          {m.issues.map((iss, idx) => (
-                            <li key={idx} className="flex items-start gap-1.5" style={{ marginBottom: idx < m.issues.length - 1 ? 3 : 0 }}>
-                              <AlertCircle size={10} color={WARN} style={{ flexShrink: 0, marginTop: 3 }}/>
-                              <span style={{ fontSize: "0.66rem", color: "#7A4800", fontWeight: 600 }}>{iss}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <div>
+                          <span style={{
+                            display: "inline-block", marginBottom: 4,
+                            background: isMemberCritical ? "#FEE2E2" : "#FEF3C7",
+                            color:      isMemberCritical ? "#7A1F1F" : "#92400E",
+                            padding: "1px 6px", borderRadius: 9,
+                            fontSize: "0.52rem", fontWeight: 800,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                          }}>
+                            {m.issues.length} {m.issues.length === 1 ? "Issue" : "Issues"}
+                          </span>
+                          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                            {m.issues.map((iss, idx) => (
+                              <li key={idx} className="flex items-start gap-1.5" style={{ marginBottom: idx < m.issues.length - 1 ? 3 : 0 }}>
+                                <AlertCircle
+                                  size={10}
+                                  color={isMemberCritical ? "#B91C1C" : WARN}
+                                  style={{ flexShrink: 0, marginTop: 3 }}
+                                />
+                                <span style={{
+                                  fontSize: "0.66rem", fontWeight: 600,
+                                  color: isMemberCritical ? "#7A1F1F" : "#7A4800",
+                                }}>{iss}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </td>
                   </tr>

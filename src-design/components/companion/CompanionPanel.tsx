@@ -19,7 +19,7 @@ const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const BG   = "#EEF1F6";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
@@ -867,7 +867,7 @@ function PlaybookViz({ viz }: { viz: Extract<VizSpec, { kind: "playbook" }> }) {
                     })}
                     aria-label={ok ? "Mark incomplete" : "Mark done"}
                     style={{
-                      marginTop: 3, width: 16, height: 16, borderRadius: 4,
+                      marginTop: 3, width: 16, height: 16, borderRadius: 9999,
                       border: ok ? `2px solid ${N}` : `2px solid ${BD}`,
                       background: ok ? N : "white",
                       display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,

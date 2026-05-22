@@ -15,7 +15,7 @@ const G   = "#C9A227";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ─── KPI Tile (Dashboard hover effect, click-to-filter) ──────────────────────
@@ -40,15 +40,16 @@ function KPITile({ label, value, sub, accent, icon, onClick, selected = false }:
       aria-label={`${label}: ${value}, ${sub}${clickable ? (active ? " (filter active)" : " (click to filter)") : ""}`}
       style={{
         textAlign: "left", width: "100%", fontFamily: "inherit",
-        background: active
-          ? `linear-gradient(135deg, ${accent}12 0%, ${accent}06 100%)`
-          : hovered
-          ? `linear-gradient(135deg, white 0%, ${accent}08 100%)`
-          : "white",
+        // Selection is conveyed by border + ring shadow + colored text only.
+        // Background stays white in all states.
+        background: "white",
         border: `${active ? 1.5 : 1}px solid ${active ? accent : hovered ? `${accent}40` : BDL}`,
         borderRadius: 10, padding: "14px 16px",
         boxShadow: active
-          ? `0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
+          // Double-ring glow on the active filter card — matches the
+          // Submissions page so the active KPI reads as "currently filtering"
+          // at a glance, even across pages.
+          ? `0 0 0 1px ${accent}, 0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
           : hovered
           ? `0 2px 6px ${accent}14, 0 1px 2px rgba(15,23,42,0.04)`
           : "0 1px 2px rgba(15,23,42,0.04)",
@@ -87,7 +88,7 @@ function KPITile({ label, value, sub, accent, icon, onClick, selected = false }:
         transition: "color 0.2s ease",
       }}>{value}</p>
       <div className="inline-flex items-center gap-1 mt-2"
-        style={{ fontSize: "0.66rem", color: TT, fontWeight: 600 }}>
+        style={{ fontSize: "0.66rem", color: active ? accent : TT, fontWeight: 600 }}>
         <span>{sub}</span>
       </div>
     </button>
@@ -116,7 +117,10 @@ const ALL_EVENTS: ActivityEvent[] = [
   { id: "ev1",  type: "Quote Issued",        actor: "Tom Lee",          actorInitials: "TL", target: "Vanderbilt University",          submission: "SUB-7832", description: "Issued indicative quote of $612,300 (Property + GL).",                       timestamp: "8 min ago",       dateBucket: "Today",              minutesAgo: 8    },
   { id: "ev2",  type: "Approval Decided",    actor: "Director",         actorInitials: "DR", target: "Austin Independent SD",          submission: "SUB-7831", description: "Approved Cyber sublimit increase to $5M.",                                    timestamp: "32 min ago",      dateBucket: "Today",              minutesAgo: 32   },
   { id: "ev3",  type: "Document Uploaded",   actor: "Sarah Mitchell",   actorInitials: "SM", target: "Seattle Public Schools",         submission: "SUB-7835", description: "Uploaded 2024 safety questionnaire (3.2 MB).",                               timestamp: "1 hour ago",      dateBucket: "Today",              minutesAgo: 60   },
+  { id: "ev3b", type: "Document Uploaded",   actor: "Sarah Mitchell",   actorInitials: "SM", target: "Seattle Public Schools",         submission: "SUB-7835", description: "Uploaded property schedule rev. 3 (1.4 MB).",                                  timestamp: "50 min ago",      dateBucket: "Today",              minutesAgo: 50   },
+  { id: "ev3c", type: "Document Uploaded",   actor: "Sarah Mitchell",   actorInitials: "SM", target: "Seattle Public Schools",         submission: "SUB-7835", description: "Uploaded broker cover letter (0.4 MB).",                                       timestamp: "1.5 hours ago",   dateBucket: "Today",              minutesAgo: 90   },
   { id: "ev4",  type: "Note Added",          actor: "James Owens",      actorInitials: "JO", target: "Phoenix Charter Academy",        submission: "SUB-7834", description: "“Loss-ratio trend is climbing — flagged for Director review.”",              timestamp: "2 hours ago",     dateBucket: "Today",              minutesAgo: 120  },
+  { id: "ev4b", type: "Note Added",          actor: "James Owens",      actorInitials: "JO", target: "Phoenix Charter Academy",        submission: "SUB-7834", description: "“Confirmed Director call scheduled for Friday.”",                              timestamp: "2.5 hours ago",   dateBucket: "Today",              minutesAgo: 145  },
   { id: "ev5",  type: "Email Sent",          actor: "Sarah Mitchell",   actorInitials: "SM", target: "Gallagher Education",            submission: "SUB-7829", description: "Sent quote summary to broker (CC: account exec).",                            timestamp: "3 hours ago",     dateBucket: "Today",              minutesAgo: 180  },
   { id: "ev6",  type: "Risk Assessed",       actor: "John Michaels",    actorInitials: "JM", target: "MIT",                             submission: "SUB-7836", description: "Completed appetite review — score 91/100.",                                   timestamp: "Today, 10:14",    dateBucket: "Today",              minutesAgo: 220  },
   { id: "ev7",  type: "Submission Created",  actor: "Sarah Mitchell",   actorInitials: "SM", target: "Stanford University",            submission: "SUB-7841", description: "Created new submission — Higher-Ed renewal package.",                         timestamp: "Today, 09:22",    dateBucket: "Today",              minutesAgo: 270  },
@@ -143,6 +147,67 @@ const EVENT_STYLE: Record<ActivityType, { color: string; icon: React.ReactNode }
   "Risk Assessed":      { color: N,         icon: <ShieldCheck size={13}/>  },
 };
 
+// ─── Visual tiering ──────────────────────────────────────────────────────────
+// Milestone events change pipeline state — they deserve a full bordered card.
+// Operational events (notes/emails/uploads/edits/tasks) are background noise
+// at the page level; they render as compact one-line rows and cluster when
+// the same actor repeats the same action on the same submission.
+const MILESTONE_TYPES = new Set<ActivityType>([
+  "Policy Bound", "Quote Issued", "Approval Decided",
+  "Submission Created", "Risk Assessed",
+]);
+
+const TYPE_VERB: Record<ActivityType, { single: string; plural: (n: number) => string }> = {
+  "Submission Created": { single: "created submission for",  plural: n => `created ${n} submissions for` },
+  "Submission Edited":  { single: "edited",                   plural: n => `made ${n} edits to` },
+  "Document Uploaded":  { single: "uploaded a document to",  plural: n => `uploaded ${n} documents to` },
+  "Note Added":         { single: "added a note on",          plural: n => `added ${n} notes on` },
+  "Email Sent":         { single: "sent an email re",         plural: n => `sent ${n} emails re` },
+  "Approval Decided":   { single: "decided approval for",     plural: n => `decided ${n} approvals for` },
+  "Quote Issued":       { single: "issued a quote for",       plural: n => `issued ${n} quotes for` },
+  "Policy Bound":       { single: "bound policy for",         plural: n => `bound ${n} policies for` },
+  "Task Completed":     { single: "completed a task on",      plural: n => `completed ${n} tasks on` },
+  "Risk Assessed":      { single: "assessed risk for",        plural: n => `completed ${n} risk reviews for` },
+};
+
+// Cluster window: same actor + type + submission within 6h → grouped row.
+const GROUP_WINDOW_MIN = 6 * 60;
+
+interface EventGroup {
+  id: string;                  // first event id, stable
+  isMilestone: boolean;
+  events: ActivityEvent[];     // sorted by minutesAgo asc (most recent first)
+}
+
+function groupEvents(events: ActivityEvent[]): EventGroup[] {
+  // events arrive sorted by minutesAgo ascending
+  const out: EventGroup[] = [];
+  const used = new Set<string>();
+  for (const e of events) {
+    if (used.has(e.id)) continue;
+    used.add(e.id);
+    if (MILESTONE_TYPES.has(e.type)) {
+      out.push({ id: e.id, isMilestone: true, events: [e] });
+      continue;
+    }
+    const cluster: ActivityEvent[] = [e];
+    for (const o of events) {
+      if (used.has(o.id)) continue;
+      if (
+        o.actor === e.actor &&
+        o.type === e.type &&
+        o.submission === e.submission &&
+        Math.abs(o.minutesAgo - e.minutesAgo) <= GROUP_WINDOW_MIN
+      ) {
+        cluster.push(o);
+        used.add(o.id);
+      }
+    }
+    out.push({ id: e.id, isMilestone: false, events: cluster });
+  }
+  return out;
+}
+
 export function ActivityPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -151,6 +216,13 @@ export function ActivityPage() {
   const [tab, setTab] = useState<"all" | "mine" | "team" | "submissions">("all");
   const [typeFilter, setTypeFilter] = useState<ActivityType | "All">("All");
   const [kpiKey, setKpiKey] = useState<"today" | "myToday" | "bound" | "approvals" | "docs" | "week" | null>(null);
+  // Groups are collapsed by default; click "Show all N" to expand a cluster.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (id: string) => setExpandedGroups(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const myName = user?.name ?? "Sarah Mitchell";
 
@@ -210,7 +282,7 @@ export function ActivityPage() {
 
   return (
     <AppShell activePage="activity" role={role} onRoleChange={() => {}}>
-      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+      <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
         style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
         {/* ── HERO ──────────────────────────────────────────────────────────── */}
@@ -225,7 +297,7 @@ export function ActivityPage() {
             background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
             borderRadius: "50%",
           }}/>
-          <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-start justify-between gap-3 flex-wrap">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5 flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Activity</h1>
               <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
@@ -253,7 +325,6 @@ export function ActivityPage() {
           style={{
             background: "white",
             border: `1px solid ${BDL}`,
-            borderTop: `3px solid ${N}`,
             borderRadius: 8,
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -266,7 +337,7 @@ export function ActivityPage() {
                 style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
                 <Activity size={13}/>
               </span>
-              <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
                 Activity Timeline
               </h3>
             </div>
@@ -325,7 +396,9 @@ export function ActivityPage() {
             </div>
           </div>
 
-          {/* Timeline */}
+          {/* Timeline — tiered: milestones get full cards, operational events
+              collapse to compact rows and cluster when the same actor repeats
+              the same action on the same submission. */}
           <div className="px-5 sm:px-7 py-5">
             {filtered.length === 0 ? (
               <div className="px-5 py-10 text-center" style={{ fontSize: "0.82rem", color: TT }}>
@@ -334,9 +407,14 @@ export function ActivityPage() {
             ) : (["Today", "Yesterday", "Earlier this week", "Earlier"] as const).map(bucket => {
               const events = grouped[bucket];
               if (!events || events.length === 0) return null;
+              const groups       = groupEvents(events);
+              const milestoneCt  = groups.filter(g => g.isMilestone).length;
+              const operationalCt = groups
+                .filter(g => !g.isMilestone)
+                .reduce((s, g) => s + g.events.length, 0);
               return (
                 <div key={bucket} className="mb-5 last:mb-0">
-                  {/* Bucket label */}
+                  {/* Bucket label with milestone/operational breakdown */}
                   <div className="flex items-center gap-2 mb-2.5">
                     <span style={{
                       fontSize: "0.64rem", fontWeight: 800, color: TT,
@@ -344,99 +422,246 @@ export function ActivityPage() {
                     }}>
                       {bucket}
                     </span>
-                    <span style={{
-                      fontSize: "0.58rem", fontWeight: 700, color: TT,
-                      background: "#F1F5F9", padding: "1px 7px", borderRadius: 4,
-                    }}>
-                      {events.length}
-                    </span>
+                    {milestoneCt > 0 && (
+                      <span style={{
+                        fontSize: "0.58rem", fontWeight: 800, color: N,
+                        background: `${N}10`, padding: "1px 7px", borderRadius: 9999,
+                        textTransform: "uppercase", letterSpacing: "0.05em",
+                      }}>
+                        {milestoneCt} milestone{milestoneCt === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {operationalCt > 0 && (
+                      <span style={{
+                        fontSize: "0.58rem", fontWeight: 700, color: TT,
+                        background: "#F1F5F9", padding: "1px 7px", borderRadius: 9999,
+                        textTransform: "uppercase", letterSpacing: "0.05em",
+                      }}>
+                        {operationalCt} operational
+                      </span>
+                    )}
                     <div style={{ flex: 1, height: 1, background: "#EEF1F5" }}/>
                   </div>
 
-                  {/* Events */}
                   <ol style={{ listStyle: "none", padding: 0, margin: 0, position: "relative" }}>
-                    {/* Vertical rail */}
                     <span aria-hidden style={{
                       position: "absolute",
                       left: 15, top: 6, bottom: 6, width: 2,
                       background: "linear-gradient(to bottom, #DCE3EC 0%, #EEF1F5 100%)",
                     }}/>
-                    {events.map((e) => {
-                      const style = EVENT_STYLE[e.type];
-                      const isClickable = !!e.submission;
-                      return (
-                        <li key={e.id}
-                          onClick={() => { if (isClickable && e.submission) navigate(`/submission/${e.submission}`); }}
-                          className={isClickable ? "cursor-pointer group" : ""}
-                          style={{
-                            position: "relative",
-                            padding: "8px 0 8px 44px",
-                            transition: "background 0.15s",
-                          }}>
-                          {/* Node */}
-                          <span className="inline-flex items-center justify-center"
-                            style={{
-                              position: "absolute", left: 0, top: 8,
-                              width: 32, height: 32, borderRadius: 8,
-                              background: `${style.color}15`, color: style.color,
-                              border: `2px solid white`,
-                              boxShadow: `0 0 0 1px ${style.color}30`,
-                              zIndex: 1,
-                            }}>
-                            {style.icon}
-                          </span>
+                    {groups.map(group => {
+                      const head        = group.events[0];
+                      const style       = EVENT_STYLE[head.type];
+                      const isClickable = !!head.submission;
+                      const onOpen      = () => { if (isClickable && head.submission) navigate(`/submission/${head.submission}`); };
 
-                          {/* Card */}
-                          <div style={{
-                            background: "white",
-                            border: `1px solid ${BDL}`,
-                            borderRadius: 8,
-                            padding: "10px 13px",
-                            transition: "border-color 0.15s, box-shadow 0.15s",
-                          }}
-                            className={isClickable ? "group-hover:border-blue-300 group-hover:shadow-sm" : ""}>
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="inline-flex items-center justify-center rounded-full shrink-0"
-                                  style={{
-                                    width: 18, height: 18,
-                                    background: `${N}15`, color: N,
-                                    fontSize: "0.5rem", fontWeight: 800,
+                      // ── Milestone: full bordered card (the existing rich treatment) ──
+                      if (group.isMilestone) {
+                        return (
+                          <li key={group.id}
+                            onClick={onOpen}
+                            className={isClickable ? "cursor-pointer group" : ""}
+                            style={{ position: "relative", padding: "8px 0 8px 44px" }}>
+                            <span className="inline-flex items-center justify-center"
+                              style={{
+                                position: "absolute", left: 0, top: 8,
+                                width: 32, height: 32, borderRadius: 8,
+                                background: `${style.color}15`, color: style.color,
+                                border: `2px solid white`,
+                                boxShadow: `0 0 0 1px ${style.color}30`,
+                                zIndex: 1,
+                              }}>
+                              {style.icon}
+                            </span>
+                            <div style={{
+                              background: "white",
+                              border: `1px solid ${BDL}`,
+                              borderLeft: `3px solid ${style.color}`,
+                              borderRadius: 8,
+                              padding: "10px 13px",
+                              transition: "border-color 0.15s, box-shadow 0.15s",
+                            }}
+                              className={isClickable ? "group-hover:border-blue-300 group-hover:shadow-sm" : ""}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="inline-flex items-center justify-center rounded-full shrink-0"
+                                    style={{
+                                      width: 18, height: 18,
+                                      background: `${N}15`, color: N,
+                                      fontSize: "0.5rem", fontWeight: 800,
+                                    }}>
+                                    {head.actorInitials}
+                                  </span>
+                                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: TD }}>
+                                    {head.actor}
+                                  </span>
+                                  <span style={{
+                                    fontSize: "0.58rem", fontWeight: 800, color: style.color,
+                                    background: `${style.color}15`, padding: "1px 7px", borderRadius: 9999,
+                                    textTransform: "uppercase", letterSpacing: "0.05em",
                                   }}>
-                                  {e.actorInitials}
-                                </span>
-                                <span style={{ fontSize: "0.76rem", fontWeight: 700, color: TD }}>
-                                  {e.actor}
-                                </span>
-                                <span style={{
-                                  fontSize: "0.58rem", fontWeight: 700, color: style.color,
-                                  background: `${style.color}15`, padding: "1px 7px", borderRadius: 4,
-                                  textTransform: "uppercase", letterSpacing: "0.05em",
-                                }}>
-                                  {e.type}
+                                    {head.type}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: "0.62rem", color: TT, whiteSpace: "nowrap" }}>
+                                  {head.timestamp}
                                 </span>
                               </div>
-                              <span style={{ fontSize: "0.62rem", color: TT, whiteSpace: "nowrap" }}>
-                                {e.timestamp}
+                              <p style={{ fontSize: "0.78rem", color: TM, marginTop: 4, lineHeight: 1.5 }}>
+                                <span style={{ fontWeight: 700, color: TD }}>{head.target}</span> · {head.description}
+                              </p>
+                              {head.submission && (
+                                <div className="flex items-center gap-1.5 mt-1.5">
+                                  <span style={{
+                                    fontSize: "0.62rem", fontWeight: 700, color: N,
+                                    fontFamily: "ui-monospace, monospace",
+                                  }} className="group-hover:underline">
+                                    {head.submission}
+                                  </span>
+                                  <ChevronRight size={10} color={BDL}/>
+                                </div>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      }
+
+                      // ── Operational, single event: compact row ──
+                      const opNode = (
+                        <span className="inline-flex items-center justify-center"
+                          style={{
+                            position: "absolute", left: 5, top: 7,
+                            width: 22, height: 22, borderRadius: 6,
+                            background: `${style.color}12`, color: style.color,
+                            border: `2px solid white`,
+                            boxShadow: `0 0 0 1px ${style.color}25`,
+                            zIndex: 1,
+                          }}>
+                          {style.icon}
+                        </span>
+                      );
+
+                      if (group.events.length === 1) {
+                        const verb = TYPE_VERB[head.type].single;
+                        return (
+                          <li key={group.id}
+                            onClick={onOpen}
+                            className={isClickable ? "cursor-pointer group" : ""}
+                            style={{
+                              position: "relative",
+                              padding: "5px 0 5px 44px",
+                              borderRadius: 6,
+                              transition: "background 0.12s",
+                            }}>
+                            {opNode}
+                            <div className="flex items-baseline gap-2 flex-wrap"
+                              style={{ minHeight: 22 }}>
+                              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: TD }}>
+                                {head.actor}
+                              </span>
+                              <span style={{
+                                fontSize: "0.70rem", color: TM,
+                                flex: 1, minWidth: 0,
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              }}>
+                                {verb} <strong style={{ color: TD, fontWeight: 600 }}>{head.target}</strong>
+                                {head.description && <> — {head.description}</>}
+                              </span>
+                              {head.submission && (
+                                <span className="group-hover:underline"
+                                  style={{
+                                    fontSize: "0.60rem", fontWeight: 700, color: N,
+                                    fontFamily: "ui-monospace, monospace", whiteSpace: "nowrap",
+                                  }}>
+                                  {head.submission}
+                                </span>
+                              )}
+                              <span style={{ fontSize: "0.60rem", color: TT, whiteSpace: "nowrap" }}>
+                                {head.timestamp}
                               </span>
                             </div>
-                            <p style={{
-                              fontSize: "0.78rem", color: TM, marginTop: 4, lineHeight: 1.5,
-                            }}>
-                              <span style={{ fontWeight: 700, color: TD }}>{e.target}</span> · {e.description}
-                            </p>
-                            {e.submission && (
-                              <div className="flex items-center gap-1.5 mt-1.5">
-                                <span style={{
-                                  fontSize: "0.62rem", fontWeight: 700, color: N,
+                          </li>
+                        );
+                      }
+
+                      // ── Operational cluster: collapsed summary + expandable children ──
+                      const verbPlural = TYPE_VERB[head.type].plural(group.events.length);
+                      const earliest   = group.events[group.events.length - 1];
+                      const latest     = group.events[0];
+                      const expanded   = expandedGroups.has(group.id);
+                      return (
+                        <li key={group.id}
+                          style={{
+                            position: "relative",
+                            padding: "5px 0 5px 44px",
+                          }}>
+                          {opNode}
+                          {/* Summary row */}
+                          <div className="flex items-baseline gap-2 flex-wrap"
+                            style={{ minHeight: 22 }}>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: TD }}>
+                              {head.actor}
+                            </span>
+                            <span style={{ fontSize: "0.70rem", color: TM, flex: 1, minWidth: 0 }}>
+                              {verbPlural} <strong style={{ color: TD, fontWeight: 600 }}>{head.target}</strong>
+                            </span>
+                            {head.submission && (
+                              <span
+                                onClick={(ev) => { ev.stopPropagation(); navigate(`/submission/${head.submission}`); }}
+                                style={{
+                                  fontSize: "0.60rem", fontWeight: 700, color: N,
                                   fontFamily: "ui-monospace, monospace",
-                                }} className="group-hover:underline">
-                                  {e.submission}
-                                </span>
-                                <ChevronRight size={10} color={BDL}/>
-                              </div>
+                                  whiteSpace: "nowrap", cursor: "pointer",
+                                }}>
+                                {head.submission}
+                              </span>
                             )}
+                            <span style={{ fontSize: "0.60rem", color: TT, whiteSpace: "nowrap" }}>
+                              {latest.timestamp}
+                              {earliest.minutesAgo !== latest.minutesAgo && (
+                                <> · spanning {Math.round((earliest.minutesAgo - latest.minutesAgo) / 60 * 10) / 10}h</>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(group.id)}
+                              style={{
+                                fontSize: "0.60rem", fontWeight: 700, color: N,
+                                background: `${N}10`, border: "none",
+                                padding: "2px 8px", borderRadius: 9999,
+                                cursor: "pointer", fontFamily: font,
+                              }}>
+                              {expanded ? "Hide" : `Show all ${group.events.length}`}
+                            </button>
                           </div>
+                          {/* Expanded children */}
+                          {expanded && (
+                            <ol style={{ listStyle: "none", padding: 0, margin: "4px 0 0 0" }}>
+                              {group.events.map(child => (
+                                <li key={child.id}
+                                  onClick={() => { if (child.submission) navigate(`/submission/${child.submission}`); }}
+                                  className={child.submission ? "cursor-pointer" : ""}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderLeft: `2px solid ${style.color}30`,
+                                    marginLeft: 4,
+                                  }}>
+                                  <div className="flex items-baseline gap-2 flex-wrap">
+                                    <span style={{
+                                      fontSize: "0.66rem", color: TM,
+                                      flex: 1, minWidth: 0,
+                                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                    }}>
+                                      {child.description}
+                                    </span>
+                                    <span style={{ fontSize: "0.58rem", color: TT, whiteSpace: "nowrap" }}>
+                                      {child.timestamp}
+                                    </span>
+                                  </div>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
                         </li>
                       );
                     })}

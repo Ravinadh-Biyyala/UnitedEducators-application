@@ -18,7 +18,7 @@ const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 type RuleStatus = "In Appetite" | "Watch" | "Out of Appetite";
@@ -80,12 +80,12 @@ function SectionCard({ title, icon, accent = N, action, children, noPad = false 
   action?: React.ReactNode; children: React.ReactNode; noPad?: boolean;
 }) {
   return (
-    <div style={{ background: "white", border: `1px solid ${BD}`, borderTop: `3px solid ${accent}`, borderRadius: 8, overflow: "hidden" }}>
+    <div style={{ background: "white", border: `1px solid ${BD}`, borderRadius: 8, overflow: "hidden" }}>
       <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2"
         style={{ borderBottom: `1px solid ${BDL}`, background: TH }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && <span style={{ color: accent }}>{icon}</span>}
-          <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: N, textTransform: "uppercase", letterSpacing: "0.08em" }}>{title}</h3>
+          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>{title}</h3>
         </div>
         {action}
       </div>
@@ -166,7 +166,7 @@ export function AppetitePage() {
         {/* Page header */}
         <div style={{ background: N }}>
           <div style={{ height: 4, background: `linear-gradient(90deg,${G} 0%,#A8841C 100%)` }} />
-          <div className="px-4 sm:px-8 py-4 sm:py-5 flex items-start justify-between gap-4 flex-wrap">
+          <div className="px-3 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Appetite & Rules</h1>
               <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.5)", marginTop: 4 }}>
@@ -207,7 +207,7 @@ export function AppetitePage() {
         </div>
 
         {/* Content */}
-        <div className="px-4 sm:px-6 lg:px-8 py-5 space-y-5" style={{ background: "#EEF1F6" }}>
+        <div className="px-3 sm:px-4 lg:px-5 py-3 space-y-3" style={{ background: "#EEF1F6" }}>
 
           {/* View toggle + category filter */}
           <div className="flex items-center justify-between flex-wrap gap-3">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Calendar, RefreshCw, AlertCircle, AlertTriangle,
   ChevronRight, ChevronLeft, Filter,
+  Activity, TrendingDown, FileCheck,
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import type { RoleId } from "../components/AppShell";
@@ -14,66 +15,98 @@ const G   = "#C9A227";
 const BDL = "#DCE3EC";
 const TD  = "#1A2530";
 const TM  = "#4A5D6E";
-const TT  = "#7A8FA3";
+const TT  = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
-// ─── Window Bucket (selectable time-window filter tile, Dashboard hover style) ───
-function WindowBucket({ label, count, sub, accent, selected, onClick }: {
-  label: string; count: number; sub: string; accent: string;
-  selected: boolean; onClick: () => void;
+// ─── Health Metric tile (op-health strip — matches KPITile chrome) ──────────
+function HealthMetric({
+  label, value, sub, tone, icon, action, onClick,
+}: {
+  label: string; value: string | number; sub: string;
+  tone: "red" | "amber" | "green";
+  icon: React.ReactNode;
+  action?: string;
+  onClick?: () => void;
 }) {
+  const accent =
+    tone === "red"   ? "#B91C1C" :
+    tone === "amber" ? "#B45309" : "#15803D";
+  const interactive = !!onClick;
   const [hovered, setHovered] = useState(false);
-  const active = selected;
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={!interactive}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      aria-pressed={active}
-      aria-label={`${label}: ${count}`}
+      aria-label={`${label}: ${value}, ${sub}`}
       style={{
         textAlign: "left", width: "100%", fontFamily: font,
-        background: active
-          ? `linear-gradient(135deg, ${accent}12 0%, ${accent}06 100%)`
-          : hovered
+        background: hovered
           ? `linear-gradient(135deg, white 0%, ${accent}08 100%)`
           : "white",
-        border: `1.5px solid ${active ? accent : hovered ? `${accent}40` : BDL}`,
+        border: `1px solid ${hovered ? `${accent}40` : BDL}`,
         borderRadius: 10,
         padding: "14px 16px",
-        boxShadow: active
-          ? `0 2px 8px ${accent}22, 0 1px 2px rgba(15,23,42,0.04)`
-          : hovered
+        boxShadow: hovered
           ? `0 2px 6px ${accent}14, 0 1px 2px rgba(15,23,42,0.04)`
           : "0 1px 2px rgba(15,23,42,0.04)",
-        transform: hovered && !active ? "translateY(-1px)" : "translateY(0)",
+        transform: hovered && interactive ? "translateY(-1px)" : "translateY(0)",
         transition: "background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease",
-        position: "relative", overflow: "hidden", outline: "none", cursor: "pointer",
-      }}>
+        position: "relative", overflow: "hidden", outline: "none",
+        cursor: interactive ? "pointer" : "default",
+      }}
+    >
+      {/* Top accent strip — matches KPITile chrome */}
       <span aria-hidden style={{
         position: "absolute", inset: "0 0 auto 0",
-        height: active ? 4 : hovered ? 4 : 3,
-        background: active ? accent : hovered ? accent : `linear-gradient(90deg, ${accent}, ${accent}66)`,
+        height: hovered ? 4 : 3,
+        background: hovered ? accent : `linear-gradient(90deg, ${accent}, ${accent}66)`,
         transition: "height 0.2s ease, background 0.2s ease",
       }}/>
-      <p style={{
-        fontSize: "0.6rem", fontWeight: 700, color: active ? accent : TT,
-        textTransform: "uppercase", letterSpacing: "0.09em", lineHeight: 1.3,
-      }}>{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p style={{
+          fontSize: "0.6rem", fontWeight: 700, color: TT,
+          textTransform: "uppercase", letterSpacing: "0.09em", lineHeight: 1.3,
+        }}>
+          {label}
+        </p>
+        <span className="inline-flex items-center justify-center"
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: hovered ? `${accent}1F` : `${accent}10`,
+            color: accent,
+            transform: hovered ? "scale(1.08)" : "scale(1)",
+            transition: "background 0.2s ease, transform 0.2s ease",
+          }}>
+          {icon}
+        </span>
+      </div>
       <p style={{
         fontSize: "1.7rem", fontWeight: 800,
-        color: active ? accent : hovered ? accent : TD,
+        color: hovered ? accent : TD,
         lineHeight: 1.1, marginTop: 6,
         fontVariantNumeric: "tabular-nums",
         transition: "color 0.2s ease",
-      }}>{count}</p>
+      }}>
+        {value}
+      </p>
       <div className="inline-flex items-center gap-1 mt-2"
-        style={{ fontSize: "0.66rem", color: active ? accent : TT, fontWeight: 600 }}>
+        style={{ fontSize: "0.66rem", color: TT, fontWeight: 600 }}>
         <span>{sub}</span>
       </div>
+      {action && (
+        <p style={{
+          fontSize: "0.66rem", color: accent, marginTop: 4,
+          fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3,
+        }}>
+          {action}
+          {interactive && <ChevronRight size={11}/>}
+        </p>
+      )}
     </button>
   );
 }
@@ -177,8 +210,6 @@ export function RenewalsPage() {
   // Time-window bucket counts — measured against the active pipeline (excl. Bound/Lost).
   const pipeline = ALL_RENEWALS.filter(r => r.status !== "Bound" && r.status !== "Lost");
   const bucketCount = (w: WindowId) => pipeline.filter(r => inWindow(r.daysUntilExpiry, w)).length;
-  const bucketExposure = (w: WindowId) =>
-    pipeline.filter(r => inWindow(r.daysUntilExpiry, w)).reduce((s, r) => s + r.expiringPremium, 0);
 
   const windows: { id: WindowId; label: string; accent: string }[] = [
     { id: "all",     label: "All Renewals",    accent: N         },
@@ -189,9 +220,25 @@ export function RenewalsPage() {
     { id: "overdue", label: "Overdue",         accent: "#B91C1C" },
   ];
 
+  // ── Operational health metrics — derived from the active pipeline (excl. Bound/Lost) ──
+  const overduePipe   = pipeline.filter(r => r.daysUntilExpiry < 0);
+  const atRiskPipe    = pipeline.filter(r => r.status === "At Risk");
+  const highLRPipe    = pipeline.filter(r => r.lossRatio >= 100);
+  const within60      = pipeline.filter(r => r.daysUntilExpiry >= 0 && r.daysUntilExpiry <= 60);
+  const within60Quoted = within60.filter(r => r.status === "Quoted").length;
+  const quoteCoverage = within60.length > 0
+    ? Math.round((within60Quoted / within60.length) * 100)
+    : 0;
+  const QUOTE_TARGET  = 70;
+
+  const overdueExposure = overduePipe.reduce((s, r) => s + r.expiringPremium, 0);
+  const atRiskExposure  = atRiskPipe.reduce((s, r) => s + r.expiringPremium, 0);
+  const highLRExposure  = highLRPipe.reduce((s, r) => s + r.expiringPremium, 0);
+  const totalAtRisk     = overdueExposure + atRiskExposure;
+
   return (
     <AppShell activePage="renewals" role={role} onRoleChange={() => {}}>
-      <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6"
+      <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4"
         style={{ fontFamily: font, color: TD, minHeight: "100%", background: "#EEF1F6" }}>
 
         {/* ── HERO ──────────────────────────────────────────────────────────── */}
@@ -206,12 +253,41 @@ export function RenewalsPage() {
             background: `radial-gradient(circle, ${G}25 0%, transparent 65%)`,
             borderRadius: "50%",
           }}/>
-          <div className="relative px-5 sm:px-7 py-5 sm:py-6 flex items-start justify-between gap-3 flex-wrap">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5 flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "white", lineHeight: 1.2 }}>Renewals</h1>
-              <p style={{ fontSize: "0.80rem", color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
-                {bucketCount("120d")} accounts renewing in next 120 days · {bucketCount("overdue")} overdue
-              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
+                {overduePipe.length > 0 && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    background: "rgba(239,68,68,0.22)",
+                    border: "1px solid rgba(254,202,202,0.5)",
+                    padding: "3px 10px", borderRadius: 9999,
+                    fontSize: "0.66rem", fontWeight: 800, color: "#FFD9D9",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    <AlertCircle size={11}/> {overduePipe.length} Overdue
+                  </span>
+                )}
+                {atRiskPipe.length > 0 && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    background: "rgba(251,146,60,0.22)",
+                    border: "1px solid rgba(254,215,170,0.5)",
+                    padding: "3px 10px", borderRadius: 9999,
+                    fontSize: "0.66rem", fontWeight: 800, color: "#FFE0B5",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    <AlertTriangle size={11}/> {atRiskPipe.length} At Risk
+                  </span>
+                )}
+                <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.72)" }}>
+                  {bucketCount("120d")} renewing in 120 days
+                  {totalAtRisk > 0 && (
+                    <> · <span style={{ color: "#FFD9D9", fontWeight: 700 }}>{fmt$(totalAtRisk)} at risk</span></>
+                  )}
+                </span>
+              </div>
             </div>
             <PrimaryWhiteButton>
               <RefreshCw size={14}/>
@@ -220,25 +296,96 @@ export function RenewalsPage() {
           </div>
         </div>
 
-        {/* ── TIME-WINDOW BUCKETS (clickable filters) ───────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        {/* ── OPERATIONAL HEALTH STRIP ──────────────────────────────────────── */}
+        {/* Action-oriented risk surface: each tile is a "you need to look at this"
+            signal, separate from the time-window filters below (which slice the
+            same pipeline by remaining-days). Cards with a meaningful filter map
+            to setting that filter so the table jumps to the matching subset. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <HealthMetric
+            tone="red"
+            icon={<AlertCircle size={14}/>}
+            label="Overdue"
+            value={overduePipe.length}
+            sub={overduePipe.length > 0 ? `${fmt$(overdueExposure)} past expiry` : "None"}
+            action={overduePipe.length > 0 ? "Triage now" : undefined}
+          />
+          <HealthMetric
+            tone="red"
+            icon={<AlertTriangle size={14}/>}
+            label="At-Risk Exposure"
+            value={fmt$(atRiskExposure)}
+            sub={`${atRiskPipe.length} ${atRiskPipe.length === 1 ? "policy" : "policies"}`}
+            action={atRiskPipe.length > 0 ? "Escalate / re-engage" : undefined}
+          />
+          <HealthMetric
+            tone={highLRPipe.length > 0 ? "amber" : "green"}
+            icon={<TrendingDown size={14}/>}
+            label="Loss Ratio > 100%"
+            value={highLRPipe.length}
+            sub={highLRPipe.length > 0 ? `${fmt$(highLRExposure)} to reprice` : "Book is healthy"}
+            action={highLRPipe.length > 0 ? "Reprice with care" : undefined}
+          />
+          <HealthMetric
+            tone={quoteCoverage >= QUOTE_TARGET ? "green" : quoteCoverage >= 50 ? "amber" : "red"}
+            icon={<FileCheck size={14}/>}
+            label="Quote Coverage · <60d"
+            value={`${quoteCoverage}%`}
+            sub={`${within60Quoted} of ${within60.length} quoted`}
+            action={quoteCoverage >= QUOTE_TARGET ? "On track" : `Target ${QUOTE_TARGET}% — behind`}
+          />
+        </div>
+
+        {/* ── TIME-WINDOW FILTER PILLS ──────────────────────────────────────── */}
+        {/* Compact filter row — the big KPI tiles above already surface the
+            critical signals; this is just a time-slice filter, not a stat. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: "0.60rem", fontWeight: 700, color: TT,
+            textTransform: "uppercase", letterSpacing: "0.07em",
+          }}>
+            <Calendar size={11}/> Window
+          </span>
           {windows.map(w => {
-            const count = bucketCount(w.id);
-            const sub = w.id === "all"
-              ? `${fmt$(bucketExposure("all"))} exposure`
-              : w.id === "overdue"
-              ? "Past expiry"
-              : `${fmt$(bucketExposure(w.id))} exposure`;
+            const count  = bucketCount(w.id);
+            const active = windowFilter === w.id;
+            const accent = w.accent;
             return (
-              <WindowBucket
+              <button
                 key={w.id}
-                label={w.label}
-                count={count}
-                sub={sub}
-                accent={w.accent}
-                selected={windowFilter === w.id}
+                type="button"
                 onClick={() => { setWindowFilter(w.id); setPage(1); }}
-              />
+                aria-pressed={active}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 11px",
+                  background: active ? `${accent}10` : "white",
+                  color: active ? accent : TM,
+                  border: `1px solid ${active ? `${accent}55` : BDL}`,
+                  borderRadius: 9999,
+                  fontSize: "0.74rem", fontWeight: active ? 700 : 500,
+                  cursor: "pointer", fontFamily: font, outline: "none",
+                  transition: "background 0.15s ease, border-color 0.15s ease, color 0.15s ease",
+                }}
+                onMouseEnter={e => {
+                  if (!active) (e.currentTarget as HTMLElement).style.borderColor = `${accent}55`;
+                }}
+                onMouseLeave={e => {
+                  if (!active) (e.currentTarget as HTMLElement).style.borderColor = BDL;
+                }}
+              >
+                {w.label}
+                <span style={{
+                  fontSize: "0.58rem", fontWeight: 800,
+                  background: w.id === "overdue" ? "#B91C1C" : active ? accent : "#E2E8F0",
+                  color:      w.id === "overdue" || active ? "white" : TM,
+                  padding: "1px 7px", borderRadius: 9999,
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {count}
+                </span>
+              </button>
             );
           })}
         </div>
@@ -248,31 +395,54 @@ export function RenewalsPage() {
           style={{
             background: "white",
             border: `1px solid ${BDL}`,
-            borderTop: `3px solid ${N}`,
             borderRadius: 8,
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
           }}>
 
-          {/* Card header */}
-          <div className="flex items-center justify-between px-5 py-3 flex-wrap gap-2"
-            style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center"
-                style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
-                <Calendar size={13} />
-              </span>
-              <h3 style={{ fontSize: "0.74rem", fontWeight: 700, color: TD, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Renewal Pipeline
-              </h3>
-            </div>
-            <span style={{
-              fontSize: "0.68rem", fontWeight: 800, background: `${N}10`, color: N,
-              padding: "2px 9px", borderRadius: 10, letterSpacing: "0.02em",
-            }}>
-              {filtered.length}
-            </span>
-          </div>
+          {/* Card header — surfaces the filtered slice's exposure & risk mix */}
+          {(() => {
+            const filteredExposure = filtered.reduce((s, r) => s + r.expiringPremium, 0);
+            const filteredCritical = filtered.filter(r =>
+              r.daysUntilExpiry < 0 || r.status === "At Risk" || r.lossRatio >= 100
+            ).length;
+            return (
+              <div className="flex items-center justify-between px-5 py-3 flex-wrap gap-2"
+                style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center"
+                    style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
+                    <Calendar size={13} />
+                  </span>
+                  <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
+                    Renewal Pipeline
+                  </h3>
+                  <span style={{ fontSize: "0.70rem", color: TT }}>
+                    · {fmt$(filteredExposure)} exposure
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {filteredCritical > 0 && (
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      fontSize: "0.62rem", fontWeight: 800,
+                      background: "#FEE2E2", color: "#B91C1C",
+                      padding: "2px 9px", borderRadius: 9999,
+                      textTransform: "uppercase", letterSpacing: "0.05em",
+                    }}>
+                      <Activity size={10}/> {filteredCritical} critical
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: "0.68rem", fontWeight: 800, background: `${N}10`, color: N,
+                    padding: "2px 9px", borderRadius: 10, letterSpacing: "0.02em",
+                  }}>
+                    {filtered.length}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Toolbar */}
           <div className="flex items-center justify-between px-5 py-2.5 gap-3 flex-wrap"
@@ -351,13 +521,27 @@ export function RenewalsPage() {
                   const dueColor =
                     r.daysUntilExpiry < 0  ? "#B91C1C" :
                     r.daysUntilExpiry <= 14 ? "#B45309" : TM;
+                  // Row-level urgency rail: red when overdue / At Risk / loss-ratio >=100,
+                  // amber when expiring within 14d or loss-ratio >= 75.
+                  const isCritical =
+                    r.daysUntilExpiry < 0 || r.status === "At Risk" || r.lossRatio >= 100;
+                  const isWarning  =
+                    !isCritical && (r.daysUntilExpiry <= 14 || r.lossRatio >= 75);
+                  const railColor  = isCritical ? "#B91C1C" : isWarning ? "#B45309" : "transparent";
+                  // At-Risk / overdue rows get a subtle red wash so they pop while scanning.
+                  const rowTint    = r.status === "At Risk" ? "#FFF6F6"
+                                   : r.daysUntilExpiry < 0  ? "#FFFAFA" : undefined;
                   const isLast = idx === paginated.length - 1;
                   return (
                     <tr key={r.id}
                       onClick={() => navigate(`/submission/${r.id}`)}
-                      className="cursor-pointer hover:bg-slate-50 transition-colors group"
-                      style={{ borderBottom: isLast ? "none" : `1px solid #EEF1F5` }}>
-                      <td className="px-4 py-3">
+                      className="cursor-pointer hover:bg-[#F0F6FF] transition-colors group"
+                      style={{
+                        borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
+                        background: rowTint,
+                      }}>
+                      <td className="px-4 py-3"
+                        style={{ borderLeft: `3px solid ${railColor}` }}>
                         <span style={{
                           fontSize: "0.72rem", fontWeight: 700, color: N,
                           fontFamily: "ui-monospace, monospace",
@@ -392,9 +576,31 @@ export function RenewalsPage() {
                             {r.expiringDate}
                           </span>
                         </div>
-                        <p style={{ fontSize: "0.62rem", color: TT, marginTop: 2 }}>
-                          {r.daysUntilExpiry < 0 ? `${Math.abs(r.daysUntilExpiry)}d overdue` : `${r.daysUntilExpiry}d left`}
-                        </p>
+                        {r.daysUntilExpiry < 0 ? (
+                          <span style={{
+                            display:"inline-block", marginTop:2,
+                            background:"#FEE2E2", color:"#7A1F1F",
+                            padding:"1px 6px", borderRadius:9,
+                            fontSize:"0.52rem", fontWeight:800,
+                            textTransform:"uppercase", letterSpacing:"0.05em",
+                          }}>
+                            Overdue · {Math.abs(r.daysUntilExpiry)}d
+                          </span>
+                        ) : r.daysUntilExpiry <= 14 ? (
+                          <span style={{
+                            display:"inline-block", marginTop:2,
+                            background:"#FEF3C7", color:"#92400E",
+                            padding:"1px 6px", borderRadius:9,
+                            fontSize:"0.52rem", fontWeight:800,
+                            textTransform:"uppercase", letterSpacing:"0.05em",
+                          }}>
+                            Due in {r.daysUntilExpiry}d
+                          </span>
+                        ) : (
+                          <p style={{ fontSize: "0.62rem", color: TT, marginTop: 2 }}>
+                            {r.daysUntilExpiry}d left
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span style={{
@@ -437,19 +643,28 @@ export function RenewalsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5"
-                          style={{
-                            background: status.bg, padding: "2px 8px", borderRadius: 4,
-                            whiteSpace: "nowrap",
-                          }}>
-                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: status.color }}/>
-                          <span style={{ fontSize: "0.66rem", fontWeight: 700, color: status.color }}>
-                            {r.status}
+                        {r.status === "At Risk" || r.status === "Lost" ? (
+                          <span className="inline-flex items-center gap-1.5"
+                            style={{
+                              background: status.bg, padding: "2px 8px", borderRadius: 9999,
+                              whiteSpace: "nowrap",
+                            }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: status.color }}/>
+                            <span style={{ fontSize: "0.66rem", fontWeight: 700, color: status.color }}>
+                              {r.status}
+                            </span>
                           </span>
-                        </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5" style={{ whiteSpace: "nowrap" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: status.color }}/>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 500, color: status.color }}>
+                              {r.status}
+                            </span>
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
-                        <ChevronRight size={13} color={BDL} className="transition-colors group-hover:text-blue-600"/>
+                        <ChevronRight size={15} color={TT} className="transition-all group-hover:text-blue-600 group-hover:translate-x-0.5"/>
                       </td>
                     </tr>
                   );
@@ -461,12 +676,12 @@ export function RenewalsPage() {
           {/* Pagination */}
           <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-3"
             style={{ borderTop: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-            <span style={{ fontSize: "0.72rem", color: TT }}>
-              Showing <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
-              {" – "}
+            <span style={{ fontSize: "0.78rem", color: TM }}>
+              <span style={{ fontWeight: 700, color: TD }}>{filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}</span>
+              {"–"}
               <span style={{ fontWeight: 700, color: TD }}>{Math.min(page * PER_PAGE, filtered.length)}</span>
               {" of "}
-              <span style={{ fontWeight: 700, color: N }}>{filtered.length}</span> renewals
+              <span style={{ fontWeight: 700, color: TD }}>{filtered.length}</span> renewals
             </span>
             <div className="flex items-center gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}

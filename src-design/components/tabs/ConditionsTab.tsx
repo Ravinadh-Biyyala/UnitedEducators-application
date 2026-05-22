@@ -10,7 +10,7 @@ const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
@@ -444,7 +444,7 @@ function ConditionsSection({
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 800,
                   background: ts.bg, color: ts.text, border: `1px solid ${ts.border}`,
-                  padding: "3px 8px", borderRadius: 4,
+                  padding: "3px 8px", borderRadius: 9999,
                   textTransform: "uppercase", letterSpacing: "0.04em",
                   justifySelf: "start",
                 }}>

@@ -11,7 +11,7 @@ const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // Health-dot colors
@@ -99,7 +99,7 @@ function StatusPill({ label, dotColor, bg, text }: {
   return (
     <span className="inline-flex items-center gap-1.5"
       style={{
-        background:bg, padding:"2px 8px", borderRadius:3,
+        background:bg, padding:"2px 8px", borderRadius:9999,
         fontSize:"0.7rem", fontWeight:700, color:text,
       }}>
       <span style={{ width:6, height:6, borderRadius:"50%", background:dotColor }}/>
@@ -112,11 +112,11 @@ function StatusPill({ label, dotColor, bg, text }: {
 function MiniBar({ pct, color = N }: { pct: number; color?: string }) {
   return (
     <div style={{
-      width:64, height:4, background:BDL, borderRadius:3, overflow:"hidden",
+      width:64, height:4, background:BDL, borderRadius:9999, overflow:"hidden",
     }}>
       <div style={{
         width:`${Math.max(0, Math.min(100, pct))}%`, height:"100%",
-        background:color, borderRadius:3,
+        background:color, borderRadius:9999,
         transition:"width 0.7s cubic-bezier(0.4,0,0.2,1)",
       }}/>
     </div>
@@ -191,7 +191,7 @@ function HeroStat({
 }) {
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5"
-      style={{ background:"white", border:`1px solid ${BDL}`, borderRadius:3 }}>
+      style={{ background:"white", border:`1px solid ${BDL}`, borderRadius:9999 }}>
       <span style={{ fontSize:"0.62rem", color:TT, fontWeight:700,
         textTransform:"uppercase", letterSpacing:"0.06em" }}>
         {label}
@@ -208,7 +208,6 @@ export function SubmissionDetailsCard() {
     <div style={{
       background:"white",
       border:`1px solid ${BDL}`,
-      borderTop:`3px solid ${N}`,
       borderRadius: 8,
       overflow: "hidden",
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -222,13 +221,13 @@ export function SubmissionDetailsCard() {
             style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
             <FileText size={13}/>
           </span>
-          <h3 style={{ fontSize:"0.74rem", fontWeight:700, color:TD, textTransform:"uppercase", letterSpacing:"0.08em" }}>
+          <h3 style={{ fontSize:"0.86rem", fontWeight:700, color:TD, letterSpacing:"-0.005em" }}>
             Submission Details
           </h3>
           <span style={{
             fontSize:"0.70rem", color:N, fontWeight:700,
             fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
-            background:`${N}10`, padding:"2px 7px", borderRadius:3,
+            background:`${N}10`, padding:"2px 7px", borderRadius:9999,
             marginLeft: 4,
           }}>
             SUB-10428

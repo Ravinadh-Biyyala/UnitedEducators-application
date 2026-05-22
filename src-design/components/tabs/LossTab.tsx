@@ -72,7 +72,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                   style={{
                     background: active ? N : "transparent",
                     color: active ? "white" : TM,
-                    border: "none", borderRadius: 4,
+                    border: "none", borderRadius: 9999,
                     padding: "4px 9px",
                     fontSize: "0.66rem", fontWeight: 800,
                     fontFamily: font,
@@ -125,7 +125,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                           <span key={p} style={{
                             background: "#F1F4F8", color: TM,
                             fontSize: "0.60rem", fontWeight: 700,
-                            padding: "2px 6px", borderRadius: 3,
+                            padding: "2px 6px", borderRadius: 9999,
                             letterSpacing: "0.02em",
                           }}>
                             {p}
@@ -138,7 +138,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                         fontSize: "0.78rem", fontWeight: 800,
                         color: ratioColor,
                         background: ratioBg,
-                        padding: "2px 9px", borderRadius: 4,
+                        padding: "2px 9px", borderRadius: 9999,
                         fontVariantNumeric: "tabular-nums",
                       }}>
                         {m.lossRatio}%
@@ -167,7 +167,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                     return (
                       <span style={{
                         fontSize: "0.78rem", fontWeight: 800, color: c,
-                        background: bg, padding: "2px 10px", borderRadius: 4,
+                        background: bg, padding: "2px 10px", borderRadius: 9999,
                       }}>
                         {wlr.toFixed(1)}% avg
                       </span>
@@ -223,7 +223,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                     color:
                       row.trend === "up" ? BAD :
                       row.trend === "down" ? OK : TT,
-                    padding: "2px 8px", borderRadius: 4,
+                    padding: "2px 8px", borderRadius: 9999,
                   }}>
                     {row.ratio}
                   </span>
@@ -244,7 +244,7 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
               <td className="px-5 py-3" colSpan={2}>
                 <span style={{
                   fontSize: "0.74rem", fontWeight: 800, color: OK,
-                  background: "#E8F5EC", padding: "2px 10px", borderRadius: 4,
+                  background: "#E8F5EC", padding: "2px 10px", borderRadius: 9999,
                 }}>
                   21.0% avg
                 </span>
@@ -301,14 +301,27 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                     className="hover:bg-slate-50 transition-colors cursor-pointer"
                     style={{
                       borderBottom: isLast ? "none" : `1px solid #EEF1F5`,
-                      background: c.alert ? "#FFFBF0" : "white",
-                      borderLeft: c.alert ? `3px solid ${WARN}` : "3px solid transparent",
+                      background: c.alert ? "#FEF2F2" : "white",
+                      borderLeft: c.alert ? `3px solid #B91C1C` : "3px solid transparent",
                     }}>
                     <td className="px-4 py-3" style={{
                       fontSize: "0.72rem", fontWeight: 700, color: N,
                       fontFamily: "ui-monospace, monospace",
                     }}>
-                      {c.id}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{c.id}</span>
+                        {c.alert && (
+                          <span style={{
+                            background: "#FEE2E2", color: "#7A1F1F",
+                            padding: "1px 6px", borderRadius: 9,
+                            fontSize: "0.52rem", fontWeight: 800,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                            fontFamily: font,
+                          }}>
+                            Flagged
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3" style={{ fontSize: "0.74rem", color: TM, whiteSpace: "nowrap" }}>{c.date}</td>
                     <td className="px-4 py-3" style={{ fontSize: "0.76rem", color: TD, fontWeight: 500 }}>{c.type}</td>
@@ -330,25 +343,33 @@ export function LossTab({ groupMembers }: { groupMembers?: GroupMemberLoss[] }) 
                       {c.total}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5"
-                        style={{
-                          background:
-                            c.status === "Closed" ? "#E8F5EC" :
-                            c.alert ? "#FFFBEB" : "#F1F5F9",
-                          padding: "2px 8px", borderRadius: 4,
-                        }}>
-                        {c.status === "Closed"
-                          ? <CheckCircle2 size={11} color={OK}/>
-                          : c.alert
-                            ? <AlertCircle size={11} color={WARN}/>
-                            : <Clock size={11} color={TT}/>}
-                        <span style={{
-                          fontSize: "0.68rem", fontWeight: 700,
-                          color: c.status === "Closed" ? OK : c.alert ? WARN : TM,
-                        }}>
-                          {c.status}
+                      {c.alert ? (
+                        <span className="inline-flex items-center gap-1.5"
+                          style={{
+                            background: "#FEE2E2",
+                            padding: "2px 8px", borderRadius: 9999,
+                          }}>
+                          <AlertCircle size={11} color="#B91C1C"/>
+                          <span style={{
+                            fontSize: "0.68rem", fontWeight: 700, color: "#7A1F1F",
+                          }}>
+                            {c.status}
+                          </span>
                         </span>
-                      </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5" style={{ whiteSpace: "nowrap" }}>
+                          <span style={{
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: c.status === "Closed" ? OK : "#7A8FA3",
+                          }}/>
+                          <span style={{
+                            fontSize: "0.72rem", fontWeight: 500,
+                            color: c.status === "Closed" ? OK : TM,
+                          }}>
+                            {c.status}
+                          </span>
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

@@ -11,7 +11,7 @@ const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
 const TD   = "#1A2530";
 const TM   = "#4A5D6E";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export function SubmissionMilestoneTracker() {
 
   return (
     <div style={{
-      background:"white", border:`1px solid ${BD}`, borderTop:`3px solid ${N}`,
+      background:"white", border:`1px solid ${BD}`,
       fontFamily:font,
     }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -188,7 +188,7 @@ export function SubmissionMilestoneTracker() {
         <div className="flex items-center gap-2">
           {blockedCount > 0 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1"
-              style={{ background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:3 }}>
+              style={{ background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:9999 }}>
               <AlertCircle size={12} color="#B91C1C"/>
               <span style={{ fontSize:"0.7rem", fontWeight:700, color:"#B91C1C" }}>
                 {blockedCount} Action Required
@@ -295,7 +295,7 @@ export function SubmissionMilestoneTracker() {
                         top:50, left:"50%", transform:"translateX(-50%)",
                         background:TD, color:"white",
                         fontSize:"0.7rem", padding:"8px 11px",
-                        borderRadius:4, width:220,
+                        borderRadius:9999, width:220,
                         boxShadow:"0 8px 24px rgba(0,0,0,0.22)",
                         pointerEvents:"none",
                       }}>
@@ -392,7 +392,7 @@ export function SubmissionMilestoneTracker() {
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center justify-center"
                     style={{
-                      width:26, height:26, borderRadius:4,
+                      width:26, height:26, borderRadius:9999,
                       background:STATUS_STYLE[selected.status].pillBg,
                       color:STATUS_STYLE[selected.status].pillText,
                     }}>
@@ -408,7 +408,7 @@ export function SubmissionMilestoneTracker() {
                 </p>
               </div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 shrink-0"
-                style={{ background:STATUS_STYLE[selected.status].pillBg, borderRadius:3 }}>
+                style={{ background:STATUS_STYLE[selected.status].pillBg, borderRadius:9999 }}>
                 <span style={{
                   width:6, height:6, borderRadius:"50%",
                   background:STATUS_STYLE[selected.status].pillText,
@@ -450,7 +450,7 @@ export function SubmissionMilestoneTracker() {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="flex items-center justify-center shrink-0"
                         style={{
-                          width:16, height:16, borderRadius:3,
+                          width:16, height:16, borderRadius:9999,
                           background: item.done ? "#15803D" : "white",
                           border:`1.5px solid ${item.done ? "#15803D" : "#CBD5E1"}`,
                         }}>

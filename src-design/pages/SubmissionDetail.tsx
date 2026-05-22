@@ -1,7 +1,7 @@
 import { AuditTrailTab }    from "../components/tabs/AuditTrailTab";
 import { ApprovalsTab }    from "../components/tabs/ApprovalsTab";
 import { ConditionsTab }   from "../components/tabs/ConditionsTab";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -35,7 +35,7 @@ const N    = "#0123D4";
 const G    = "#C9A227";
 const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
-const TT   = "#7A8FA3";
+const TT   = "#5F7080";
 const TM   = "#4A5D6E";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
@@ -411,21 +411,22 @@ function groupForStage(stage: string) {
   return STAGE_GROUPS.find(g => g.options.includes(stage))?.group ?? "";
 }
 
-const TABS = [
-  {id:"review",        label:"Review",             icon:<ClipboardCheck size={13}/>},
-  {id:"overview",      label:"Details",            icon:<LayoutDashboard size={13}/>},
-  {id:"member",        label:"Member & Brokerage", icon:<Users size={13}/>},
-  {id:"members",       label:"Group Members",      icon:<Users size={13}/>},
-  {id:"risk",          label:"Risk & Exposure",    icon:<ShieldAlert size={13}/>},
-  {id:"loss",          label:"Loss History",       icon:<TrendingDown size={13}/>},
-  {id:"conditions",    label:"Conditions",         icon:<ListChecks size={13}/>},
-  {id:"rating",        label:"Underwriting",       icon:<Calculator size={13}/>},
-  {id:"documents",     label:"Documents",          icon:<FolderOpen size={13}/>},
-  {id:"correspondence",label:"Correspondence",     icon:<Mail size={13}/>},
-  {id:"notes",         label:"Notes",              icon:<MessageSquare size={13}/>},
-  {id:"tasks",         label:"Tasks",              icon:<CheckSquare size={13}/>},
-  {id:"approvals",     label:"Approvals",          icon:<ThumbsUp size={13}/>},
-  {id:"audit",         label:"Audit Trail",        icon:<Clock size={13}/>},
+type TabGroup = "overview" | "analysis" | "workflow";
+const TABS: { id: string; label: string; icon: ReactNode; group: TabGroup }[] = [
+  {id:"review",        label:"Review",             icon:<ClipboardCheck size={13}/>,  group:"overview"},
+  {id:"overview",      label:"Details",            icon:<LayoutDashboard size={13}/>, group:"overview"},
+  {id:"member",        label:"Member & Brokerage", icon:<Users size={13}/>,           group:"overview"},
+  {id:"members",       label:"Group Members",      icon:<Users size={13}/>,           group:"overview"},
+  {id:"risk",          label:"Risk & Exposure",    icon:<ShieldAlert size={13}/>,     group:"analysis"},
+  {id:"loss",          label:"Loss History",       icon:<TrendingDown size={13}/>,    group:"analysis"},
+  {id:"conditions",    label:"Conditions",         icon:<ListChecks size={13}/>,      group:"analysis"},
+  {id:"rating",        label:"Underwriting",       icon:<Calculator size={13}/>,      group:"analysis"},
+  {id:"documents",     label:"Documents",          icon:<FolderOpen size={13}/>,      group:"workflow"},
+  {id:"correspondence",label:"Correspondence",     icon:<Mail size={13}/>,            group:"workflow"},
+  {id:"notes",         label:"Notes",              icon:<MessageSquare size={13}/>,   group:"workflow"},
+  {id:"tasks",         label:"Tasks",              icon:<CheckSquare size={13}/>,     group:"workflow"},
+  {id:"approvals",     label:"Approvals",          icon:<ThumbsUp size={13}/>,        group:"workflow"},
+  {id:"audit",         label:"Audit Trail",        icon:<Clock size={13}/>,           group:"workflow"},
 ];
 
 /* ── StatCell: icon tile + uppercase micro-label · value · subtitle ──────── */
@@ -649,6 +650,18 @@ function SubmissionDetailInner() {
     if (tab) setActiveTab(tab);
   }, [location.search]);
 
+  // Keep the active tab visible when the tab strip is narrower than its content
+  // (e.g. when the chat is expanded). Auto-scrolls the active button into view
+  // whenever the active tab changes.
+  const activeTabButtonRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    activeTabButtonRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeTab]);
+
   // Live unread badge for the Correspondence tab
   const unreadCount = threads.reduce((s, t) => s + t.unreadCount, 0);
 
@@ -790,7 +803,7 @@ ${SUBMISSION.underwriter.title} · United Educators`;
       <div style={{fontFamily: font, color:"#1A2530"}}>
 
         {/* ── BREADCRUMB + STAGE DROPDOWN ──────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-8 py-2.5 flex-wrap"
+        <div className="flex items-center justify-between gap-3 px-3 sm:px-5 py-2.5 flex-wrap"
           style={{background:"white", borderBottom:`1px solid ${BDL}`}}>
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={()=>navigate("/")} className="hover:underline"
@@ -801,7 +814,15 @@ ${SUBMISSION.underwriter.title} · United Educators`;
             <span style={{color:"#C4CDD8",fontSize:"0.75rem"}}>/</span>
             <span style={{fontSize:"0.75rem",color:N,fontWeight:600}}>{displayInstitutionName}</span>
             <span style={{color:"#C4CDD8",fontSize:"0.75rem"}}>/</span>
-            <span style={{fontSize:"0.75rem",color:G,fontWeight:700}}>
+            {/* Active section — bolder + icon so users can always tell where they are
+                even when the tab strip scrolls or the chat panel narrows it. */}
+            <span className="inline-flex items-center gap-1.5" style={{
+              fontSize:"0.86rem", color:N, fontWeight:800,
+              background:`${N}10`, padding:"2px 8px", borderRadius:6,
+            }}>
+              <span style={{ display:"inline-flex", alignItems:"center", color:N }}>
+                {TABS.find(t=>t.id===activeTab)?.icon}
+              </span>
               {TABS.find(t=>t.id===activeTab)?.label}
             </span>
           </div>
@@ -822,7 +843,7 @@ ${SUBMISSION.underwriter.title} · United Educators`;
           >
 
               {/* ── Header row ────────────────────────────────────────── */}
-              <div className="flex items-center gap-3 px-4 sm:px-8 py-3 flex-wrap">
+              <div className="flex items-center gap-3 px-3 sm:px-5 py-3 flex-wrap">
 
                 {/* Identity block */}
                 <div className="flex-1 min-w-0 flex items-center gap-2.5 flex-wrap">
@@ -1132,27 +1153,43 @@ ${SUBMISSION.underwriter.title} · United Educators`;
         </div>
 
         {/* ── PRIMARY TAB STRIP ──────────────────────────────────────────── */}
-        {/* Single flat tab row — no sub-strip. Order: Review → Risk → Loss   */}
-        {/* → Rating → Notes → Tasks → Approvals → Member & Brokerage →       */}
-        {/* (Group Members) → Documents → Correspondence → Audit Trail.       */}
-        <div className="px-4 sm:px-8 pt-4" style={{ background: "#EEF1F6" }}>
-          <div
-            style={{
-              background: "white",
-              border: `1px solid ${BDL}`,
-              borderRadius: 8,
-              padding: 4,
-              boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
-              display: "flex",
-              gap: 1,
-            }}>
-            {TABS.filter(t => t.id !== "members" || isGroup).map(t => {
+        {/* Edge-to-edge strip: flush against the side nav and chat panel, no
+            top gap from the hero above. Single horizontal-scroll row with
+            visual dividers between tab groups (Overview / Analysis / Workflow). */}
+        <div
+          className="submission-tabs-scroll"
+          style={{
+            background: "white",
+            borderTop: `1px solid ${BDL}`,
+            borderBottom: `1px solid ${BDL}`,
+            padding: "6px 16px",
+            display: "flex",
+            gap: 2,
+            overflowX: "auto",
+            overflowY: "hidden",
+            scrollbarWidth: "thin",
+          }}>
+            {TABS.filter(t => t.id !== "members" || isGroup).map((t, idx, arr) => {
               const isActive = activeTab === t.id;
               const showBadge = t.id === "correspondence" && unreadCount > 0;
+              // Render a thin vertical divider before any tab whose group differs
+              // from the previous visible tab — visually clusters tabs into
+              // Overview / Analysis / Workflow without taking extra space.
+              const prev = idx > 0 ? arr[idx - 1] : null;
+              const isGroupBoundary = prev !== null && prev.group !== t.group;
               return (
-                <button key={t.id}
+                <Fragment key={t.id}>
+                  {isGroupBoundary && (
+                    <span aria-hidden style={{
+                      width: 1, alignSelf: "stretch",
+                      background: BDL, margin: "4px 4px", flex: "0 0 auto",
+                    }}/>
+                  )}
+                <button
+                  ref={isActive ? activeTabButtonRef : undefined}
                   onClick={() => setActiveTab(t.id)}
                   aria-current={isActive ? "page" : undefined}
+                  title={t.label}
                   className="flex items-center justify-center gap-1.5 transition-all"
                   onMouseEnter={(e) => {
                     if (!isActive) e.currentTarget.style.background = `${N}08`;
@@ -1161,22 +1198,22 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                     if (!isActive) e.currentTarget.style.background = "transparent";
                   }}
                   style={{
-                    background: isActive ? `${N}0F` : "transparent",
+                    background: isActive ? N : "transparent",
                     border: "none",
-                    borderBottom: `2px solid ${isActive ? N : "transparent"}`,
                     borderRadius: 6,
                     cursor: "pointer",
                     fontFamily: font,
-                    padding: "6px 8px",
-                    flex: "1 1 0",
+                    padding: "7px 12px",
+                    flex: "0 0 auto",
                     minWidth: 0,
-                    transition: "background 0.2s ease, border-color 0.2s ease",
+                    boxShadow: isActive ? `0 1px 3px ${N}33` : "none",
+                    transition: "background 0.2s ease, box-shadow 0.2s ease",
                   }}>
                   <span className="inline-flex items-center justify-center shrink-0"
                     style={{
                       width: 18, height: 18, borderRadius: 4,
-                      background: isActive ? `${N}15` : "#F0F3F8",
-                      color: isActive ? N : TM,
+                      background: isActive ? "rgba(255,255,255,0.2)" : "#F0F3F8",
+                      color: isActive ? "white" : TM,
                       transition: "background 0.2s ease",
                     }}>
                     {t.icon}
@@ -1184,11 +1221,9 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                   <span style={{
                     fontSize: "0.72rem",
                     fontWeight: isActive ? 700 : 500,
-                    color: isActive ? N : "#1A2530",
+                    color: isActive ? "white" : "#1A2530",
                     lineHeight: 1.2,
                     whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
                   }}>
                     {t.label}
                   </span>
@@ -1203,13 +1238,13 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                     </span>
                   )}
                 </button>
+                </Fragment>
               );
             })}
-          </div>
         </div>
 
         {/* ── TAB CONTENT ─────────────────────────────────────────────────── */}
-        <div className="px-4 sm:px-8 py-6 pb-10" style={{background:"#EEF1F6",minHeight:400}}>
+        <div className="px-3 sm:px-4 py-3 pb-5" style={{background:"#EEF1F6",minHeight:400}}>
           {renderTab()}
         </div>
 
