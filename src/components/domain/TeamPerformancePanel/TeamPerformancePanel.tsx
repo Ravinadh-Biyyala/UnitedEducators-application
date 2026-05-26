@@ -1,6 +1,6 @@
 import { Users } from 'lucide-react';
 import type { UnderwriterPerformance } from '@/shared/types/teamPerformance';
-import { colors, dims, fonts, teamPerfDims } from '@/theme/tokens';
+import { colors, fonts, teamPerfDims } from '@/theme/tokens';
 import { CardShell } from '@/components/domain/CardShell';
 import { TeamPerformanceRow } from '@/components/domain/TeamPerformanceRow';
 
@@ -17,60 +17,72 @@ export function TeamPerformancePanel({ underwriters }: TeamPerformancePanelProps
       icon={<Users size={13} />}
       iconColor={colors.brandBlue}
     >
-      {/* Column-headers row */}
-      <div
+      <table
         style={{
-          display:      'flex',
-          height:       teamPerfDims.headerRowHeight,
-          paddingLeft:  20,
-          background:   colors.bgMuted,
-          borderBottom: `1px solid ${colors.borderDefault}`,
-          fontFamily:   fonts.sans,
+          width:          '100%',
+          borderCollapse: 'collapse',
+          tableLayout:    'fixed',
+          fontFamily:     fonts.sans,
         }}
       >
-        {COLUMN_HEADERS.map((label) => (
-          <div
-            key={label}
+        <caption className="sr-only">Underwriter performance summary</caption>
+        <colgroup>
+          {COLUMN_HEADERS.map((label) => (
+            <col key={label} style={{ width: teamPerfDims.columnWidth }} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr
             style={{
-              width:      teamPerfDims.columnWidth,
-              flexShrink: 0,
-              display:    'flex',
-              alignItems: 'center',
-              fontSize:   teamPerfDims.headerFontSize,
-              fontWeight: 700,
-              color:      colors.textMuted,
-              textTransform: 'uppercase',
+              height:       teamPerfDims.headerRowHeight,
+              background:   colors.bgMuted,
+              borderBottom: `1px solid ${colors.borderDefault}`,
             }}
           >
-            {label}
-          </div>
-        ))}
-      </div>
-
-      {/* Data rows */}
-      {underwriters.length === 0 ? (
-        <div
-          style={{
-            height:     teamPerfDims.rowHeight,
-            display:    'flex',
-            alignItems: 'center',
-            fontSize:   12,
-            fontWeight: 400,
-            color:      colors.textMuted,
-            fontFamily: fonts.sans,
-          }}
-        >
-          No team performance data available.
-        </div>
-      ) : (
-        underwriters.map((u, i) => (
-          <TeamPerformanceRow
-            key={u.id}
-            underwriter={u}
-            isLast={i === underwriters.length - 1}
-          />
-        ))
-      )}
+            {COLUMN_HEADERS.map((label, i) => (
+              <th
+                key={label}
+                scope="col"
+                style={{
+                  paddingLeft: i === 0 ? 20 : 0,
+                  textAlign:   'left',
+                  fontSize:    teamPerfDims.headerFontSize,
+                  fontWeight:  700,
+                  color:       colors.textMuted,
+                }}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {underwriters.length === 0 ? (
+            <tr>
+              <td
+                colSpan={COLUMN_HEADERS.length}
+                style={{
+                  height:     teamPerfDims.rowHeight,
+                  fontSize:   12,
+                  fontWeight: 400,
+                  color:      colors.textMuted,
+                  paddingLeft: 20,
+                }}
+              >
+                Team performance data will appear once underwriters log activity.
+              </td>
+            </tr>
+          ) : (
+            underwriters.map((u, i) => (
+              <TeamPerformanceRow
+                key={u.id}
+                underwriter={u}
+                isLast={i === underwriters.length - 1}
+              />
+            ))
+          )}
+        </tbody>
+      </table>
     </CardShell>
   );
 }

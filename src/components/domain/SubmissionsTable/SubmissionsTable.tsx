@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Inbox, MapPin, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { Inbox, MapPin, Filter, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { colors, fonts, dims, statusLabels } from '@/theme/tokens';
 import { formatCurrency } from '@/shared/utils';
 import type { Submission, SubmissionStatus } from '@/shared/types';
@@ -123,13 +123,16 @@ export function SubmissionsTable({
         }}
       >
         {/* Scope buttons */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div role="group" aria-label="Scope" style={{ display: 'flex', gap: 4 }}>
           {(['Mine', 'Team', 'All'] as Scope[]).map((s) => {
             const active = scope === s;
             return (
               <button
                 key={s}
+                type="button"
+                aria-pressed={active}
                 onClick={() => onScopeChange?.(s)}
+                className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
                 style={{
                   height:       31,
                   padding:      '1px 12px',
@@ -152,7 +155,12 @@ export function SubmissionsTable({
         {/* Filter dropdown */}
         <div ref={filterRef} style={{ position: 'relative' }}>
           <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={dropdownOpen}
+            aria-label="Filter by status"
             onClick={() => setDropdownOpen((o) => !o)}
+            className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
             style={{
               display:      'flex',
               alignItems:   'center',
@@ -184,6 +192,8 @@ export function SubmissionsTable({
 
           {dropdownOpen && (
             <div
+              role="listbox"
+              aria-label="Filter status options"
               style={{
                 position:   'absolute',
                 top:        '100%',
@@ -202,6 +212,9 @@ export function SubmissionsTable({
                 return (
                   <button
                     key={opt}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
                     onClick={() => { onFilterChange?.(opt); setDropdownOpen(false); }}
                     style={{
                       display:    'block',
@@ -236,6 +249,7 @@ export function SubmissionsTable({
           tableLayout:    'fixed',
         }}
       >
+        <caption className="sr-only">Submissions ({scope})</caption>
         <colgroup>
           <col style={{ width: '7.41%' }} />
           <col style={{ width: '18.65%' }} />
@@ -249,15 +263,17 @@ export function SubmissionsTable({
         </colgroup>
         <thead>
           <tr>
-            <th style={TH_STYLE}>ID</th>
-            <th style={TH_STYLE}>Member / Institution</th>
-            <th style={TH_STYLE}>Type</th>
-            <th style={TH_STYLE}>Assignee</th>
-            <th style={TH_STYLE}>Premium</th>
-            <th style={TH_STYLE}>Status</th>
-            <th style={TH_STYLE}>Priority</th>
-            <th style={TH_STYLE}>Eff. Date</th>
-            <th style={TH_STYLE} />
+            <th scope="col" style={TH_STYLE}>ID</th>
+            <th scope="col" style={TH_STYLE}>Member / Institution</th>
+            <th scope="col" style={TH_STYLE}>Type</th>
+            <th scope="col" style={TH_STYLE}>Assignee</th>
+            <th scope="col" style={TH_STYLE}>Premium</th>
+            <th scope="col" style={TH_STYLE}>Status</th>
+            <th scope="col" style={TH_STYLE}>Priority</th>
+            <th scope="col" style={TH_STYLE}>Eff. Date</th>
+            <th scope="col" style={TH_STYLE}>
+              <span className="sr-only">Open submission</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -279,7 +295,21 @@ export function SubmissionsTable({
             submissions.map((row) => (
               <tr
                 key={row.id}
-                onClick={() => onRowClick?.(row)}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? 'button' : undefined}
+                aria-label={onRowClick ? `Open submission ${row.id}, ${row.member}` : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
                 style={{
                   borderBottom: `1px solid ${colors.borderDefault}`,
                   cursor:       onRowClick ? 'pointer' : 'default',
@@ -304,20 +334,24 @@ export function SubmissionsTable({
                     <span style={{ fontSize: 11, color: colors.textMuted }}>{row.state}</span>
                     {row.docs && (
                       <span
+                        aria-label="Missing required documents"
                         style={{
-                          display:      'inline-block',
-                          marginLeft:   4,
-                          padding:      '0px 4px',
-                          background:   colors.dangerRedBg,
-                          border:       `1px solid ${colors.dangerRedBorder}`,
-                          borderRadius: 0,
-                          fontSize:     9,
-                          fontWeight:   700,
-                          color:        colors.dangerRedText,
-                          whiteSpace:   'nowrap',
+                          display:        'inline-flex',
+                          alignItems:     'center',
+                          gap:            3,
+                          marginLeft:     4,
+                          padding:        '0px 4px',
+                          background:     colors.dangerRedBg,
+                          border:         `1px solid ${colors.dangerRedBorder}`,
+                          borderRadius:   0,
+                          fontSize:       9,
+                          fontWeight:     700,
+                          color:          colors.dangerRedText,
+                          whiteSpace:     'nowrap',
                         }}
                       >
-                        Docs ⚠
+                        <AlertTriangle size={9} aria-hidden />
+                        Docs missing
                       </span>
                     )}
                   </div>
@@ -364,7 +398,10 @@ export function SubmissionsTable({
 
                 {/* Premium */}
                 <td style={{ padding: '8px 8px', overflow: 'hidden' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: colors.brandBlue }}>
+                  <span
+                    className="tabular-nums"
+                    style={{ fontSize: 12, fontWeight: 700, color: colors.brandBlue }}
+                  >
                     {formatCurrency(row.premium)}
                   </span>
                 </td>

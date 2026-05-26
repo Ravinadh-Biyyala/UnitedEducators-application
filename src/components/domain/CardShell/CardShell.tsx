@@ -70,11 +70,9 @@ export function CardShell({ title, icon, width, iconColor = colors.brandBlue, he
           <span style={{ display: 'flex', alignItems: 'center', color: iconColor }}>{icon}</span>
           <span
             style={{
-              fontSize:      12,
-              fontWeight:    700,
-              color:         colors.brandBlue,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              fontSize:   12,
+              fontWeight: 700,
+              color:      colors.brandBlue,
             }}
           >
             {title}

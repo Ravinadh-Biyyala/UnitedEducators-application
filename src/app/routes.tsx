@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
+import { Spinner } from '@/components/common/Spinner';
 
 const DashboardPage = lazy(() =>
   import('@/features/dashboard').then((m) => ({ default: m.DashboardPage })),
@@ -20,7 +21,18 @@ const SubmissionDetailPage = lazy(() =>
 
 export function AppRoutes() {
   return (
-    <Suspense fallback={<div className="p-6">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Loading page"
+          className="flex h-screen items-center justify-center"
+        >
+          <Spinner size={28} label="Loading page" />
+        </div>
+      }
+    >
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AppShell />}>

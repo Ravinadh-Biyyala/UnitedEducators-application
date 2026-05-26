@@ -37,30 +37,52 @@ interface StatRowProps {
 export function StatRow({ stat, isLast, onClick }: StatRowProps) {
   const style    = portfolioStatStyles[stat.key];
   const IconComp = ICON_MAP[style.icon as IconName];
+  const interactive = !!onClick;
 
-  return (
-    <div
-      onClick={onClick ? () => onClick(stat.key) : undefined}
-      style={{
-        display:        'flex',
-        justifyContent: 'space-between',
-        alignItems:     'center',
-        height:         statRowDims.height,
-        padding:        statRowDims.padding,
-        borderBottom:   isLast ? 'none' : `1px solid ${colors.borderDefault}`,
-        cursor:         onClick ? 'pointer' : undefined,
-        fontFamily:     fonts.sans,
-      }}
-    >
+  const rowStyle: React.CSSProperties = {
+    display:        'flex',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+    width:          '100%',
+    height:         statRowDims.height,
+    padding:        statRowDims.padding,
+    borderBottom:   isLast ? 'none' : `1px solid ${colors.borderDefault}`,
+    cursor:         interactive ? 'pointer' : 'default',
+    fontFamily:     fonts.sans,
+    textAlign:      'left',
+    background:     'transparent',
+  };
+
+  const body = (
+    <>
       <div style={{ display: 'flex', alignItems: 'center', gap: statRowDims.gap }}>
         {IconComp && <IconComp size={statRowDims.iconSize} color={style.iconColor} />}
         <span style={{ fontSize: 12, fontWeight: 400, color: colors.textBody }}>
           {stat.label}
         </span>
       </div>
-      <span style={{ fontSize: 13, fontWeight: 700, color: colors.textHeading }}>
+      <span
+        className="tabular-nums"
+        style={{ fontSize: 13, fontWeight: 700, color: colors.textHeading }}
+      >
         {formatStatValue(stat)}
       </span>
-    </div>
+    </>
+  );
+
+  if (!interactive) {
+    return <div style={rowStyle}>{body}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick!(stat.key)}
+      aria-label={`View ${stat.label}: ${formatStatValue(stat)}`}
+      className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid hover:bg-neutral-50 transition-colors"
+      style={{ ...rowStyle, border: 'none', borderBottom: rowStyle.borderBottom }}
+    >
+      {body}
+    </button>
   );
 }

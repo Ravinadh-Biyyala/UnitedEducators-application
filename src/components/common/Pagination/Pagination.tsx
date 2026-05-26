@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { paginationStyles as ps, colors } from '@/theme/tokens';
 
 export interface PaginationProps {
@@ -10,11 +10,26 @@ export interface PaginationProps {
 }
 
 /**
- * S4 — left side: "Showing X – Y of Z items" + divider + "Page A of B".
- * Right side: chevron prev / numbered pages / chevron next. All values
- * read from `paginationStyles`. No invented properties — Figma values
- * verified against node 520-29725.
+ * Builds the visible page-number window:
+ *   [1, ..., current-1, current, current+1, ..., total]
+ * Ellipses are returned as the sentinel `null` so the renderer can
+ * distinguish them from real page numbers.
  */
+function buildPageWindow(current: number, total: number): Array<number | null> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const window: Array<number | null> = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+
+  if (start > 2) window.push(null);
+  for (let i = start; i <= end; i += 1) window.push(i);
+  if (end < total - 1) window.push(null);
+
+  window.push(total);
+  return window;
+}
+
 export function Pagination({
   page,
   pageSize,
@@ -27,9 +42,11 @@ export function Pagination({
   const end    = Math.min(page * pageSize, total);
   const canPrev = page > 1;
   const canNext = page < totalPages && total > 0;
+  const pageWindow = buildPageWindow(page, totalPages);
 
   return (
-    <div
+    <nav
+      aria-label="Pagination"
       className="flex flex-wrap items-center justify-between gap-y-3"
       style={{
         paddingLeft:    ps.paddingX,
@@ -67,26 +84,51 @@ export function Pagination({
       </div>
 
       <div className="flex items-center" style={{ gap: ps.gap }}>
+        {totalPages > 7 && (
+          <EdgeButton
+            direction="first"
+            disabled={!canPrev}
+            onClick={() => onPageChange(1)}
+          />
+        )}
         <PrevNextButton
           direction="prev"
           disabled={!canPrev}
           onClick={() => onPageChange(page - 1)}
         />
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-          <PageNumberButton
-            key={n}
-            n={n}
-            isActive={n === page}
-            onClick={() => onPageChange(n)}
-          />
-        ))}
+        {pageWindow.map((n, i) =>
+          n === null ? (
+            <span
+              key={`ellipsis-${i}`}
+              aria-hidden
+              className="px-1 text-slate-400"
+              style={{ fontSize: ps.inactiveSize }}
+            >
+              …
+            </span>
+          ) : (
+            <PageNumberButton
+              key={n}
+              n={n}
+              isActive={n === page}
+              onClick={() => onPageChange(n)}
+            />
+          ),
+        )}
         <PrevNextButton
           direction="next"
           disabled={!canNext}
           onClick={() => onPageChange(page + 1)}
         />
+        {totalPages > 7 && (
+          <EdgeButton
+            direction="last"
+            disabled={!canNext}
+            onClick={() => onPageChange(totalPages)}
+          />
+        )}
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -100,13 +142,14 @@ function PrevNextButton({
   onClick:   () => void;
 }) {
   const Icon = direction === 'prev' ? ChevronLeft : ChevronRight;
-  const label = direction === 'prev' ? ' Previous' : 'Next ';
+  const label = direction === 'prev' ? 'Previous' : 'Next';
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex items-center justify-center cursor-pointer disabled:cursor-not-allowed transition-opacity"
+      aria-label={`${label} page`}
+      className="inline-flex items-center justify-center cursor-pointer disabled:cursor-not-allowed transition-opacity ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
       style={{
         height:          ps.prevNextHeight,
         paddingLeft:     ps.prevNextPaddingX,
@@ -120,9 +163,41 @@ function PrevNextButton({
         opacity:         disabled ? ps.disabledOpacity : 1,
       }}
     >
-      {direction === 'prev' && <Icon size={ps.prevNextIconSize} />}
+      {direction === 'prev' && <Icon size={ps.prevNextIconSize} aria-hidden />}
       <span>{label}</span>
-      {direction === 'next' && <Icon size={ps.prevNextIconSize} />}
+      {direction === 'next' && <Icon size={ps.prevNextIconSize} aria-hidden />}
+    </button>
+  );
+}
+
+function EdgeButton({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: 'first' | 'last';
+  disabled:  boolean;
+  onClick:   () => void;
+}) {
+  const Icon = direction === 'first' ? ChevronsLeft : ChevronsRight;
+  const label = direction === 'first' ? 'First page' : 'Last page';
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={label}
+      className="inline-flex items-center justify-center cursor-pointer disabled:cursor-not-allowed transition-opacity ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
+      style={{
+        height:          ps.prevNextHeight,
+        width:           ps.prevNextHeight,
+        backgroundColor: colors.bgSurface,
+        color:           ps.inactiveColor,
+        border:          `${ps.inactiveBorderWidth}px solid ${ps.inactiveBorderColor}`,
+        opacity:         disabled ? ps.disabledOpacity : 1,
+      }}
+    >
+      <Icon size={ps.prevNextIconSize} aria-hidden />
     </button>
   );
 }
@@ -141,7 +216,8 @@ function PageNumberButton({
       type="button"
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
-      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90"
+      aria-label={`${isActive ? 'Current page, page ' : 'Go to page '}${n}`}
+      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
       style={
         isActive
           ? {

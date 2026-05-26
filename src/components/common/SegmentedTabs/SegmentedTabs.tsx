@@ -25,13 +25,16 @@ export function SegmentedTabs<T extends string>({
   const fontWeight = size === 'sm' ? 700 : 600;
 
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div role="group" aria-label="Segmented control" style={{ display: 'flex', gap: 4 }}>
       {tabs.map((tab) => {
         const active = activeValue === tab.value;
         return (
           <button
             key={tab.value}
+            type="button"
+            aria-pressed={active}
             onClick={() => onChange(tab.value)}
+            className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
             style={{
               display:      'inline-flex',
               alignItems:   'center',
@@ -43,7 +46,7 @@ export function SegmentedTabs<T extends string>({
               background:   active ? colors.brandBlue : '#ffffff',
               color:        active ? '#ffffff' : colors.textMuted,
               border:       `1px solid ${active ? colors.brandBlue : colors.borderStrong}`,
-              borderRadius: 0,
+              borderRadius: 4,
               cursor:       'pointer',
               fontFamily:   fonts.sans,
               whiteSpace:   'nowrap',

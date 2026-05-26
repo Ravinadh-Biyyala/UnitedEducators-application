@@ -102,7 +102,7 @@ export function LoginFormContainer() {
         />
       </FormField>
 
-      <div className="relative">
+      <div>
         <FormField label="PASSWORD" error={errors.password} labelClassName="text-xs font-semibold tracking-widest text-form-label">
           <PasswordInput
             placeholder="••••••••"
@@ -111,25 +111,25 @@ export function LoginFormContainer() {
             autoComplete="current-password"
           />
         </FormField>
-        <a
-          href="/forgot-password"
-          className="absolute top-0 right-0 text-xs text-brand-vivid font-medium hover:underline"
-        >
-          Forgot password?
-        </a>
+        <div className="mt-2 flex justify-end">
+          <a
+            href="/forgot-password"
+            className="text-xs text-brand-vivid font-medium hover:underline ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
+          >
+            Forgot password?
+          </a>
+        </div>
       </div>
-
-      {/* Hook for future API error — not triggered by stub */}
-      {/* {apiError && <p className="text-xs text-red-600">{apiError}</p>} */}
 
       <Button
         type="submit"
-        disabled={submitting || !email || !password}
+        loading={submitting}
+        disabled={!email || !password}
         className="w-full font-semibold gap-3 justify-between mt-2 bg-brand-vivid hover:bg-brand-vivid/90"
       >
-        <LockIcon />
+        {!submitting && <LockIcon />}
         <span>{submitting ? 'Signing in…' : 'Sign In'}</span>
-        <ArrowRightIcon />
+        {!submitting && <ArrowRightIcon />}
       </Button>
     </form>
   );

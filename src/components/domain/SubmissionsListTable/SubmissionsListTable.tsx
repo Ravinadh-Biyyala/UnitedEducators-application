@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronRight, GraduationCap } from 'lucide-react';
 import { Pagination, SortableColumnHeader } from '@/components/common';
+import { getAriaSort } from '@/components/common/SortableColumnHeader';
 import { ProductChips } from '@/components/domain/ProductChips';
 import { StatusBadge } from '@/components/domain/StatusBadge';
 import {
@@ -31,6 +32,7 @@ import type {
 interface SubmissionsListTableProps {
   response?:    SubmissionsListResponse;
   isLoading?:   boolean;
+  isError?:     boolean;
   sort:         SubmissionsSort;
   onSortChange: (next: SubmissionsSort) => void;
   page:         number;
@@ -57,9 +59,17 @@ const COLUMN_ORDER: {
   { key: 'effective',         label: 'Effective', sortField: 'effective' },
 ];
 
+const cellPaddingStyle = {
+  paddingLeft:   dims.cellPaddingX,
+  paddingRight:  dims.cellPaddingX,
+  paddingTop:    dims.cellPaddingY,
+  paddingBottom: dims.cellPaddingY,
+} as const;
+
 export function SubmissionsListTable({
   response,
   isLoading,
+  isError,
   sort,
   onSortChange,
   page,
@@ -70,7 +80,8 @@ export function SubmissionsListTable({
   const items = response?.items ?? [];
   const total = response?.total ?? 0;
   const showSkeleton = isLoading && items.length === 0;
-  const showEmpty    = !isLoading && items.length === 0;
+  const showError    = !isLoading && isError;
+  const showEmpty    = !isLoading && !isError && items.length === 0;
 
   const handleSort = (field: string) => {
     const direction: 'asc' | 'desc' =
@@ -81,16 +92,70 @@ export function SubmissionsListTable({
   return (
     <div className="bg-white">
       <div className="overflow-x-auto">
-        <div role="table" style={{ minWidth: 'max-content' }}>
-          <HeaderRow sort={sort} onSortChange={handleSort} />
-          <div role="rowgroup">
+        <table
+          className="text-sm leading-relaxed border-collapse"
+          style={{ minWidth: 'max-content', width: '100%' }}
+        >
+          <caption className="sr-only">Submissions list</caption>
+          <colgroup>
+            {COLUMN_ORDER.map((col) => (
+              <col key={col.key} style={{ width: dims.colWidths[col.key] }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr
+              style={{
+                height:          dims.headerHeight,
+                backgroundColor: dims.headerBg,
+                borderBottom:    `${dims.headerBorderWidth}px solid ${dims.headerBorderColor}`,
+              }}
+            >
+              {COLUMN_ORDER.map((col) => (
+                <th
+                  key={col.key}
+                  scope="col"
+                  aria-sort={getAriaSort(col.sortField, sort.field, sort.direction)}
+                  style={{
+                    paddingLeft:  dims.headerPaddingX,
+                    paddingRight: dims.headerPaddingX,
+                    textAlign:    col.align ?? 'left',
+                    fontWeight:   dims.headerFontWeight,
+                  }}
+                >
+                  {col.sortField ? (
+                    <SortableColumnHeader
+                      label={col.label}
+                      sortKey={col.sortField}
+                      currentField={sort.field}
+                      currentDirection={sort.direction}
+                      onSortChange={handleSort}
+                      align={col.align}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontSize:   dims.headerFontSize,
+                        fontWeight: dims.headerFontWeight,
+                        color:      dims.headerInactiveColor,
+                        display:    'block',
+                      }}
+                    >
+                      {col.label}
+                    </span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
             {showSkeleton && Array.from({ length: pageSize }).map((_, i) => <SkeletonRow key={i} />)}
+            {showError && <ErrorMessage />}
             {showEmpty && <EmptyMessage />}
-            {!showSkeleton && !showEmpty && items.map((row) => (
+            {!showSkeleton && !showError && !showEmpty && items.map((row) => (
               <SubmissionListRow key={row.id} submission={row} onRowClick={onRowClick} />
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
       <div style={{ borderTop: `${dims.paginationBorderWidth}px solid ${dims.paginationBorderColor}` }}>
         <Pagination
@@ -105,68 +170,6 @@ export function SubmissionsListTable({
   );
 }
 
-// ── Header row ──────────────────────────────────────────────────────────────
-
-function HeaderRow({
-  sort,
-  onSortChange,
-}: {
-  sort:         SubmissionsSort;
-  onSortChange: (field: string) => void;
-}) {
-  return (
-    <div
-      role="row"
-      className="flex"
-      style={{
-        height:          dims.headerHeight,
-        backgroundColor: dims.headerBg,
-        borderBottom:    `${dims.headerBorderWidth}px solid ${dims.headerBorderColor}`,
-      }}
-    >
-      {COLUMN_ORDER.map((col) => (
-        <div
-          key={col.key}
-          role="columnheader"
-          className="flex items-center"
-          style={{
-            width:        dims.colWidths[col.key],
-            flexShrink:   0,
-            paddingLeft:  dims.headerPaddingX,
-            paddingRight: dims.headerPaddingX,
-          }}
-        >
-          {col.sortField ? (
-            <SortableColumnHeader
-              label={col.label}
-              sortKey={col.sortField}
-              currentField={sort.field}
-              currentDirection={sort.direction}
-              onSortChange={onSortChange}
-              align={col.align}
-            />
-          ) : (
-            <span
-              style={{
-                fontSize:      dims.headerFontSize,
-                fontWeight:    dims.headerFontWeight,
-                color:         dims.headerInactiveColor,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                display:       'block',
-                width:         '100%',
-                textAlign:     col.align ?? 'left',
-              }}
-            >
-              {col.label}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Data row ────────────────────────────────────────────────────────────────
 
 function SubmissionListRow({
@@ -177,65 +180,51 @@ function SubmissionListRow({
   onRowClick?: (id: string) => void;
 }) {
   const stripeColor = submissionsRowStatusStripes[submission.status];
+  const interactive = !!onRowClick;
   return (
-    <div
-      role="row"
-      className="relative flex items-center"
-      onClick={() => onRowClick?.(submission.id)}
+    <tr
+      tabIndex={interactive ? 0 : undefined}
+      role={interactive ? 'button' : undefined}
+      aria-label={interactive ? `Open submission ${submission.id}, ${submission.member}` : undefined}
+      onClick={interactive ? () => onRowClick(submission.id) : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onRowClick(submission.id);
+              }
+            }
+          : undefined
+      }
+      className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
       style={{
+        position:        'relative',
         minHeight:       dims.rowMinHeight,
         backgroundColor: dims.rowBg,
         borderBottom:    `${dims.rowBorderWidth}px solid ${dims.rowBorderColor}`,
-        cursor:          onRowClick ? 'pointer' : 'default',
+        borderLeft:      `${dims.rowLeftStripeWidth}px solid ${stripeColor}`,
+        cursor:          interactive ? 'pointer' : 'default',
       }}
     >
-      <div
-        aria-hidden
-        style={{
-          position:        'absolute',
-          left:            0,
-          top:             0,
-          bottom:          0,
-          width:           dims.rowLeftStripeWidth,
-          backgroundColor: stripeColor,
-        }}
-      />
-      <Cell width={dims.colWidths.memberInstitution}><MemberCell submission={submission} /></Cell>
-      <Cell width={dims.colWidths.type}><TypeCell submission={submission} /></Cell>
-      <Cell width={dims.colWidths.products}><ProductChips products={submission.products ?? []} /></Cell>
-      <Cell width={dims.colWidths.stage}><StatusBadge status={submission.status} /></Cell>
-      <Cell width={dims.colWidths.premium}><PremiumCell submission={submission} /></Cell>
-      <Cell width={dims.colWidths.underwriter}><UnderwriterCell submission={submission} /></Cell>
-      <Cell width={dims.colWidths.appetite}><AppetiteText percent={submission.appetite ?? 0} /></Cell>
-      <Cell width={dims.colWidths.age}><AgeCell days={submission.daysOpen ?? 0} /></Cell>
-      <Cell width={dims.colWidths.needBy}><NeedByCell date={submission.needByDate} /></Cell>
-      <Cell width={dims.colWidths.effective}><EffectiveCell date={submission.effDate} /></Cell>
-    </div>
-  );
-}
-
-function Cell({ width, children }: { width: string; children: React.ReactNode }) {
-  return (
-    <div
-      role="cell"
-      className="flex items-center"
-      style={{
-        width,
-        flexShrink:    0,
-        paddingLeft:   dims.cellPaddingX,
-        paddingRight:  dims.cellPaddingX,
-        paddingTop:    dims.cellPaddingY,
-        paddingBottom: dims.cellPaddingY,
-      }}
-    >
-      {children}
-    </div>
+      <td style={cellPaddingStyle}><MemberCell submission={submission} /></td>
+      <td style={cellPaddingStyle}><TypeCell submission={submission} /></td>
+      <td style={cellPaddingStyle}><ProductChips products={submission.products ?? []} /></td>
+      <td style={cellPaddingStyle}><StatusBadge status={submission.status} /></td>
+      <td style={cellPaddingStyle}><PremiumCell submission={submission} /></td>
+      <td style={cellPaddingStyle}><UnderwriterCell submission={submission} /></td>
+      <td style={{ ...cellPaddingStyle, textAlign: 'center' }}><AppetiteText percent={submission.appetite ?? 0} /></td>
+      <td style={cellPaddingStyle}><AgeCell days={submission.daysOpen ?? 0} /></td>
+      <td style={cellPaddingStyle}><NeedByCell date={submission.needByDate} /></td>
+      <td style={cellPaddingStyle}><EffectiveCell date={submission.effDate} /></td>
+    </tr>
   );
 }
 
 // ── Member cell ─────────────────────────────────────────────────────────────
 
 function MemberCell({ submission }: { submission: Submission }) {
+  const brokerLabel = submission.broker ?? '—';
   return (
     <div className="flex items-start" style={{ gap: mc.rowGap }}>
       <div
@@ -252,9 +241,8 @@ function MemberCell({ submission }: { submission: Submission }) {
       </div>
       <div className="flex flex-col" style={{ gap: mc.blockGap, minWidth: 0 }}>
         <span
-          className="truncate"
-          style={{ fontSize: mc.nameSize, fontWeight: mc.nameWeight, color: mc.nameColor }}
           title={submission.member}
+          style={{ fontSize: mc.nameSize, fontWeight: mc.nameWeight, color: mc.nameColor, wordBreak: 'break-word' }}
         >
           {submission.member}
         </span>
@@ -272,6 +260,7 @@ function MemberCell({ submission }: { submission: Submission }) {
               fontWeight:      mc.subIdWeight,
               color:           mc.subIdColor,
               lineHeight:      1,
+              whiteSpace:      'nowrap',
             }}
           >
             {submission.id}
@@ -282,9 +271,10 @@ function MemberCell({ submission }: { submission: Submission }) {
           <span aria-hidden style={{ color: mc.metaSeparatorColor }}>·</span>
           <span
             className="truncate"
+            title={brokerLabel}
             style={{ fontSize: mc.metaSize, fontWeight: mc.metaWeight, color: mc.metaColor }}
           >
-            {submission.broker ?? '—'}
+            {brokerLabel}
           </span>
         </div>
       </div>
@@ -323,7 +313,10 @@ function TypeCell({ submission }: { submission: Submission }) {
 function PremiumCell({ submission }: { submission: Submission }) {
   return (
     <div className="flex flex-col" style={{ gap: pc.rowGap }}>
-      <span style={{ fontSize: pc.amountSize, fontWeight: pc.amountWeight, color: pc.amountColor }}>
+      <span
+        className="tabular-nums"
+        style={{ fontSize: pc.amountSize, fontWeight: pc.amountWeight, color: pc.amountColor }}
+      >
         {formatCurrency(submission.premium)}
       </span>
       {typeof submission.enrolled === 'number' && (
@@ -374,24 +367,45 @@ function UnderwriterCell({ submission }: { submission: Submission }) {
 
 // ── Appetite text cell ──────────────────────────────────────────────────────
 
-function appetiteColor(percent: number): string {
-  if (percent >= ats.greenThreshold) return ats.colorGreen;
-  if (percent >= ats.amberThreshold) return ats.colorAmber;
+type AppetiteBand = 'favorable' | 'caution' | 'restricted';
+
+function appetiteBand(percent: number): AppetiteBand {
+  if (percent >= ats.greenThreshold) return 'favorable';
+  if (percent >= ats.amberThreshold) return 'caution';
+  return 'restricted';
+}
+
+function appetiteColor(band: AppetiteBand): string {
+  if (band === 'favorable') return ats.colorGreen;
+  if (band === 'caution') return ats.colorAmber;
   return ats.colorRed;
 }
 
+const APPETITE_LABEL: Record<AppetiteBand, string> = {
+  favorable: 'In appetite',
+  caution: 'Caution',
+  restricted: 'Out of appetite',
+};
+
 function AppetiteText({ percent }: { percent: number }) {
+  const band = appetiteBand(percent);
+  const color = appetiteColor(band);
+  const label = APPETITE_LABEL[band];
+  const symbol = band === 'favorable' ? '●' : band === 'caution' ? '▲' : '■';
   return (
     <span
+      aria-label={`${label}: ${percent}%`}
+      className="tabular-nums"
       style={{
         fontSize:   ats.size,
         fontWeight: ats.weight,
-        color:      appetiteColor(percent),
-        textAlign: 'left',
-        display:    'block',
-        width:      '100%',
+        color,
+        display:    'inline-flex',
+        alignItems: 'center',
+        gap:        4,
       }}
     >
+      <span aria-hidden>{symbol}</span>
       {percent}%
     </span>
   );
@@ -405,11 +419,24 @@ function severityForDays(days: number): DaysOpenSeverity {
   return 'normal';
 }
 
+const AGE_LABEL: Record<DaysOpenSeverity, string> = {
+  normal: 'On track',
+  warning: 'Aging',
+  critical: 'Critical',
+};
+
 function AgeCell({ days }: { days: number }) {
   const sev = severityForDays(days);
   const { color, weight } = daysOpenSeverityStyles[sev];
+  const label = AGE_LABEL[sev];
+  const showIcon = sev !== 'normal';
   return (
-    <span style={{ fontSize: dc.daysSize, fontWeight: weight, color, whiteSpace: 'nowrap' }}>
+    <span
+      aria-label={`${label}: ${days} days open`}
+      className="inline-flex items-center gap-1 tabular-nums"
+      style={{ fontSize: dc.daysSize, fontWeight: weight, color, whiteSpace: 'nowrap' }}
+    >
+      {showIcon && <AlertTriangle size={11} aria-hidden />}
       {days}d
     </span>
   );
@@ -424,7 +451,10 @@ function formatNeedByDate(iso: string): string {
 function NeedByCell({ date }: { date?: string }) {
   if (!date) return <span style={{ fontSize: nbc.size, color: nbc.color }}>—</span>;
   return (
-    <span style={{ fontSize: nbc.size, fontWeight: nbc.weight, color: nbc.color, whiteSpace: 'nowrap' }}>
+    <span
+      className="tabular-nums"
+      style={{ fontSize: nbc.size, fontWeight: nbc.weight, color: nbc.color, whiteSpace: 'nowrap' }}
+    >
       {formatNeedByDate(date)}
     </span>
   );
@@ -438,7 +468,7 @@ function formatEffectiveDate(iso: string): string {
 
 function EffectiveCell({ date }: { date?: string }) {
   return (
-    <div className="inline-flex items-center" style={{ gap: ec.gap }}>
+    <div className="inline-flex items-center tabular-nums" style={{ gap: ec.gap }}>
       <span style={{ fontSize: ec.size, fontWeight: ec.weight, color: ec.color }}>
         {date ? formatEffectiveDate(date) : '—'}
       </span>
@@ -447,13 +477,12 @@ function EffectiveCell({ date }: { date?: string }) {
   );
 }
 
-// ── Skeleton + empty ────────────────────────────────────────────────────────
+// ── Skeleton + empty + error ────────────────────────────────────────────────
 
 function SkeletonRow() {
   return (
-    <div
-      role="row"
-      className="relative flex items-center"
+    <tr
+      aria-hidden
       style={{
         minHeight:       dims.rowMinHeight,
         backgroundColor: dims.rowBg,
@@ -461,22 +490,38 @@ function SkeletonRow() {
       }}
     >
       {COLUMN_ORDER.map((col) => (
-        <Cell key={col.key} width={dims.colWidths[col.key]}>
+        <td key={col.key} style={cellPaddingStyle}>
           <div className="bg-neutral-200 animate-pulse" style={{ width: '60%', height: 14 }} />
-        </Cell>
+        </td>
       ))}
-    </div>
+    </tr>
   );
 }
 
 function EmptyMessage() {
   return (
-    <div
-      role="row"
-      className="flex items-center justify-center"
-      style={{ minHeight: dims.rowMinHeight * 2, color: colors.slate500, fontSize: 13 }}
-    >
-      No submissions match your filters.
-    </div>
+    <tr>
+      <td
+        colSpan={COLUMN_ORDER.length}
+        className="text-center"
+        style={{ minHeight: dims.rowMinHeight * 2, padding: 32, color: colors.slate500, fontSize: 13 }}
+      >
+        No submissions match your filters.
+      </td>
+    </tr>
+  );
+}
+
+function ErrorMessage() {
+  return (
+    <tr>
+      <td
+        colSpan={COLUMN_ORDER.length}
+        className="text-center"
+        style={{ minHeight: dims.rowMinHeight * 2, padding: 32, color: '#B91C1C', fontSize: 13 }}
+      >
+        Unable to load submissions. Refresh the page to try again.
+      </td>
+    </tr>
   );
 }

@@ -31,8 +31,9 @@ export function PasswordInput({ className = '', ...rest }: Props) {
       <button
         type="button"
         onClick={() => setShow((v) => !v)}
-        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
         aria-label={show ? 'Hide password' : 'Show password'}
+        aria-pressed={show}
       >
         {show ? <EyeOffIcon /> : <EyeIcon />}
       </button>

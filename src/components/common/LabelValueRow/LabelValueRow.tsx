@@ -11,13 +11,11 @@ export function LabelValueRow({ label, value }: LabelValueRowProps) {
     <div className="flex items-baseline justify-between" style={{ gap: 12 }}>
       <span
         style={{
-          fontSize:      s.labelSize,
-          lineHeight:    `${s.labelLineHeight}px`,
-          fontWeight:    s.labelWeight,
-          letterSpacing: s.labelLetterSpacing,
-          textTransform: 'uppercase',
-          color:         s.labelColor,
-          flexShrink:    0,
+          fontSize:   s.labelSize,
+          lineHeight: `${s.labelLineHeight}px`,
+          fontWeight: s.labelWeight,
+          color:      s.labelColor,
+          flexShrink: 0,
         }}
       >
         {label}

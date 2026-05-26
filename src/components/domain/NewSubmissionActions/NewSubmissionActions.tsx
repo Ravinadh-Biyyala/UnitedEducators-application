@@ -31,9 +31,10 @@ export function NewSubmissionActions({
       <Button
         variant="primary"
         fullWidth
-        leftIcon={<Plus size={15} />}
+        leftIcon={!isSubmitting ? <Plus size={15} /> : undefined}
         onClick={onCreateClick}
-        disabled={isSubmitBlocked || isSubmitting}
+        loading={isSubmitting}
+        disabled={isSubmitBlocked}
       >
         {isSubmitting ? 'Creating…' : 'Create Submission'}
       </Button>

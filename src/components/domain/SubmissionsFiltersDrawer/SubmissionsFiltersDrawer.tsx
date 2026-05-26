@@ -101,14 +101,12 @@ function FilterGroupShell({
       <header
         className="flex items-center"
         style={{
-          height:        fs.groupHeaderHeight,
-          paddingLeft:   fs.groupHeaderPaddingX,
-          paddingRight:  fs.groupHeaderPaddingX,
-          fontSize:      fs.groupHeaderFontSize,
-          fontWeight:    fs.groupHeaderWeight,
-          color:         fs.groupHeaderColor,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
+          height:       fs.groupHeaderHeight,
+          paddingLeft:  fs.groupHeaderPaddingX,
+          paddingRight: fs.groupHeaderPaddingX,
+          fontSize:     fs.groupHeaderFontSize,
+          fontWeight:   fs.groupHeaderWeight,
+          color:        fs.groupHeaderColor,
         }}
       >
         {label}

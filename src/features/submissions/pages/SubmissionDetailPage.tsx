@@ -93,7 +93,7 @@ function StatCell({
         borderBottom: borderBottom ? `1px solid ${colors.borderDefault}` : undefined,
       }}
     >
-      <span style={{ color: colors.textMuted, fontSize: '0.56rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.10em' }}>{label}</span>
+      <span style={{ color: colors.textMuted, fontSize: '0.56rem', fontWeight: 600 }}>{label}</span>
       <span style={{ color: colors.textHeading, fontSize: '0.88rem', fontWeight: 700 }}>{value}</span>
       {note && <span style={{ fontSize: '0.68rem', color: noteColor ?? colors.textMuted }}>{note}</span>}
     </div>
@@ -271,7 +271,7 @@ export function SubmissionDetailPage() {
 
         {/* Coverage lines strip */}
         <div className="px-8 py-3 flex flex-wrap items-center gap-2" style={{ borderTop: `1px solid ${colors.borderDefault}` }}>
-          <span style={{ color: colors.textMuted, fontSize: '0.56rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.10em', marginRight: 4 }}>
+          <span style={{ color: colors.textMuted, fontSize: '0.56rem', fontWeight: 600, marginRight: 4 }}>
             Coverage Lines
           </span>
           {SUBMISSION.productLines.map((pid) => {

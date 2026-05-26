@@ -7,8 +7,15 @@ interface RequiredFieldsCounterProps {
 
 export function RequiredFieldsCounter({ completed, total }: RequiredFieldsCounterProps) {
   return (
-    <span className="inline-flex items-baseline">
+    <span
+      className="inline-flex items-baseline"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={`${completed} of ${total} required fields completed`}
+    >
       <span
+        aria-hidden
         style={{
           fontSize:   s.completedSize,
           lineHeight: `${s.completedLineHeight}px`,
@@ -19,6 +26,7 @@ export function RequiredFieldsCounter({ completed, total }: RequiredFieldsCounte
         {completed}
       </span>
       <span
+        aria-hidden
         style={{
           fontSize:   s.totalSize,
           lineHeight: `${s.totalLineHeight}px`,

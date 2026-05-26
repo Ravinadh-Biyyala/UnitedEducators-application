@@ -23,7 +23,7 @@ export function DashboardPage() {
         <ErrorBoundary fallback={(_err, reset) => <PanelErrorState panelName="KPI Row" onRetry={reset} />}>
           <KpiRowContainer />
         </ErrorBoundary>
-<div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
+<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
           <div className="flex flex-col gap-4">
     <ErrorBoundary fallback={(_err, reset) => <PanelErrorState panelName="Submissions" onRetry={reset} />}>
               <SubmissionsTableContainer />

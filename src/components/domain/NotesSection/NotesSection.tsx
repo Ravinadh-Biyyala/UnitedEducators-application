@@ -1,30 +1,38 @@
+import { useId } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import { SectionPanel } from '@/components/common/SectionPanel';
 import { colors } from '@/theme/tokens';
 import type { NewSubmissionFormValues } from '@/shared/types';
 
+const MAX_NOTES = 500;
+
 export function NotesSection() {
   const { register, watch } = useFormContext<NewSubmissionFormValues>();
   const notesValue = watch('notes') ?? '';
+  const labelId = useId();
+  const helpId = `${labelId}-help`;
+  const countId = `${labelId}-count`;
 
   return (
     <SectionPanel title="Notes">
       <div>
-        <p
+        <label
+          id={labelId}
+          htmlFor={`${labelId}-textarea`}
           style={{
+            display:      'block',
             fontSize:     '0.70rem',
             fontWeight:   600,
             color:        colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom:  8,
+            marginBottom: 8,
           }}
         >
           Internal Notes
-        </p>
+        </label>
         <div style={{ position: 'relative' }}>
           <div
+            aria-hidden
             style={{
               position:      'absolute',
               left:           11,
@@ -36,9 +44,12 @@ export function NotesSection() {
             <MessageSquare size={13} />
           </div>
           <textarea
+            id={`${labelId}-textarea`}
             {...register('notes')}
             placeholder="Add any internal notes, context, or observations for this submission…"
             rows={5}
+            maxLength={MAX_NOTES}
+            aria-describedby={`${helpId} ${countId}`}
             style={{
               width:          '100%',
               boxSizing:      'border-box',
@@ -60,11 +71,18 @@ export function NotesSection() {
           />
         </div>
         <div className="flex items-center justify-between" style={{ marginTop: 8 }}>
-          <p style={{ fontSize: '0.60rem', color: colors.textMuted }}>
+          <p id={helpId} style={{ fontSize: '0.60rem', color: colors.textMuted }}>
             Notes are visible to all underwriting team members
           </p>
-          <p style={{ fontSize: '0.60rem', color: colors.textMuted }}>
-            {notesValue.length} characters
+          <p
+            id={countId}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="tabular-nums"
+            style={{ fontSize: '0.60rem', color: colors.textMuted }}
+          >
+            {notesValue.length} / {MAX_NOTES} characters
           </p>
         </div>
       </div>

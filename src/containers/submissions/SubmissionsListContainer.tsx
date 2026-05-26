@@ -20,12 +20,15 @@ export function SubmissionsListContainer({ scope }: Props) {
     pageSize,
   });
 
-  if (isError) throw new Error('SubmissionsList query failed');
-
+  // Pass the error through to the table so it can render an inline error
+  // row (preserves filters/pagination chrome) instead of throwing the whole
+  // panel to the ErrorBoundary. ErrorBoundary still catches anything thrown
+  // synchronously by the children below.
   return (
     <SubmissionsListTable
       response={data}
       isLoading={isLoading}
+      isError={isError}
       sort={sort}
       onSortChange={setSort}
       page={page}

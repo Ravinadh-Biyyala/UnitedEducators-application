@@ -719,7 +719,13 @@ function SubmissionDetailInner() {
   // "review" is the default landing tab. For a brand-new auto-created record,
   // route the user to Overview instead — there's nothing to review yet.
   const [activeTab, setActiveTab] = useState(isFreshAutoCreate ? "overview" : "review");
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  // Submission Details (KPI snapshot) is open by default ONLY on the Details
+  // tab — every other tab needs its own real estate above the fold. The user
+  // can still toggle freely within a tab; switching tabs re-applies the rule.
+  const [detailsOpen, setDetailsOpen] = useState(activeTab === "overview");
+  useEffect(() => {
+    setDetailsOpen(activeTab === "overview");
+  }, [activeTab]);
   // Stage starts at "Information Gathering" for a fresh auto-create —
   // signals "we have the submission, but underwriting hasn't started".
   const [stage, setStage] = useState(isFreshAutoCreate ? "Information Gathering" : "Review In Progress");
@@ -765,6 +771,15 @@ function SubmissionDetailInner() {
 
   // Live unread badge for the Correspondence tab
   const unreadCount = threads.reduce((s, t) => s + t.unreadCount, 0);
+
+  // ── Side-nav hover-to-expand behaviour ─────────────────────────────────
+  // Collapsed by default → icons only (56px). Expanded on hover → 220px,
+  // overlaying page content. Collapses the instant the cursor leaves.
+  const NAV_COLLAPSED_W = 56;
+  const NAV_EXPANDED_W  = 220;
+  const [navExpanded, setNavExpanded] = useState(false);
+  const handleNavEnter = () => setNavExpanded(true);
+  const handleNavLeave = () => setNavExpanded(false);
 
   const renderTab = () => {
     switch(activeTab){
@@ -901,7 +916,178 @@ ${SUBMISSION.underwriter.title} · United Educators`;
           tabPack.extraFacts ? tabPack.extraFacts() : "",
         ].filter(Boolean).join("\n")}
       />
-      <div style={{fontFamily: font, color:"#1A2530"}}>
+      <div className="flex" style={{fontFamily: font, color:"#1A2530"}}>
+
+        {/* ── LEFT TAB NAV ───────────────────────────────────────────────────
+            Two-layer trick so expanding doesn't push the page content:
+              • The <aside> reserves a fixed 56px gutter in flex flow (icons-
+                only width). It is sticky so the gutter stays under the
+                global top nav as the right column scrolls.
+              • Inside, an absolutely-positioned panel paints the actual nav.
+                On hover it widens to 220px, overflowing the aside's right
+                edge and floating on top of page content. On mouseleave it
+                auto-collapses after 5s (mouseenter cancels the timer). */}
+        <aside
+          className="shrink-0"
+          aria-label="Submission sections"
+          style={{
+            width: NAV_COLLAPSED_W, minWidth: NAV_COLLAPSED_W,
+            position: "sticky",
+            top: 0,
+            alignSelf: "flex-start",
+            height: "calc(100vh - 56px)",
+            zIndex: 10,
+            // Let the absolutely-positioned panel below overflow rightward.
+            overflow: "visible",
+          }}
+        >
+          <div
+            onMouseEnter={handleNavEnter}
+            onMouseLeave={handleNavLeave}
+            style={{
+              position: "absolute",
+              top: 0, left: 0,
+              width: navExpanded ? NAV_EXPANDED_W : NAV_COLLAPSED_W,
+              height: "100%",
+              background: "white",
+              borderRight: `1px solid ${BDL}`,
+              overflowY: "auto",
+              overflowX: "hidden",
+              transition: "width 0.2s ease, box-shadow 0.2s ease",
+              boxShadow: navExpanded ? "4px 0 18px rgba(15,23,42,0.10)" : "none",
+              scrollbarWidth: "thin",
+            }}
+          >
+            <nav className="flex flex-col py-1.5">
+              {(() => {
+                const GROUP_LABELS: Record<TabGroup, string> = {
+                  overview: "Overview",
+                  analysis: "Analysis",
+                  workflow: "Workflow",
+                };
+                const visible = TABS.filter(t => t.id !== "members" || isGroup);
+                let lastGroup: TabGroup | null = null;
+                return visible.map((t) => {
+                  const isActive   = activeTab === t.id;
+                  const showBadge  = t.id === "correspondence" && unreadCount > 0;
+                  const newGroup   = t.group !== lastGroup;
+                  const isFirst    = lastGroup === null;
+                  lastGroup = t.group;
+                  return (
+                    <Fragment key={t.id}>
+                      {newGroup && (
+                        navExpanded ? (
+                          <div
+                            style={{
+                              padding: "10px 14px 4px",
+                              fontSize: "0.58rem",
+                              fontWeight: 800,
+                              color: TT,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.10em",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {GROUP_LABELS[t.group]}
+                          </div>
+                        ) : (
+                          !isFirst && (
+                            <div
+                              aria-hidden
+                              style={{ height: 1, background: BDL, margin: "6px 10px" }}
+                            />
+                          )
+                        )
+                      )}
+                      <button
+                        ref={isActive ? activeTabButtonRef : undefined}
+                        onClick={() => setActiveTab(t.id)}
+                        aria-current={isActive ? "page" : undefined}
+                        title={t.label}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${N}08`; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        className="flex items-center w-full text-left transition-colors relative"
+                        style={{
+                          gap: navExpanded ? 9 : 0,
+                          padding: navExpanded ? "8px 12px" : "10px 0",
+                          paddingLeft: navExpanded ? (isActive ? 9 : 12) : 0,
+                          paddingRight: navExpanded ? 12 : 0,
+                          justifyContent: navExpanded ? "flex-start" : "center",
+                          borderLeft: isActive ? `3px solid ${G}` : "3px solid transparent",
+                          background: isActive ? N : "transparent",
+                          color: isActive ? "white" : "#1A2530",
+                          fontSize: "0.78rem",
+                          fontWeight: isActive ? 700 : 500,
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: font,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        <span
+                          className="inline-flex items-center justify-center shrink-0 relative"
+                          style={{
+                            width: 28, height: 28, borderRadius: 6,
+                            background: isActive ? "rgba(255,255,255,0.2)" : "#F0F3F8",
+                            color: isActive ? "white" : TM,
+                          }}
+                        >
+                          {t.icon}
+                          {/* Compact badge dot when collapsed (icons only) */}
+                          {!navExpanded && showBadge && (
+                            <span
+                              aria-hidden
+                              style={{
+                                position: "absolute",
+                                top: -2, right: -2,
+                                width: 10, height: 10,
+                                borderRadius: 9999,
+                                background: "#B45309",
+                                border: "1.5px solid white",
+                              }}
+                            />
+                          )}
+                        </span>
+                        {navExpanded && (
+                          <>
+                            <span
+                              className="flex-1 min-w-0"
+                              style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                            >
+                              {t.label}
+                            </span>
+                            {showBadge && (
+                              <span
+                                style={{
+                                  fontSize: "0.62rem", fontWeight: 800,
+                                  color: "white",
+                                  background: isActive ? G : "#B45309",
+                                  padding: "2px 7px", borderRadius: 9999,
+                                  minWidth: 18, textAlign: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {unreadCount}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    </Fragment>
+                  );
+                });
+              })()}
+            </nav>
+          </div>
+        </aside>
+
+        {/* ── RIGHT COLUMN ──────────────────────────────────────────────────
+            All page content (breadcrumb, account header, snapshot, tab
+            content) lives here. This column scrolls within AppShell's
+            <main>; the side nav above does not move. */}
+        <div className="flex-1 min-w-0">
 
         {/* ── BREADCRUMB + STAGE DROPDOWN ──────────────────────────────────── */}
         <div className="flex items-center justify-between gap-3 px-3 sm:px-5 py-2.5 flex-wrap"
@@ -1012,24 +1198,30 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                   </span>
                 </button>
 
-                {/* Thin vertical divider — visually groups the cascade
-                    toggles as a separate cluster from the collapse toggle. */}
-                <span aria-hidden style={{ width: 1, height: 14, background: BDL }} />
-
-                <CompactToggle
-                  icon={<Gift size={13} />}
-                  label="Member Benefits"
-                  value={memberBenefitsChecked}
-                  onToggle={() => setMemberBenefitsChecked(!memberBenefitsChecked)}
-                  title="Cascades to every product on this submission"
-                />
-                <CompactToggle
-                  icon={<Bell size={13} />}
-                  label="Notifications"
-                  value={notificationsEnabled}
-                  onToggle={() => setNotificationsEnabled(!notificationsEnabled)}
-                  title="Cascades to every product on this submission"
-                />
+                {/* Member Benefits + Notifications cascade toggles —
+                    surface only on the Terms & Conditions tab, where the
+                    underwriter is actually shaping product-level coverage
+                    and the cascade is relevant. Divider rides with them so
+                    it doesn't become an orphan vertical line on other tabs. */}
+                {activeTab === "rating" && (
+                  <>
+                    <span aria-hidden style={{ width: 1, height: 14, background: BDL }} />
+                    <CompactToggle
+                      icon={<Gift size={13} />}
+                      label="Member Benefits"
+                      value={memberBenefitsChecked}
+                      onToggle={() => setMemberBenefitsChecked(!memberBenefitsChecked)}
+                      title="Cascades to every product on this submission"
+                    />
+                    <CompactToggle
+                      icon={<Bell size={13} />}
+                      label="Notifications"
+                      value={notificationsEnabled}
+                      onToggle={() => setNotificationsEnabled(!notificationsEnabled)}
+                      title="Cascades to every product on this submission"
+                    />
+                  </>
+                )}
 
                 <span className="ml-auto" style={{
                   fontSize: "0.6rem", fontWeight: 600, color: TT,
@@ -1250,101 +1442,17 @@ ${SUBMISSION.underwriter.title} · United Educators`;
 
         </div>
 
-        {/* ── PRIMARY TAB STRIP ──────────────────────────────────────────── */}
-        {/* Edge-to-edge strip: flush against the side nav and chat panel, no
-            top gap from the hero above. Single horizontal-scroll row with
-            visual dividers between tab groups (Overview / Analysis / Workflow). */}
+        {/* ── TAB CONTENT ──────────────────────────────────────────────────
+            The active tab's panel. Lives inside the right column so it
+            scrolls independently of the pinned side nav on the left. */}
         <div
-          className="submission-tabs-scroll"
-          style={{
-            background: "white",
-            borderTop: `1px solid ${BDL}`,
-            borderBottom: `1px solid ${BDL}`,
-            padding: "6px 16px",
-            display: "flex",
-            gap: 2,
-            overflowX: "auto",
-            overflowY: "hidden",
-            scrollbarWidth: "thin",
-          }}>
-            {TABS.filter(t => t.id !== "members" || isGroup).map((t, idx, arr) => {
-              const isActive = activeTab === t.id;
-              const showBadge = t.id === "correspondence" && unreadCount > 0;
-              // Render a thin vertical divider before any tab whose group differs
-              // from the previous visible tab — visually clusters tabs into
-              // Overview / Analysis / Workflow without taking extra space.
-              const prev = idx > 0 ? arr[idx - 1] : null;
-              const isGroupBoundary = prev !== null && prev.group !== t.group;
-              return (
-                <Fragment key={t.id}>
-                  {isGroupBoundary && (
-                    <span aria-hidden style={{
-                      width: 1, alignSelf: "stretch",
-                      background: BDL, margin: "4px 4px", flex: "0 0 auto",
-                    }}/>
-                  )}
-                <button
-                  ref={isActive ? activeTabButtonRef : undefined}
-                  onClick={() => setActiveTab(t.id)}
-                  aria-current={isActive ? "page" : undefined}
-                  title={t.label}
-                  className="flex items-center justify-center gap-1.5 transition-all"
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.background = `${N}08`;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.background = "transparent";
-                  }}
-                  style={{
-                    background: isActive ? N : "transparent",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontFamily: font,
-                    padding: "9px 14px",
-                    flex: "0 0 auto",
-                    minWidth: 0,
-                    boxShadow: isActive ? `0 1px 3px ${N}33` : "none",
-                    transition: "background 0.2s ease, box-shadow 0.2s ease",
-                  }}>
-                  <span className="inline-flex items-center justify-center shrink-0"
-                    style={{
-                      width: 22, height: 22, borderRadius: 5,
-                      background: isActive ? "rgba(255,255,255,0.2)" : "#F0F3F8",
-                      color: isActive ? "white" : TM,
-                      transition: "background 0.2s ease",
-                    }}>
-                    {t.icon}
-                  </span>
-                  <span style={{
-                    fontSize: "0.84rem",
-                    fontWeight: isActive ? 700 : 500,
-                    color: isActive ? "white" : "#1A2530",
-                    lineHeight: 1.2,
-                    whiteSpace: "nowrap",
-                  }}>
-                    {t.label}
-                  </span>
-                  {showBadge && (
-                    <span style={{
-                      fontSize: "0.62rem", fontWeight: 800, color: "white",
-                      background: "#B45309",
-                      padding: "2px 7px", borderRadius: 9999,
-                      minWidth: 18, textAlign: "center",
-                    }}>
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-                </Fragment>
-              );
-            })}
-        </div>
-
-        {/* ── TAB CONTENT ─────────────────────────────────────────────────── */}
-        <div className="px-3 sm:px-4 py-3 pb-5" style={{background:"#EEF1F6",minHeight:400}}>
+          className="px-3 sm:px-4 py-3 pb-5"
+          style={{ background: "#EEF1F6", borderTop: `1px solid ${BDL}`, minHeight: 400 }}
+        >
           {renderTab()}
         </div>
+
+        </div>  {/* /right column */}
 
       </div>
     </AppShell>

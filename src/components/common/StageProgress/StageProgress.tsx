@@ -52,12 +52,10 @@ export function StageProgress({
         <div className="flex flex-col" style={{ minWidth: 0, flex: '1 1 auto' }}>
           <span
             style={{
-              fontSize:      s.labelSize,
-              lineHeight:    `${s.labelLineHeight}px`,
-              fontWeight:    s.labelWeight,
-              letterSpacing: s.labelLetterSpacing,
-              textTransform: 'uppercase',
-              color:         s.labelColor,
+              fontSize:   s.labelSize,
+              lineHeight: `${s.labelLineHeight}px`,
+              fontWeight: s.labelWeight,
+              color:      s.labelColor,
             }}
           >
             Current Stage
@@ -67,12 +65,10 @@ export function StageProgress({
         <div className="flex flex-col items-end">
           <span
             style={{
-              fontSize:      s.labelSize,
-              lineHeight:    `${s.labelLineHeight}px`,
-              fontWeight:    s.labelWeight,
-              letterSpacing: s.labelLetterSpacing,
-              textTransform: 'uppercase',
-              color:         s.labelColor,
+              fontSize:   s.labelSize,
+              lineHeight: `${s.labelLineHeight}px`,
+              fontWeight: s.labelWeight,
+              color:      s.labelColor,
             }}
           >
             Required Fields
@@ -83,6 +79,11 @@ export function StageProgress({
 
       {/* Progress bar */}
       <div
+        role="progressbar"
+        aria-valuenow={Math.round(fillPercent)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Required fields progress: ${completedCount} of ${totalRequiredFields} complete`}
         style={{
           marginTop:       s.progressBarMarginTop,
           height:          s.progressBarHeight,
@@ -90,6 +91,7 @@ export function StageProgress({
         }}
       >
         <div
+          aria-hidden
           style={{
             width:           `${fillPercent}%`,
             height:          '100%',

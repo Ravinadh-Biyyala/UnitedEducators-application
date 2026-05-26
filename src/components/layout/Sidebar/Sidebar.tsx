@@ -98,8 +98,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           type="button"
           onClick={toggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          aria-controls="main-nav"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden lg:flex items-center justify-center shrink-0 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 transition-colors"
+          className="hidden lg:flex items-center justify-center shrink-0 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 transition-colors ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
           style={{
             width:      ss.toggleButtonSize,
             height:     ss.toggleButtonSize,
@@ -120,10 +122,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="flex lg:hidden items-center justify-center shrink-0 text-neutral-400 hover:text-neutral-600 transition-colors"
+            className="flex lg:hidden items-center justify-center shrink-0 text-neutral-400 hover:text-neutral-600 transition-colors ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
             style={{
-              width:  ss.toggleButtonSize,
-              height: ss.toggleButtonSize,
+              width:  Math.max(ss.toggleButtonSize, 44),
+              height: Math.max(ss.toggleButtonSize, 44),
               border: `1px solid ${ss.toggleCollapsedBorderColor}`,
             }}
           >
@@ -170,9 +172,16 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* ── Nav items ─────────────────────────────────────────────────────── */}
-      <nav className="flex-1 flex flex-col overflow-y-auto py-2" aria-label="Main navigation">
+      <nav id="main-nav" className="flex-1 flex flex-col overflow-y-auto py-2" aria-label="Main navigation">
         {NAV_ITEMS.map(({ to, label, Icon, end }) => (
-          <NavLink key={to} to={to} end={end} onClick={mobileOpen ? onClose : undefined}>
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            onClick={mobileOpen ? onClose : undefined}
+            aria-label={collapsed ? label : undefined}
+            className="block ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid focus-visible:ring-inset"
+          >
             {({ isActive }) => (
               <div
                 title={collapsed ? label : undefined}

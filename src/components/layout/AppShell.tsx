@@ -17,8 +17,9 @@ function AiAssistantPanel() {
     >
       <button
         type="button"
-        className="flex flex-col items-center gap-0 hover:opacity-80 transition-opacity focus:outline-none"
+        className="flex flex-col items-center gap-0 hover:opacity-80 transition-opacity ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
         aria-label="Open AI Assistant"
+        title="Open AI Assistant"
       >
         {/* Icon container — 32×32, brand-vivid bg, rounded-lg (Figma 320:50568) */}
         <div className="relative mb-3">
@@ -71,6 +72,15 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Skip-to-content — visible only on keyboard focus. Lets keyboard users
+          jump past the nav rail and topbar on every page load. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-4 focus:py-2 focus:text-brand-vivid focus:font-semibold focus:rounded focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-vivid"
+      >
+        Skip to main content
+      </a>
+
       {/* Mobile backdrop — shown when sidebar slides in on small screens */}
       {mobileOpen && (
         <div
@@ -88,7 +98,11 @@ export function AppShell() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar onMobileMenu={() => setMobileOpen(true)} />
         {/* bg neutral-100 (#EEF1F6), padding: top 28px · left/right 32px · bottom 0 */}
-        <main className="flex-1 overflow-y-auto bg-neutral-100 pt-7 px-8 pb-0">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto bg-neutral-100 pt-7 px-8 pb-0 ring-custom focus-visible:outline-none"
+        >
           <Outlet />
         </main>
       </div>

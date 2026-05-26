@@ -17,3 +17,18 @@ body {
   background-color: #f7f8fa;
   color: #111827;
 }
+
+/* Global focus-visible policy (WCAG 2.4.7).
+   Any element that strips its default outline must use focus-visible:ring-*
+   utilities; this rule guarantees a fallback so a keyboard user is never
+   stranded on an invisible element. */
+:focus-visible {
+  outline: 2px solid #0123d4; /* brand.vivid */
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Buttons / links that draw their own focus ring opt out with .ring-custom. */
+.ring-custom:focus-visible {
+  outline: none;
+}

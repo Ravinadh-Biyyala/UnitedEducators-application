@@ -52,12 +52,13 @@ export function SubmissionsScopeTabs({
       <div className="flex items-center" style={{ gap: 16 }}>
         <span
           aria-live="polite"
+          aria-busy={isLoading || undefined}
           style={{
             color:    ts.resultsCountColor,
             fontSize: ts.resultsCountSize,
           }}
         >
-          {isLoading ? '…' : `${resultsCount} ${resultsCount === 1 ? 'result' : 'results'}`}
+          {isLoading ? 'Loading…' : `${resultsCount} ${resultsCount === 1 ? 'result' : 'results'}`}
         </span>
         <FiltersButton activeFilterCount={activeFilterCount ?? 0} onClick={onFiltersClick} isOpen={filtersOpen ?? false} />
       </div>
@@ -80,9 +81,9 @@ function ScopeTab({
     <button
       type="button"
       onClick={onClick}
-      aria-current={isActive ? 'page' : undefined}
+      aria-pressed={isActive}
       className={cn(
-        'relative inline-flex items-center justify-center cursor-pointer transition-colors bg-transparent border-0 outline-none',
+        'relative inline-flex items-center justify-center cursor-pointer transition-colors bg-transparent border-0 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded',
       )}
       style={{
         height:     ts.tabHeight,
@@ -124,7 +125,8 @@ function FiltersButton({
       type="button"
       onClick={onClick}
       aria-pressed={isOpen}
-      className="inline-flex items-center justify-center cursor-pointer transition-colors outline-none"
+      aria-controls="filters-drawer"
+      className="inline-flex items-center justify-center cursor-pointer transition-colors ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
       style={{
         height:          ts.filtersToggleHeight,
         minWidth:        ts.filtersToggleWidth,

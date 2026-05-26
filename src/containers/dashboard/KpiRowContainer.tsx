@@ -1,6 +1,6 @@
 import { useGetKpisQuery } from '@/services/dashboard/dashboardApi';
 import { KpiCard } from '@/components/domain';
-import { Spinner } from '@/components/common';
+import { PanelErrorState } from '@/components/common/ErrorBoundary/PanelErrorState';
 import { formatCompactCurrency, formatPercent } from '@/shared/utils';
 import { colors } from '@/theme/tokens';
 import InReviewIcon    from '@/assets/icons/kpi/in-review.svg?react';
@@ -11,11 +11,31 @@ import DaysToQuoteIcon from '@/assets/icons/kpi/days-to-quote.svg?react';
 
 // Row layout from Figma node 320:49426 (SVG width 1188, 5 cards × 224.8px + 4 × 16px gaps):
 // flex row, gap-4 (16px), each card is flex-1 (equal width).
-export function KpiRowContainer() {
-  const { data, isLoading, error } = useGetKpisQuery();
+function KpiSkeletonCard() {
+  // Matches KpiCard final height to prevent CLS when real data lands.
+  return (
+    <div
+      aria-hidden
+      className="flex-1 animate-pulse bg-white"
+      style={{ minHeight: 96, border: '1px solid #DCE3EC' }}
+    />
+  );
+}
 
-  if (isLoading) return <div className="py-4"><Spinner /></div>;
-  if (error || !data) return <div className="text-sm text-red-600">Failed to load KPIs.</div>;
+export function KpiRowContainer() {
+  const { data, isLoading, error, refetch } = useGetKpisQuery();
+
+  if (isLoading) {
+    return (
+      <div role="status" aria-busy="true" aria-label="Loading KPIs" className="flex gap-4">
+        {Array.from({ length: 5 }).map((_, i) => <KpiSkeletonCard key={i} />)}
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return <PanelErrorState panelName="KPI row" onRetry={refetch} />;
+  }
 
   return (
     <div className="flex gap-4">

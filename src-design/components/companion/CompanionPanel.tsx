@@ -228,7 +228,7 @@ export function CompanionPanel() {
           onClick={() => setCollapsed(false)}
           aria-label="Open companion"
           style={{
-            position: "fixed", right: 16, bottom: 88, zIndex: 60,
+            position: "fixed", right: 24, bottom: 24, zIndex: 60,
             width: 48, height: 48, borderRadius: 9999,
             background: `linear-gradient(135deg, ${N}, ${ND})`,
             color: "white", border: "none", cursor: "pointer",
@@ -252,8 +252,13 @@ export function CompanionPanel() {
     <>
       <style>{KEYFRAMES}</style>
       <aside style={{
-        position: "relative", flexShrink: 0,
-        width: 400, height: "100vh",
+        // Fixed overlay anchored to the right edge, starting just below the
+        // 56px global top nav and running to the bottom of the viewport.
+        // Was `position: relative` (in-flow), which only worked when AppShell
+        // used a horizontal flex layout; after the top-nav refactor the panel
+        // would flow underneath <main> and appear to take the whole screen.
+        position: "fixed", top: 56, right: 0, bottom: 0, zIndex: 55,
+        width: 300,
         borderLeft: `1px solid ${BDL}`,
         background: "white",
         display: "flex", flexDirection: "column",
@@ -1424,7 +1429,7 @@ export function CompanionBackgroundTray() {
       <style>{KEYFRAMES}</style>
       <div style={{
         position: "fixed", top: 80, zIndex: 50,
-        right: collapsed ? 80 : 420,
+        right: collapsed ? 80 : 320,
         display: "flex", flexDirection: "column", gap: 8,
         maxWidth: 360, pointerEvents: "none",
         fontFamily: font,

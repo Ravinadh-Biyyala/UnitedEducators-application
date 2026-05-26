@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGetTasksQuery } from '@/services/tasks/tasksApi';
 import { OpenTasksPanel } from '@/components/domain';
+import { PanelErrorState } from '@/components/common/ErrorBoundary/PanelErrorState';
 import type { TaskFilter } from '@/shared/types';
 
 const TASK_FILTER_PARAM = 'taskFilter';
@@ -12,7 +13,7 @@ function isValidTaskFilter(v: string | null): v is TaskFilter {
 }
 
 export function OpenTasksPanelContainer() {
-  const { data: tasks = [] } = useGetTasksQuery();
+  const { data: tasks = [], isLoading, error, refetch } = useGetTasksQuery();
   const [params, setParams] = useSearchParams();
 
   const raw = params.get(TASK_FILTER_PARAM);
@@ -39,6 +40,19 @@ export function OpenTasksPanelContainer() {
   }, [tasks, activeFilter]);
 
   const overdueCount = useMemo(() => tasks.filter((t) => t.isOverdue).length, [tasks]);
+
+  if (error) return <PanelErrorState panelName="Open Tasks" onRetry={refetch} />;
+  if (isLoading && tasks.length === 0) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading tasks"
+        className="bg-white border border-neutral-200 animate-pulse"
+        style={{ minHeight: 200 }}
+      />
+    );
+  }
 
   return (
     <OpenTasksPanel

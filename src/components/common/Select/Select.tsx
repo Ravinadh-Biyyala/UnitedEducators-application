@@ -108,6 +108,8 @@ export function Select<TId extends string = string>({
     }
   };
 
+  const typeAheadRef = useRef<{ query: string; lastAt: number }>({ query: '', lastAt: 0 });
+
   const onDropdownKey = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
@@ -116,6 +118,12 @@ export function Select<TId extends string = string>({
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActiveIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setActiveIndex(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setActiveIndex(options.length - 1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const opt = options[activeIndex];
@@ -124,6 +132,16 @@ export function Select<TId extends string = string>({
           setOpen(false);
           triggerRef.current?.focus();
         }
+      } else if (e.key.length === 1 && /\S/.test(e.key)) {
+        // Type-ahead: build up a query for ~500ms, jump to first match.
+        const now = Date.now();
+        const prev = typeAheadRef.current;
+        const query = (now - prev.lastAt > 500 ? '' : prev.query) + e.key.toLowerCase();
+        typeAheadRef.current = { query, lastAt: now };
+        const match = options.findIndex(
+          (o) => !o.disabled && o.label.toLowerCase().startsWith(query),
+        );
+        if (match >= 0) setActiveIndex(match);
       }
     },
     [activeIndex, options, onChange],
@@ -141,7 +159,7 @@ export function Select<TId extends string = string>({
         disabled={disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
         onKeyDown={onTriggerKey}
-        className="relative w-full text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="relative w-full text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
         style={{
           height:          inputStyles.height,
           backgroundColor: inputStyles.bg,

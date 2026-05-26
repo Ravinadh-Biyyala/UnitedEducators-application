@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ErrorBoundary, PanelErrorState } from '@/components/common';
 import {
   SubmissionsFiltersContainer,
@@ -12,8 +12,22 @@ interface SubmissionsPageProps {
   scope: SubmissionsScope;
 }
 
+const FILTERS_PARAM = 'filters';
+
 export function SubmissionsPage({ scope }: SubmissionsPageProps) {
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Per §X. Filter state — URL params: the filters drawer open/closed
+  // belongs in the URL so refresh, share-link, and back-button all preserve it.
+  const [params, setParams] = useSearchParams();
+  const filtersOpen = params.get(FILTERS_PARAM) === 'open';
+  const setFiltersOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(filtersOpen) : next;
+    setParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      if (resolved) updated.set(FILTERS_PARAM, 'open');
+      else updated.delete(FILTERS_PARAM);
+      return updated;
+    }, { replace: true });
+  };
 
   return (
     <div className="flex flex-col h-full -mx-8 -mt-7">

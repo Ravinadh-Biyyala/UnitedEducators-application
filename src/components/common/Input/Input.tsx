@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { inputStyles } from '@/theme/tokens';
+import { inputStyles, colors } from '@/theme/tokens';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   /**
@@ -15,6 +15,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   rightIcon?:  React.ReactNode;
   /** Visually mute the value (used when "Auto-filled from contact"). */
   mutedValue?: boolean;
+  /** When true, sets aria-invalid and renders an error-state border. */
+  error?:      boolean;
 }
 
 export function Input({
@@ -22,14 +24,25 @@ export function Input({
   leftIcon,
   rightIcon,
   mutedValue,
+  error,
   className = '',
   style,
+  'aria-invalid': ariaInvalidProp,
   ...rest
 }: InputProps) {
+  const ariaInvalid = error || ariaInvalidProp || undefined;
+  const isInvalid = Boolean(ariaInvalid);
+
   if (variant === 'legacy') {
     return (
       <input
-        className={`block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand ${className}`}
+        aria-invalid={ariaInvalid}
+        className={
+          `block w-full rounded-md border px-3 py-2 text-sm ring-custom ` +
+          `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid ` +
+          (isInvalid ? 'border-rose-500 ' : 'border-gray-300 ') +
+          className
+        }
         {...rest}
       />
     );
@@ -37,6 +50,8 @@ export function Input({
 
   // tokenized
   const hasLeftIcon = Boolean(leftIcon);
+  const borderColor = isInvalid ? colors.dangerRed : inputStyles.borderColor;
+
   return (
     <span
       className={`relative block w-full ${className}`}
@@ -59,11 +74,13 @@ export function Input({
       )}
       <input
         {...rest}
+        aria-invalid={ariaInvalid}
+        className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid focus-visible:ring-offset-0"
         style={{
           width:           '100%',
           height:          '100%',
           backgroundColor: inputStyles.bg,
-          border:          `${inputStyles.borderWidth}px solid ${inputStyles.borderColor}`,
+          border:          `${inputStyles.borderWidth}px solid ${borderColor}`,
           paddingLeft:     hasLeftIcon ? inputStyles.paddingXWithLeftIcon : inputStyles.paddingX,
           paddingRight:    rightIcon   ? inputStyles.paddingXWithLeftIcon : inputStyles.paddingX,
           paddingTop:      inputStyles.paddingY,

@@ -2,6 +2,20 @@ import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react';
 import { sortableColumnHeaderStyles as ss } from '@/theme/tokens';
 import { cn } from '@/lib/cn';
 
+/**
+ * Returns the WAI-ARIA `aria-sort` value for a `<th>` cell wrapping a
+ * `<SortableColumnHeader>`. Consumers do `<th aria-sort={getAriaSort(...)}>`.
+ */
+export function getAriaSort(
+  sortKey: string | undefined,
+  currentField: string | undefined,
+  currentDirection: 'asc' | 'desc' | undefined,
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (!sortKey) return undefined;
+  if (currentField !== sortKey) return 'none';
+  return currentDirection === 'asc' ? 'ascending' : 'descending';
+}
+
 export interface SortableColumnHeaderProps {
   label:        string;
   sortKey?:     string;
@@ -34,13 +48,25 @@ export function SortableColumnHeader({
     ? ChevronsUpDown
     : currentDirection === 'desc' ? ChevronDown : ChevronUp;
 
+  // aria-sort lives on the <th> in a real table; this component is the inner
+  // button. We surface aria-sort via the wrapping <th>'s default if consumers
+  // forward `currentField`/`currentDirection`. For accessible announcement we
+  // also add an sr-only suffix to the button label describing current state.
+  const sortStateLabel = !isSortable
+    ? ''
+    : !isActive
+    ? ', not sorted, activate to sort ascending'
+    : currentDirection === 'asc'
+    ? ', sorted ascending, activate to sort descending'
+    : ', sorted descending, activate to clear sort';
+
   return (
     <button
       type="button"
       disabled={!isSortable}
       onClick={() => isSortable && onSortChange!(sortKey!)}
       className={cn(
-        'inline-flex items-center w-full bg-transparent border-0 outline-none',
+        'inline-flex items-center w-full bg-transparent border-0 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded',
         align === 'right'  && 'justify-end',
         align === 'center' && 'justify-center',
         isSortable && 'cursor-pointer',
@@ -50,11 +76,10 @@ export function SortableColumnHeader({
         fontSize:      ss.fontSize,
         fontWeight:    ss.fontWeight,
         color:         isActive ? ss.activeColor : ss.inactiveColor,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
       }}
     >
       <span>{label}</span>
+      {sortStateLabel && <span className="sr-only">{sortStateLabel}</span>}
       {isSortable && <Chevron size={ss.iconSize} aria-hidden />}
     </button>
   );

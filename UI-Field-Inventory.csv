@@ -1,0 +1,1225 @@
+Screen,Section/Panel,Element Type,Element Label/Name,Notes,Logic,Input Data,Output Data
+AppShell,Sidebar - Logo,Image,United Educators Logo (Full/Icon),"Logo display, collapses with sidebar",Render brand asset; swap between full and icon variants based on collapsed state,Static asset + sidebarCollapsed UI state,-
+AppShell,Sidebar - Collapse Toggle,Icon Button,Expand/Collapse Sidebar,"Desktop only, toggles sidebar width",Toggle sidebar collapsed/expanded state,User click,Persisted UI slice: ui.sidebarCollapsed
+AppShell,Sidebar - Navigation,NavItem,Dashboard,Routes to home page,Navigate to dashboard route,User click,Route: /dashboard
+AppShell,Sidebar - Navigation,NavItem,Submissions,Routes to submissions page,Navigate to submissions route,User click,Route: /submissions
+AppShell,Sidebar - Navigation,NavItem,Renewals,Routes to renewals page,Navigate to renewals route,User click,Route: /renewals
+AppShell,Sidebar - Navigation,NavItem,Inbox,Routes to inbox page,Navigate to inbox route,User click,Route: /inbox
+AppShell,Sidebar - Navigation,NavItem,Tasks,Routes to tasks page,Navigate to tasks route,User click,Route: /tasks
+AppShell,Sidebar - Navigation,NavItem,Approvals,Routes to approvals page,Navigate to approvals route,User click,Route: /approvals
+AppShell,Sidebar - Navigation,NavItem,Notifications,Routes to notifications page,Navigate to notifications route,User click,Route: /notifications
+AppShell,Sidebar - Navigation,NavItem,Activity,Routes to activity page,Navigate to activity route,User click,Route: /activity
+AppShell,Sidebar - Navigation,NavItem,Portfolio,Routes to portfolio (senior UW+),Navigate to portfolio route; visible per user.role,user.role / RBAC,Route: /portfolio
+AppShell,Sidebar - Navigation,NavItem,Appetite Rules,Routes to appetite rules (lead/director),Navigate to appetite route; gated by role,user.role / RBAC,Route: /appetite
+AppShell,Sidebar - Navigation,NavItem,User Management,Routes to user management (director only),Navigate to user management route; director-only,user.role / RBAC,Route: /admin/users
+AppShell,Sidebar - User Pill,Button,User Initials Avatar,Toggles user dropdown menu,Open user menu popover,User click + auth.user,Popover open state
+AppShell,Sidebar - User Dropdown,Section Header,Access Level,Permission summary header,Render section title,Static text,-
+AppShell,Sidebar - User Dropdown,Checkbox,View Submissions,Permission indicator,Render permission read-only,user.permissions.viewSubmissions,-
+AppShell,Sidebar - User Dropdown,Checkbox,Approve Quotes,Permission indicator,Render permission read-only,user.permissions.approveQuotes,-
+AppShell,Sidebar - User Dropdown,Checkbox,Bind Policies,Permission indicator,Render permission read-only,user.permissions.bindPolicies,-
+AppShell,Sidebar - User Dropdown,Checkbox,Manage Users,Permission indicator,Render permission read-only,user.permissions.manageUsers,-
+AppShell,Sidebar - User Dropdown,Checkbox,Appetite Rules,Permission indicator,Render permission read-only,user.permissions.appetiteRules,-
+AppShell,Sidebar - User Dropdown,Checkbox,Admin Settings,Permission indicator,Render permission read-only,user.permissions.adminSettings,-
+AppShell,Sidebar - User Dropdown,Text,Team: [Team Name],Team and department info,Render team membership,user.team / user.department,-
+AppShell,Sidebar - User Dropdown,Button,Account Settings,Opens account settings,Navigate to account settings,User click,Route: /account/settings
+AppShell,Sidebar - User Dropdown,Button,Sign Out,Logs out user,Clear auth session and redirect,User click + auth state,POST /auth/logout; clear auth slice; Route: /login
+Login,Left Panel - Hero,Text,United Educators,Heading with tagline,Render marketing copy,Static text,-
+Login,Left Panel - Features,Stat,9 UE product lines in a single workflow,Feature point,Render feature bullet,Static text,-
+Login,Left Panel - Features,Stat,Role-based access for UW teams,Feature point,Render feature bullet,Static text,-
+Login,Left Panel - Features,Stat,Real-time appetite scoring & alerts,Feature point,Render feature bullet,Static text,-
+Login,Left Panel - Footer,Text,(c) 2024 United Educators...,Legal footer text,Render legal footer,Static text,-
+Login,Right Panel - Status Bar,Text,System operational,Operational status indicator,Render system health,GET /api/health,-
+Login,Right Panel - Form,Section Header,Sign in to your account,Main heading,Render heading,Static text,-
+Login,Right Panel - Form,Section Header,I am signing in as,Role selector label,Render label,Static text,-
+Login,Right Panel - Form - Role Selector,Button,Underwriter,Role card with demo info,Select demo role and prefill creds,User click,Form state: selectedRole + prefilled email/password
+Login,Right Panel - Form - Role Selector,Button,UW Manager,Role card with demo info,Select demo role and prefill creds,User click,Form state: selectedRole + prefilled email/password
+Login,Right Panel - Form - Role Selector,Button,Admin,Role card with demo info,Select demo role and prefill creds,User click,Form state: selectedRole + prefilled email/password
+Login,Right Panel - Form - Role Selector,Stat,My submission queue,Feature bullet,Render feature bullet for role,Static text,-
+Login,Right Panel - Form - Role Selector,Stat,Configure & quote,Feature bullet,Render feature bullet for role,Static text,-
+Login,Right Panel - Form - Role Selector,Stat,Bind policies,Feature bullet,Render feature bullet for role,Static text,-
+Login,Right Panel - Form,Text,Demo: Sarah Mitchell,Demo user name,Render demo identity,Static demo data,-
+Login,Right Panel - Form,Text,Credentials pre-filled - Password: ue2024!,Demo hint text,Render demo password hint,Static text,-
+Login,Right Panel - Form,Field,Email Address,Text input for email,Capture email; validate format,User entry,Form state: email
+Login,Right Panel - Form,Field,Password,Password input field,Capture password (masked),User entry,Form state: password
+Login,Right Panel - Form,Button,Forgot password?,Link to password reset,Navigate to password reset flow,User click,Route: /forgot-password
+Login,Right Panel - Form,Icon Button,Show/Hide Password,Eye icon toggle,Toggle password visibility,UI state: showPassword,Toggled UI state
+Login,Right Panel - Form,Text,[Error message],Error alert if login fails,Render auth error,POST /auth/login error response,-
+Login,Right Panel - Form,Button,Sign In,Primary submit button,Submit credentials and authenticate,Form state: email + password,POST /auth/login -> auth slice + Route: /dashboard
+Login,Right Panel - Demo Accounts,Section Header,All Demo Accounts,Demo accounts list header,Render section title,Static text,-
+Login,Right Panel - Demo Accounts,Button,[User Name] [Email] [Role],"Demo account row, clickable",Prefill form with demo credentials on click,Static demo account list,Form state: email + password + selectedRole
+Unauthorized,Main,Icon,ShieldAlert,Access denied icon,Render warning icon,Static asset,-
+Unauthorized,Main,Section Header,Access Denied,Main heading,Render heading,Static text,-
+Unauthorized,Main,Text,Your role does not have permission...,Error explanation,Render denial explanation,Static text + attempted route,-
+Unauthorized,Main,Button,Go Back,Navigate back,Browser history back,User click,history.back()
+Unauthorized,Main,Button,Dashboard,Navigate to dashboard,Navigate home,User click,Route: /dashboard
+Unauthorized,Main,Button,Sign Out,Logout and return to login,Clear session and redirect,User click + auth state,POST /auth/logout; Route: /login
+Dashboard,Top Bar,Section Header,[Today's Date],Date display with icon,Render today's date formatted,new Date(),-
+Dashboard,Top Bar,Section Header,"Good [morning/afternoon/evening], [FirstName]",Greeting,Compute time-of-day greeting,Local time + user.firstName,-
+Dashboard,Top Bar,Text,You have X critical alerts...,Status summary,Summarize unread critical alerts,Computed from alerts query,-
+Dashboard,Top Bar,Button,New Submission,Primary action button,Open Create Submission modal or route to /submissions/new,User click,Modal open state OR Route: /submissions/new
+Dashboard,KPI Row,KPI Card,My In Review,Shows count and trend,Aggregate submissions in review for user,GET /api/submissions?assignee=me&stage=in_review,-
+Dashboard,KPI Row,KPI Card,Quoted This Month,Shows count and trend,Count submissions quoted this month,GET /api/submissions?stage=quoted&period=mtd,-
+Dashboard,KPI Row,KPI Card,Bound This Month,Shows count and trend,Count submissions bound this month,GET /api/submissions?stage=bound&period=mtd,-
+Dashboard,KPI Row,KPI Card,Avg. Days to Quote,Shows time metric and trend,Compute average days from intake to quote,GET /api/metrics/days-to-quote,-
+Dashboard,KPI Row,KPI Card,Hit Ratio (YTD),Shows percentage and trend,Compute bound/quoted ratio YTD,GET /api/metrics/hit-ratio?period=ytd,-
+Dashboard,KPI Row,KPI Card,Team In Review,Shows count (team leads+),Aggregate team in-review count; gated by role,GET /api/submissions?team=mine&stage=in_review + user.role,-
+Dashboard,KPI Row,KPI Card,Team Quoted,Shows count (team leads+),Aggregate team quoted count; role-gated,GET /api/submissions?team=mine&stage=quoted,-
+Dashboard,KPI Row,KPI Card,Bound YTD,Shows amount (team leads+),Sum of bound premium YTD; role-gated,GET /api/metrics/bound-premium?period=ytd&scope=team,-
+Dashboard,KPI Row,KPI Card,Portfolio Hit Ratio,Shows percentage (directors),Compute portfolio-level hit ratio; director-only,GET /api/metrics/portfolio-hit-ratio,-
+Dashboard,KPI Row,KPI Card,Quoted Pipeline,Shows amount (directors),Sum of quoted premium pipeline; director-only; click filters Submissions table,GET /api/metrics/quoted-pipeline,Sets ?status=Quoted on Submissions table (cross-panel via URL)
+Dashboard,Open Tasks,Section Header,Open Tasks,Card title,Render card title,Static text,-
+Dashboard,Open Tasks,Button,All,Filters tasks,Set task filter to All,?taskFilter URL param,Sets ?taskFilter=All
+Dashboard,Open Tasks,Button,Mine,Filters tasks,Set task filter to Mine,?taskFilter URL param,Sets ?taskFilter=Mine
+Dashboard,Open Tasks,Button,Overdue,Filters tasks with count badge,Set task filter to Overdue; show count,?taskFilter URL param + tasks query,Sets ?taskFilter=Overdue
+Dashboard,Open Tasks,Task Row,[Task Title],Task list item,Render task row; navigate on click,task object from GET /api/tasks,Route: /submissions/{subId}?tab=tasks
+Dashboard,Open Tasks,Stat,[Priority Level],Priority indicator chip,Render priority chip,task.priority,-
+Dashboard,Open Tasks,Text,[Submission ID],Submission reference,Render submission link,task.submissionId,Route: /submissions/{subId}
+Dashboard,Open Tasks,Text,[Due Date],Due date with status icon,Render due date with overdue indicator,task.dueDate + now(),-
+Dashboard,Open Tasks,Footer,[Count] total tasks,Summary line,Render total count,tasks.length,-
+Dashboard,Open Tasks,Link,View all,Navigate to tasks page,Navigate with current filter context,?taskFilter URL param,Route: /tasks?filter=<current>
+Dashboard,Alerts & Flags,Section Header,Alerts & Flags,Card title,Render card title,Static text,-
+Dashboard,Alerts & Flags,Button,All,Filters alerts,Set alert filter to All,?alertFilter URL param,Sets ?alertFilter=All
+Dashboard,Alerts & Flags,Button,Critical,Filters alerts,Set alert filter to Critical,?alertFilter URL param,Sets ?alertFilter=Critical
+Dashboard,Alerts & Flags,Button,Warning,Filters alerts,Set alert filter to Warning,?alertFilter URL param,Sets ?alertFilter=Warning
+Dashboard,Alerts & Flags,Alert Row,[Alert Title],Alert list item,Render alert row; navigate on click,alert object from GET /api/alerts,Route: /submissions/{subId}
+Dashboard,Alerts & Flags,Text,[Time Ago],Alert timestamp,Format alert timestamp relative,alert.createdAt + now(),-
+Dashboard,Alerts & Flags,Text,[Alert Body],Alert description,Render alert text,alert.body,-
+Dashboard,Alerts & Flags,Text,[Submission ID],Linked submission,Render linked submission ID,alert.submissionId,Route: /submissions/{subId}
+Dashboard,Alerts & Flags,Footer,X critical / Y warnings,Summary,Aggregate counts by severity,alerts grouped by severity,-
+Dashboard,Alerts & Flags,Link,View all,Navigate to alerts,Navigate to full alerts view,User click,Route: /alerts
+Dashboard,Correspondence,Section Header,Correspondence,Card title,Render card title,Static text,-
+Dashboard,Correspondence,Text,[Count] unread / [Count] awaiting reply,Status summary,Aggregate unread + awaiting counts,GET /api/correspondence?summary=true,-
+Dashboard,Correspondence,Avatar,[Initials],Sender avatar,Render sender initials,thread.lastSender.initials,-
+Dashboard,Correspondence,Text,[Sender Name] - [Organization],Sender info,Render sender + org,thread.lastSender,-
+Dashboard,Correspondence,Icon,Unread Indicator,Blue dot for unread,Render unread state dot,thread.isUnread,-
+Dashboard,Correspondence,Stat,Overdue reply,Overdue status chip,Render overdue chip when reply SLA breached,thread.lastInboundAt + replySLA,-
+Dashboard,Correspondence,Stat,Awaiting reply,Awaiting reply chip,Render awaiting chip,thread.awaitingReply,-
+Dashboard,Correspondence,Text,[Subject Line],Email subject,Render subject,thread.subject,-
+Dashboard,Correspondence,Text,[Message Preview],Message preview text,Render truncated last message,thread.lastMessage.body,-
+Dashboard,Correspondence,Text,[Submission ID] - [Time] - [Channel],Metadata,Render thread metadata,thread.submissionId / channel / time,-
+Dashboard,Correspondence,Footer,[Count] threads - [Count] overdue,Summary,Aggregate thread counts,threads grouped by status,-
+Dashboard,Correspondence,Link,Open inbox,Navigate to inbox,Navigate to inbox,User click,Route: /inbox
+Dashboard,Submissions Table,Section Header,Submissions,Card title,Render card title,Static text,-
+Dashboard,Submissions Table,Stat,[Count],Submission count badge,Render result count,filtered submissions length,-
+Dashboard,Submissions Toolbar,Tab,Mine,Filters submissions,Filter submissions to user's,?scope URL param,Sets ?scope=mine
+Dashboard,Submissions Toolbar,Tab,Team,Filters submissions (team leads),Filter submissions to team,?scope URL param + user.role,Sets ?scope=team
+Dashboard,Submissions Toolbar,Tab,All,Filters submissions (director only),Filter to all submissions; director-only,?scope URL param + user.role,Sets ?scope=all
+Dashboard,Submissions Toolbar,Dropdown,Status Filter,Status filter dropdown,Filter submissions by status,?status URL param,Sets ?status=<value>
+Dashboard,Submissions Table - Header,Column,ID,Sortable column,Render column header; sort on click,submission.id,Sets ?sort=id&dir=<asc/desc>
+Dashboard,Submissions Table - Header,Column,Member,Sortable column,Render column header; sort on click,submission.member.name,Sets ?sort=member
+Dashboard,Submissions Table - Header,Column,Type,Sortable column,Render column header; sort on click,submission.type,Sets ?sort=type
+Dashboard,Submissions Table - Header,Column,Assignee,Sortable column,Render column header; sort on click,submission.assignee,Sets ?sort=assignee
+Dashboard,Submissions Table - Header,Column,Premium,Sortable column,Render column header; sort on click,submission.premium,Sets ?sort=premium
+Dashboard,Submissions Table - Header,Column,Status,Sortable column,Render column header; sort on click,submission.status,Sets ?sort=status
+Dashboard,Submissions Table - Header,Column,Priority,Sortable column,Render column header; sort on click,submission.priority,Sets ?sort=priority
+Dashboard,Submissions Table - Header,Column,Effective,Sortable column,Render column header; sort on click,submission.effectiveDate,Sets ?sort=effective
+Dashboard,Submissions Table - Row,Text,[Submission ID],Monospaced ID reference,Render submission ID,submission.id,Route: /submissions/{id}
+Dashboard,Submissions Table - Row,Text,[Member Name],Member organization,Render member name,submission.member.name,-
+Dashboard,Submissions Table - Row,Icon,MapPin,Location icon,Render location icon,Static asset,-
+Dashboard,Submissions Table - Row,Text,[State],State abbreviation,Render state,submission.member.state,-
+Dashboard,Submissions Table - Row,Stat,Docs warning,Missing docs indicator,Render warning chip if docs incomplete,submission.docsComplete,-
+Dashboard,Submissions Table - Row,Text,[Type],Submission type,Render type,submission.type,-
+Dashboard,Submissions Table - Row,Avatar,[Initials],Assignee avatar,Render assignee initials,submission.assignee.initials,-
+Dashboard,Submissions Table - Row,Text,[Assignee First Name],Assignee name,Render assignee first name,submission.assignee.firstName,-
+Dashboard,Submissions Table - Row,Text,[Premium Amount],Currency amount,Render formatted currency,submission.premium,-
+Dashboard,Submissions Table - Row,Stat,[Status],Status chip/badge,Render status with color,submission.status,-
+Dashboard,Submissions Table - Row,Stat,[Priority],Priority chip/badge,Render priority chip,submission.priority,-
+Dashboard,Submissions Table - Row,Text,[Effective Date],Date,Render effective date,submission.effectiveDate,-
+Dashboard,Submissions Table - Row,Icon Button,Open submission,Eye icon action,Navigate to submission detail,User click,Route: /submissions/{id}
+Dashboard,Submissions Table - Row,Icon Button,Reassign,User plus icon action,Open reassign popover,User click,Modal/popover state
+Dashboard,Submissions Table - Row,Icon Button,Add note,Message square icon action,Open quick-note composer,User click,Modal state -> POST /api/notes
+Dashboard,Submissions Table - Row,Icon Button,More actions,Horizontal ellipsis action,Open contextual menu,User click,Menu open state
+Dashboard,Submissions Pagination,Text,[Start]-[End] of [Total],Pagination info,Render page info,?page URL param + total,-
+Dashboard,Submissions Pagination,Button,Prev,Previous page button,Navigate to previous page,?page URL param,Sets ?page=<prev>
+Dashboard,Submissions Pagination,Button,[Page Number],Pagination number button,Jump to specific page,User click,Sets ?page=<n>
+Dashboard,Submissions Pagination,Button,Next,Next page button,Navigate to next page,?page URL param,Sets ?page=<next>
+Dashboard,Portfolio Snapshot,Section Header,Portfolio Snapshot,Card title,Render card title,Static text,-
+Dashboard,Portfolio Snapshot,KPI Card,Total Submissions (MTD),Stat with icon,Count submissions this month,GET /api/metrics/submissions?period=mtd,-
+Dashboard,Portfolio Snapshot,KPI Card,Quoted Pipeline,Stat with icon,Sum of quoted premium; click filters Submissions table,GET /api/metrics/quoted-pipeline,Sets ?status=Quoted on Submissions table
+Dashboard,Portfolio Snapshot,KPI Card,Bound YTD,Stat with icon,Sum of bound premium YTD,GET /api/metrics/bound-premium?period=ytd,-
+Dashboard,Portfolio Snapshot,KPI Card,Avg. Appetite Score,Stat with icon,Average appetite score,GET /api/metrics/avg-appetite,-
+Dashboard,Portfolio Snapshot,KPI Card,Submissions in SLA,Stat with icon,Count submissions within SLA,GET /api/metrics/sla-compliance,-
+Dashboard,Portfolio Snapshot,KPI Card,Docs Incomplete,Stat with icon,Count submissions with missing docs,GET /api/metrics/docs-incomplete,-
+Dashboard,Team Performance,Section Header,Team Performance,Card title (team leads+),Render card title; role-gated,user.role + static text,-
+Dashboard,Team Performance,Column,Underwriter,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Column,In Review,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Column,Quoted,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Column,Bound,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Column,Hit Ratio,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Column,Days to Quote,Table header,Render column header,Static text,-
+Dashboard,Team Performance,Team Row,[Member Name] [Role],Team member row,Render UW performance row,GET /api/metrics/team-performance,-
+CompanionPanel,Header,Text,Live - agentic,Status indicator,Render agent status,Companion socket status,-
+CompanionPanel,Header,Icon Button,Reset thread,Rotates companion,Reset conversation thread,User click + thread state,Clear thread state
+CompanionPanel,Header,Icon Button,Collapse,Collapses panel,Toggle panel collapsed state,User click,UI state: companionCollapsed
+CompanionPanel,Identity,Avatar,Companion,Agent avatar with status,Render agent avatar,Static asset + status,-
+CompanionPanel,Identity,Text,Companion,Agent name,Render agent name,Static text,-
+CompanionPanel,Identity,Text,[Page Title] - [Subtitle],Current page context,Render context from active page,PageRegister context,-
+CompanionPanel,Messages,Message,[User Text],User message bubble,Render user message,thread.messages[i] where role=user,-
+CompanionPanel,Messages,Message,[Agent Text],Agent response bubble,Render agent message,thread.messages[i] where role=agent,-
+CompanionPanel,Messages,Message,[Navigation Suggestion],Navigate button with CTA,Render suggestion with navigate action,agent message with navigation payload,Route: <suggested-path>
+CompanionPanel,Messages,Suggestion,[Follow-up Chip],Suggested follow-up prompt,Render follow-up prompt,agent.followUps,Composer input on click
+CompanionPanel,Messages,Viz Card,[Chart Title],Visualization container,Render embedded chart from agent,agent.visualizations,-
+CompanionPanel,Composer,Field,[Placeholder Text],Chat input textarea,Capture user message,User entry,Form state: draft message
+CompanionPanel,Composer,Icon Button,Add Attachment,Plus icon button,Open file picker,User click,File picker state
+CompanionPanel,Composer,Button,Send,Send message button,Send message to companion,Form state + page context,POST /api/companion/chat
+CompanionPanel,Composer,Text,Watching this page...,Status indicator text,Render watching context,Current route + PageRegister,-
+PinnedDashboard,Header,Icon,Sparkles,Section icon,Render section icon,Static asset,-
+PinnedDashboard,Header,Section Header,Pinned by you,Section title,Render section title,Static text,-
+PinnedDashboard,Header,Stat,[Count],Pinned items count,Render pinned items count,pinnedItems.length,-
+PinnedDashboard,Header,Text,Charts you saved...,Descriptive text,Render description,Static text,-
+PinnedDashboard,Card,Text,[Chart Type],Chart type label,Render chart type,pinnedItem.type,-
+PinnedDashboard,Card,Link,Source,Link to source page,Navigate to source page,pinnedItem.sourceUrl,Route: <source>
+PinnedDashboard,Card,Section Header,[Chart Title],Chart title,Render chart title,pinnedItem.title,-
+PinnedDashboard,Card,Text,[Chart Intro/Source],Chart description,Render description,pinnedItem.description,-
+PinnedDashboard,Card,Visualization,[Mini Chart],Rendered visualization,Render chart visualization,pinnedItem.data,-
+PinnedDashboard,Card,Icon Button,Remove from dashboard,X icon button,Unpin chart,User click + pinnedItem.id,DELETE /api/pinned/{id}
+Portfolio,Hero,Section Header,Portfolio Analytics,Executive view title,Render page title,Static text,-
+Portfolio,KPI Strip,KPI Card,Total TIV,Shows $1.43B with account count,Aggregate Total Insured Value across portfolio,GET /api/portfolio/tiv,-
+Portfolio,KPI Strip,KPI Card,Written Premium YTD,Shows $8.3M with growth indicator,Sum written premium YTD,GET /api/portfolio/written-premium?period=ytd,-
+Portfolio,KPI Strip,KPI Card,Earned Premium YTD,Shows $7.1M with earned ratio,Sum earned premium YTD,GET /api/portfolio/earned-premium?period=ytd,-
+Portfolio,KPI Strip,KPI Card,Portfolio Hit Ratio,Shows 69% with trend,Compute hit ratio across portfolio,GET /api/portfolio/hit-ratio,-
+Portfolio,KPI Strip,KPI Card,Avg. Loss Ratio,Shows 54% within target,Compute weighted average loss ratio,GET /api/portfolio/avg-loss-ratio,-
+Portfolio,KPI Strip,KPI Card,At-Risk Accounts,"Accounts loss ratio > 70%, clickable filter",Count and filter accounts with loss ratio > 70%,GET /api/portfolio/at-risk-count,Sets ?atRisk=true on distribution table
+Portfolio,Premium Trend,Section Header,Premium Trend - Written vs. Earned vs. Target,Chart title with icon,Render chart title,Static text,-
+Portfolio,Premium Trend,Legend Item,Written,Blue bar legend label ($M),Render legend swatch,Static label + color,-
+Portfolio,Premium Trend,Legend Item,Earned,Teal bar legend label ($M),Render legend swatch,Static label + color,-
+Portfolio,Premium Trend,Legend Item,Target,Gold bar legend label ($M),Render legend swatch,Static label + color,-
+Portfolio,Product Mix,Section Header,Product Mix (Premium),Chart title with icon,Render chart title,Static text,-
+Portfolio,Product Mix,Legend Item,General Liability,Shows 28% with dot,Render product slice with %,GET /api/portfolio/product-mix,-
+Portfolio,Product Mix,Legend Item,Property,Shows 35% with dot,Render product slice with %,GET /api/portfolio/product-mix,-
+Portfolio,Product Mix,Legend Item,Educators Legal Liability,Shows 18% with dot,Render product slice with %,GET /api/portfolio/product-mix,-
+Portfolio,Product Mix,Legend Item,Student Accident,Shows 11% with dot,Render product slice with %,GET /api/portfolio/product-mix,-
+Portfolio,Product Mix,Legend Item,Cyber / Tech,Shows 8% with dot,Render product slice with %,GET /api/portfolio/product-mix,-
+Portfolio,Exposure & Premium Distribution,Tab,By Segment,Toggle button for segment view,Switch distribution view to segment,?distView URL param,Sets ?distView=segment
+Portfolio,Exposure & Premium Distribution,Tab,By Geography,Toggle button for geography view,Switch distribution view to geography,?distView URL param,Sets ?distView=geography
+Portfolio,Exposure & Premium Distribution,Filter Chip,At-Risk only,"Clear filter button, shows when at-risk filter active",Clear at-risk filter,?atRisk URL param,Clears ?atRisk
+Portfolio,Exposure & Premium Distribution,Column,Segment,Table column header (or State in geography mode),Render column header (varies by view),Static text + ?distView,-
+Portfolio,Exposure & Premium Distribution,Column,Accounts,Table column showing account count,Render cell value,row.accountCount,-
+Portfolio,Exposure & Premium Distribution,Column,TIV ($M),Table column showing total insured value,Render TIV with formatting,row.tiv,-
+Portfolio,Exposure & Premium Distribution,Column,Written Prem. ($M),Table column showing written premium,Render written premium with formatting,row.writtenPremium,-
+Portfolio,Exposure & Premium Distribution,Column,Loss Ratio,Table column with bar chart and percentage,Render loss ratio bar,row.lossRatio,-
+Portfolio,Exposure & Premium Distribution,Column,Trend,Table column showing at-risk badge when applicable,Render trend indicator and at-risk badge,row.atRisk + row.trend,-
+Portfolio,Appetite Tracking,Section Header,Appetite Tracking - Progress Toward Strategic Targets,Title with icon,Render section title,Static text,-
+Portfolio,Appetite Tracking,Progress Indicator,K-12 Public Education,Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Appetite Tracking,Progress Indicator,Higher Education,Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Appetite Tracking,Progress Indicator,Charter Schools,Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Appetite Tracking,Progress Indicator,Private / Independent,Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Appetite Tracking,Progress Indicator,California (Geo. Limit),Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Appetite Tracking,Progress Indicator,Property TIV > $400M,Shows current vs target with status badge,Render progress bar vs target,GET /api/appetite/targets,-
+Portfolio,Accumulation Risk,Section Header,Accumulation Risk,Title with icon,Render section title,Static text,-
+Portfolio,Accumulation Risk,Stat,Max Single State TIV,Shows $490M CA with risk indicator,Compute max TIV in one state,GET /api/portfolio/accumulation,-
+Portfolio,Accumulation Risk,Stat,Max Single Account TIV,Shows $412M K-12 with risk indicator,Compute max TIV for one account,GET /api/portfolio/accumulation,-
+Portfolio,Accumulation Risk,Stat,Cat Zone 3 (Earthquake),Shows $220M CA/WA with watch status,Compute Cat Zone 3 aggregate exposure,GET /api/portfolio/accumulation,-
+Portfolio,Accumulation Risk,Stat,Coastal Exposure (Wind),Shows $198M FL with ok status,Compute coastal exposure aggregate,GET /api/portfolio/accumulation,-
+Portfolio,Accumulation Risk,Stat,Named Perils Aggregation,Shows $908M All with critical status,Compute named perils aggregate,GET /api/portfolio/accumulation,-
+Activity,Hero,Section Header,Activity,Workbench-wide audit feed title,Render page title,Static text,-
+Activity,Hero,Button,Export Feed,Download activity feed,Export activity events as CSV/JSON,Current URL filter params,GET /api/activity/export -> file download
+Activity,KPI Strip,KPI Card,Events Today,Shows count with icon,Count events today,GET /api/activity/metrics?period=today,-
+Activity,KPI Strip,KPI Card,My Actions,Shows user actions count for today,Count user actions today,GET /api/activity/metrics?actor=me&period=today,-
+Activity,KPI Strip,KPI Card,Bound,Shows policy bind count for week,Count bind events this week,GET /api/activity/metrics?type=bound&period=7d,-
+Activity,KPI Strip,KPI Card,Approvals,Shows approval decisions count,Count approval decisions,GET /api/activity/metrics?type=approval,-
+Activity,KPI Strip,KPI Card,Docs Uploaded,Shows document upload count for 7 days,Count document uploads in 7d,GET /api/activity/metrics?type=doc_upload&period=7d,-
+Activity,KPI Strip,KPI Card,Events (7d),Shows total volume for week,Count all events in 7d,GET /api/activity/metrics?period=7d,-
+Activity,Activity Timeline,Tab,All Activity,Shows all events,Set scope filter to all,?scope URL param,Sets ?scope=all
+Activity,Activity Timeline,Tab,My Activity,Filters to user actions,Set scope filter to mine,?scope URL param,Sets ?scope=mine
+Activity,Activity Timeline,Tab,Team,Filters to team actions,Set scope filter to team,?scope URL param,Sets ?scope=team
+Activity,Activity Timeline,Tab,Submissions,Filters to submission-related actions,Set scope filter to submissions,?scope URL param,Sets ?scope=submissions
+Activity,Activity Timeline,Dropdown,Activity Type Filter,"Dropdown to filter by event type (All, Submission Created, etc.)",Filter events by type,?eventType URL param,Sets ?eventType=<value>
+Activity,Activity Timeline,Badge,Event Count,Shows total count of filtered events,Render filtered count,events.length,-
+Activity,Activity Timeline,Badge,Milestone Count,Shows number of milestone events in time bucket,Count milestone events per bucket,events grouped,-
+Activity,Activity Timeline,Badge,Operational Count,Shows number of operational events in time bucket,Count operational events per bucket,events grouped,-
+Activity,Activity Timeline,Section Header,Today,Time period section header,Render time bucket label,Date grouping,-
+Activity,Activity Timeline,Section Header,Yesterday,Time period section header,Render time bucket label,Date grouping,-
+Activity,Activity Timeline,Section Header,Earlier this week,Time period section header,Render time bucket label,Date grouping,-
+Activity,Activity Timeline,Section Header,Earlier,Time period section header,Render time bucket label,Date grouping,-
+Activity,Activity Timeline,Event Card,Submission Created,"Milestone event with actor, target, timestamp",Render milestone event,event of type submission_created,Route: /submissions/{subId}
+Activity,Activity Timeline,Event Card,Submission Edited,"Milestone event with actor, target, timestamp",Render milestone event,event of type submission_edited,Route: /submissions/{subId}
+Activity,Activity Timeline,Event Card,Document Uploaded,"Operational event, can be clustered",Render operational event (clusterable),event of type doc_uploaded,Route: /submissions/{subId}?tab=documents
+Activity,Activity Timeline,Event Card,Note Added,"Operational event, can be clustered",Render operational event,event of type note_added,Route: /submissions/{subId}?tab=notes
+Activity,Activity Timeline,Event Card,Email Sent,"Operational event, can be clustered",Render operational event,event of type email_sent,Route: /submissions/{subId}?tab=correspondence
+Activity,Activity Timeline,Event Card,Approval Decided,Milestone event with decision details,Render milestone event,event of type approval_decided,Route: /submissions/{subId}?tab=approvals
+Activity,Activity Timeline,Event Card,Quote Issued,Milestone event with quote details,Render milestone event,event of type quote_issued,Route: /submissions/{subId}/quote
+Activity,Activity Timeline,Event Card,Policy Bound,Milestone event with policy details,Render milestone event,event of type policy_bound,Route: /submissions/{subId}
+Activity,Activity Timeline,Event Card,Task Completed,Operational event with task reference,Render operational event,event of type task_completed,Route: /submissions/{subId}?tab=tasks
+Activity,Activity Timeline,Event Card,Risk Assessed,Milestone event with risk score,Render milestone event,event of type risk_assessed,Route: /submissions/{subId}?tab=risk
+Activity,Timeline Footer,Stat,Events Shown,Shows count of filtered vs total events,Render filtered vs total counts,filtered.length + total,-
+Activity,Timeline Footer,Stat,Data Retention,Shows 90-day retention policy,Render retention policy notice,Static text,-
+Notifications,Hero,Section Header,Notifications,System alerts title,Render page title,Static text,-
+Notifications,Hero,Button,Mark all read,Marks all notifications as read,Mark all unread as read,Current notifications,PATCH /api/notifications/mark-all-read
+Notifications,Toolbar,Tab,All,Shows all notifications,Set filter to all,?filter URL param,Sets ?filter=all
+Notifications,Toolbar,Tab,Unread,Filters to unread notifications,Set filter to unread,?filter URL param,Sets ?filter=unread
+Notifications,Toolbar,Tab,Mentions,Filters to mention notifications,Set filter to mentions,?filter URL param,Sets ?filter=mentions
+Notifications,Toolbar,Tab,Critical,Filters to critical severity notifications,Set filter to critical,?filter URL param,Sets ?filter=critical
+Notifications,Toolbar,Dropdown,Category Filter,"Filter by category (All, Mention, Approval, Task, SLA, Submission, System)",Filter notifications by category,?category URL param,Sets ?category=<value>
+Notifications,Stream,Notification Row,Critical Alert,Red-highlighted notification with critical badge,Render critical notification,GET /api/notifications,Click -> Route to target + PATCH read
+Notifications,Stream,Notification Row,Approval Notification,Amber-highlighted approval with category badge,Render approval notification,GET /api/notifications,Click -> Route: /approvals + PATCH read
+Notifications,Stream,Notification Row,Mention,Notification with mention category,Render mention notification,GET /api/notifications,Click -> Route to context + PATCH read
+Notifications,Stream,Notification Row,Task Notification,Task-related notification,Render task notification,GET /api/notifications,Click -> Route: /tasks + PATCH read
+Notifications,Stream,Notification Row,SLA Alert,SLA warning notification,Render SLA alert,GET /api/notifications,Click -> Route to subject + PATCH read
+Notifications,Stream,Notification Row,Submission Update,Submission status change notification,Render submission update,GET /api/notifications,Click -> Route: /submissions/{id} + PATCH read
+Notifications,Stream,Notification Row,System Message,Muted system notification,Render system notification,GET /api/notifications,PATCH read on view
+Notifications,Stream,Button,Mark Read,Per-notification mark-as-read button,Mark this notification read,notification.id,PATCH /api/notifications/{id}/read
+Notifications,Stream,Link,Submission ID,Clickable link to submission detail,Navigate to submission,notification.submissionId,Route: /submissions/{id}
+Task Queue,Hero,Section Header,Task Queue,Master task queue title,Render page title,Static text,-
+Task Queue,Hero,Button,New Task,Create new task,Open new task modal,User click,Modal open state
+Task Queue,KPI Strip,KPI Card,My Open Tasks,Shows count of open tasks assigned to user,Count open tasks for user,GET /api/tasks?assignee=me&status=open,-
+Task Queue,KPI Strip,KPI Card,Overdue,Shows count of overdue tasks,Count tasks past due date,GET /api/tasks?overdue=true,-
+Task Queue,KPI Strip,KPI Card,Due Today,Shows count of tasks due today,Count tasks due today,GET /api/tasks?dueDate=today,-
+Task Queue,KPI Strip,KPI Card,In Progress,Shows count of in-progress tasks,Count tasks in progress,GET /api/tasks?status=in_progress,-
+Task Queue,KPI Strip,KPI Card,Completed (MTD),Shows count of completed tasks this month,Count completed tasks MTD,GET /api/tasks?status=done&period=mtd,-
+Task Queue,KPI Strip,KPI Card,SLA at Risk,Shows count of tasks at 80%+ SLA usage,Count tasks with SLA usage >= 80%,GET /api/tasks?slaAtRisk=true,-
+Task Queue,Task Queue Card,Tab,My Tasks,Filters to assigned tasks,Set scope filter to mine,?scope URL param,Sets ?scope=mine
+Task Queue,Task Queue Card,Tab,Team Tasks,Filters to team tasks,Set scope filter to team,?scope URL param,Sets ?scope=team
+Task Queue,Task Queue Card,Tab,Unassigned,Filters to unassigned tasks,Set scope filter to unassigned,?scope URL param,Sets ?scope=unassigned
+Task Queue,Task Queue Card,Tab,Overdue,Filters to overdue tasks,Set scope filter to overdue,?scope URL param,Sets ?scope=overdue
+Task Queue,Task Queue Card,Dropdown,Priority Filter,"Dropdown for Critical, High, Medium, Low",Filter tasks by priority,?priority URL param,Sets ?priority=<value>
+Task Queue,Task Queue Card,Dropdown,Type Filter,"Dropdown for Document Request, Review, Communication, Analysis, Decision",Filter tasks by type,?type URL param,Sets ?type=<value>
+Task Queue,Task Queue Card,Column,Priority,Colored dot indicator with priority label,Render priority dot,task.priority,-
+Task Queue,Task Queue Card,Column,Task,Task title and member name,Render task title + member,task.title + task.member,-
+Task Queue,Task Queue Card,Column,Submission,Submission ID link,Render submission link,task.submissionId,Route: /submissions/{id}
+Task Queue,Task Queue Card,Column,Assignee,Assignee avatar and name,Render assignee,task.assignee,-
+Task Queue,Task Queue Card,Column,Type,Task type label,Render task type,task.type,-
+Task Queue,Task Queue Card,Column,SLA,SLA usage bar with percentage,Render SLA usage bar,task.slaUsage,-
+Task Queue,Task Queue Card,Column,Due Date,Due date with alert icon if overdue/at-risk,Render due date with urgency indicator,task.dueDate + now(),-
+Task Queue,Task Queue Card,Column,Status,"Status pill (Open, In Progress, Done, Overdue)",Render status pill,task.status,-
+Task Queue,Pagination,Button,Prev,Previous page button,Navigate to previous page,?page URL param,Sets ?page=<prev>
+Task Queue,Pagination,Button,Next,Next page button,Navigate to next page,?page URL param,Sets ?page=<next>
+Task Queue,Pagination,Button,Page Numbers,Numbered pagination buttons,Jump to specific page,User click,Sets ?page=<n>
+Task Queue,Pagination,Stat,Row Count,Shows current row range and total,Render pagination info,?page + tasks.length,-
+Approvals,Hero,Section Header,Approval Queue,Referrals and exceptions title,Render page title,Static text,-
+Approvals,Hero,Button,Authority Matrix,Link to authority guidelines,Open authority matrix doc/page,User click,Route or modal to authority matrix
+Approvals,Urgent Panel,Section Header,Needs your decision now,Urgent alert header,Render section title,Static text,-
+Approvals,Urgent Panel,Stat,Escalated Count,Number of escalated items,Count escalated approvals,GET /api/approvals?escalated=true,-
+Approvals,Urgent Panel,Stat,Critical Count,Number of critical priority items,Count critical-priority approvals,GET /api/approvals?priority=critical,-
+Approvals,Urgent Panel,Stat,SLA-Breached Count,Number of SLA-breached items,Count SLA-breached approvals,GET /api/approvals?slaBreached=true,-
+Approvals,Urgent Panel,Urgent Card,Escalated Badge,Shows escalation status,Render escalation badge,approval.escalated,-
+Approvals,Urgent Panel,Urgent Card,Critical Badge,Shows critical priority,Render critical badge,approval.priority,-
+Approvals,Urgent Panel,Urgent Card,SLA Breach Badge,Shows SLA breach status and duration,Render SLA breach badge,approval.slaBreach,-
+Approvals,Urgent Panel,Button,Approve,Approve action button,Approve the approval request,approval.id + user.id,PATCH /api/approvals/{id}/approve
+Approvals,Urgent Panel,Button,Decline,Decline action button,Decline the approval request,approval.id + user.id,PATCH /api/approvals/{id}/decline
+Approvals,Queue,Tab,Awaiting,Shows pending approvals,Set status filter to pending,?status URL param,Sets ?status=pending
+Approvals,Queue,Tab,My Requests,Filters to user submitted requests,Set scope filter to mine,?scope URL param,Sets ?scope=mine
+Approvals,Queue,Tab,Escalated,Filters to escalated requests,Set status filter to escalated,?status URL param,Sets ?status=escalated
+Approvals,Queue,Tab,Decided,Filters to approved/declined requests,Set status filter to decided,?status URL param,Sets ?status=decided
+Approvals,Queue,Dropdown,Approval Type Filter,"Filter by Premium Authority, Coverage Exception, Limit Increase, etc.",Filter approvals by type,?type URL param,Sets ?type=<value>
+Approvals,Queue Table,Column,Request,Approval reason/description,Render request reason,approval.reason,-
+Approvals,Queue Table,Column,Submission,Submission ID link,Render submission link,approval.submissionId,Route: /submissions/{id}
+Approvals,Queue Table,Column,Amount,Dollar amount with currency icon,Render amount formatted,approval.amount,-
+Approvals,Queue Table,Column,Requester,Requester avatar and name,Render requester,approval.requestedBy,-
+Approvals,Queue Table,Column,Age,Hours/days open with raised date,Compute age from raisedAt,approval.raisedAt + now(),-
+Approvals,Queue Table,Column,Status,"Status pill (Pending, Approved, Declined, Escalated)",Render status pill,approval.status,-
+Approvals,Queue Table,Column,Action,Approve/Decline buttons for pending items,Render inline action buttons,approval.status,PATCH /api/approvals/{id}/approve or /decline
+Approvals,Pagination,Button,Prev,Previous page button,Navigate to previous page,?page URL param,Sets ?page=<prev>
+Approvals,Pagination,Button,Next,Next page button,Navigate to next page,?page URL param,Sets ?page=<next>
+Approvals,Pagination,Button,Page Numbers,Numbered pagination buttons,Jump to specific page,User click,Sets ?page=<n>
+Approvals,Pagination,Stat,Row Count,Shows current row range and total,Render pagination info,?page + approvals.length,-
+Inbox,Folder Panel,Tab,Inbox,Filters to inbox folder,Set folder filter to inbox,?folder URL param,Sets ?folder=inbox
+Inbox,Folder Panel,Tab,Sent,Filters to sent folder,Set folder filter to sent,?folder URL param,Sets ?folder=sent
+Inbox,Folder Panel,Tab,Archive,Filters to archived emails,Set folder filter to archive,?folder URL param,Sets ?folder=archive
+Inbox,Folder Panel,Button,Refresh,Refresh email list,Refetch email list,GET /api/inbox,Cache invalidation
+Inbox,Folder Panel,Button,Filter,Filter emails,Open advanced filter panel,User click,Filter panel open state
+Inbox,Folder Panel,Search,Search Input,"Search by subject, sender, or company",Filter emails by query,User text,Sets ?q=<text>
+Inbox,Email List,Email Row,Unread Email,Shows unread status with bold text,Render unread email row; navigate on click,email object,Click -> select email + PATCH read
+Inbox,Email List,Email Row,Flagged Email,Shows star flag indicator,Render flagged email,email.flagged,Click -> select email
+Inbox,Email List,Email Row,System Alert,System notification with bell icon,Render system alert email,email.type = system,-
+Inbox,Email List,Badge,Unread Count,Shows count of unread inbox emails,Count unread emails,emails filtered by unread,-
+Inbox,Email List,Badge,Attachment Count,Shows count of attachments,Count attachments on email,email.attachments.length,-
+Inbox,Email List,Tag,Broker,Email tagged as broker correspondence,Render broker tag,email.tags,-
+Inbox,Email List,Tag,New Submission,Email tagged as new submission,Render new-submission tag,email.tags,-
+Inbox,Email List,Tag,Follow-up,Email tagged as follow-up,Render follow-up tag,email.tags,-
+Inbox,Email Viewer,Section Header,Email Subject,Full subject line,Render subject,email.subject,-
+Inbox,Email Viewer,Badge,Reply Indicator,Marks thread as reply,Render reply badge,email.inReplyTo,-
+Inbox,Email Viewer,Sender Block,Sender Avatar,Colored avatar with initials,Render sender initials,email.sender.initials,-
+Inbox,Email Viewer,Sender Block,Sender Name,Sender full name,Render sender name,email.sender.name,-
+Inbox,Email Viewer,Sender Block,Sender Company,Organization name,Render sender company,email.sender.company,-
+Inbox,Email Viewer,Sender Block,Sender Email,Email address,Render sender email,email.sender.email,-
+Inbox,Email Viewer,Button,Archive,Archive email button,Move email to archive,email.id,PATCH /api/inbox/{id}/archive
+Inbox,Email Viewer,Button,Delete,Delete email button,Soft-delete email,email.id,DELETE /api/inbox/{id}
+Inbox,Email Viewer,Button,More,More options menu button,Open menu of secondary actions,User click,Menu open state
+Inbox,Email Viewer,Auto-Create Banner,Auto-Created Status,Green banner for successful auto-create,Render success banner when submission auto-created,email.autoCreate.status,-
+Inbox,Email Viewer,Auto-Create Banner,Draft Status,Amber banner for draft with validation issues,Render draft banner with validation issues,email.autoCreate.draftStatus,-
+Inbox,Email Viewer,Attachment List,Attachment Chip,File name with size and download button,Render attachment chip with download,email.attachments,GET /api/files/{id}/download
+Inbox,AI Toolbar,Button,Create Submission,Create new submission from email,Parse email and prefill new submission,email content,POST /api/submissions/from-email -> Route: /submissions/new
+Inbox,AI Toolbar,Button,Parse Attachments,Parse attachment content,Parse attachments via AI,email.attachments,POST /api/ai/parse-attachments
+Inbox,AI Toolbar,Button,Check Duplicates,Check for duplicate accounts,Search for duplicate accounts,email.sender + content,POST /api/ai/check-duplicates
+Inbox,AI Toolbar,Button,Close Panel,Close AI result panel,Close AI panel,User click,Panel closed state
+Inbox,Email Body,Text Content,Email body content,Full email message text,Render email body HTML,email.body,-
+Inbox,AI Result Panel,Panel Header,Create,Auto-create result panel header,Render result header,AI action result,-
+Inbox,AI Result Panel,Panel Header,Parse,Parse attachments result panel header,Render result header,AI action result,-
+Inbox,AI Result Panel,Panel Header,Duplicates,Duplicate check result panel header,Render result header,AI action result,-
+Appetite,Page Header,Section Header,Appetite & Rules,Main page title,Render page title,Static text,-
+Appetite,Page Header,Button,Edit Rules,Admin-only edit button for appetite rules,Open rule editor; admin-only,user.role,Route or modal to rule editor
+Appetite,Page Header - Status Strip,KPI Card,Overall Appetite Score,Displays aggregate score out of 100,Compute weighted overall score,GET /api/appetite/score,-
+Appetite,Page Header - Status Strip,KPI Card,Rules In Appetite,Count and ratio of in-appetite rules,Count rules with status=in_appetite,GET /api/appetite/rules,-
+Appetite,Page Header - Status Strip,KPI Card,Watch Flags,Count of rules on watch,Count rules with status=watch,GET /api/appetite/rules,-
+Appetite,Page Header - Status Strip,KPI Card,Out of Appetite,Count of out-of-appetite rules,Count rules with status=out,GET /api/appetite/rules,-
+Appetite,Content - View Toggle,Tab,Appetite Rules,Switches to rules view with category filters,Set view to rules,?view URL param,Sets ?view=rules
+Appetite,Content - View Toggle,Tab,Score Model,Switches to scoring view with model breakdown,Set view to score model,?view URL param,Sets ?view=score
+Appetite,Content - Category Filter,Button,All,Shows all rules without filtering,Clear category filter,?category URL param,Clears ?category
+Appetite,Content - Category Filter,Button,Loss Performance,Filter rules by Loss Performance category,Filter by category,?category URL param,Sets ?category=loss_performance
+Appetite,Content - Category Filter,Button,Institution Type,Filter rules by Institution Type category,Filter by category,?category URL param,Sets ?category=institution_type
+Appetite,Content - Category Filter,Button,Exposure Limits,Filter rules by Exposure Limits category,Filter by category,?category URL param,Sets ?category=exposure_limits
+Appetite,Content - Category Filter,Button,Safety Standards,Filter rules by Safety Standards category,Filter by category,?category URL param,Sets ?category=safety_standards
+Appetite,Content - Category Filter,Button,Ineligible Risks,Filter rules by Ineligible Risks category,Filter by category,?category URL param,Sets ?category=ineligible_risks
+Appetite,Content - Category Filter,Button,Authority Limits,Filter rules by Authority Limits category,Filter by category,?category URL param,Sets ?category=authority_limits
+Appetite,Rules View - Section,Section Header,Appetite Rules,Displays filtered rules with status counts,Render section header with counts,filtered rules,-
+Appetite,Rules View - Rule Row,Column,Rule ID,"Monospace identifier (R01, R02, etc.)",Render rule ID,rule.id,-
+Appetite,Rules View - Rule Row,Column,Rule Name,Human-readable rule title,Render rule name,rule.name,-
+Appetite,Rules View - Rule Row,Column,Weight,Percentage weight in scoring model,Render weight %,rule.weight,-
+Appetite,Rules View - Rule Row,Column,Configurable Status,Shows if rule is editable or system-locked,Render configurable indicator,rule.configurable,-
+Appetite,Rules View - Rule Row,Column,Threshold,Rule threshold or constraint value,Render threshold value,rule.threshold,-
+Appetite,Rules View - Rule Row,Column,Current Value,Current value against threshold,Render current value vs threshold,rule.currentValue,-
+Appetite,Rules View - Rule Row,Column,Status Badge,In Appetite / Watch / Out of Appetite indicator,Render rule status badge,rule.status,-
+Appetite,Score Model View - Overall Score,KPI Card,Appetite Score Model,Main score card with ring display,Render score ring,GET /api/appetite/score,-
+Appetite,Score Model View - Overall Score,Stat,Overall Score,Weighted aggregate out of 100,Compute weighted score,scoreModel.components,-
+Appetite,Score Model View - Components,Column,Component Name,"Score component label (Loss History, Institution Type, etc.)",Render component label,component.name,-
+Appetite,Score Model View - Components,Column,Weight,Percentage weight in overall score,Render weight %,component.weight,-
+Appetite,Score Model View - Components,Column,Score,Individual component score out of 100,Render component score,component.score,-
+Appetite,Authority Table,Column,Role,"User role (Underwriter, Sr. UW, Manager, Director)",Render role label,authority.role,-
+Appetite,Authority Table,Column,TIV Limit,Transaction value limit for role,Render TIV limit,authority.tivLimit,-
+Appetite,Authority Table,Column,Single Premium Cap,Max single policy premium for role,Render premium cap,authority.singlePremiumCap,-
+Appetite,Authority Table,Column,Referral Required Above,Threshold above which escalation required,Render referral threshold,authority.referralThreshold,-
+Appetite,Authority Table,Column,Notes,Additional notes for role,Render notes,authority.notes,-
+Renewals,Page Hero,Section Header,Renewals,Main page title,Render page title,Static text,-
+Renewals,Page Hero,Button,Sync Policy Book,Refresh policy data from external source,Sync policy book from external system,User click,POST /api/renewals/sync
+Renewals,Page Hero - Status,Stat,Overdue Count,Number of overdue renewal policies,Count overdue renewals,GET /api/renewals?overdue=true,-
+Renewals,Page Hero - Status,Stat,Overdue Exposure,Total premium of overdue policies,Sum overdue premium,renewals filtered by overdue,-
+Renewals,Page Hero - Status,Stat,At Risk Count,Number of at-risk renewal policies,Count at-risk renewals,GET /api/renewals?atRisk=true,-
+Renewals,Page Hero - Status,Stat,At Risk Exposure,Total premium at risk,Sum at-risk premium,renewals filtered by atRisk,-
+Renewals,Page Hero - Status,Stat,Remaining Days,Days until next renewal in pipeline,Compute days to next renewal,renewals.next.expiresAt,-
+Renewals,Health Metrics - Overdue,KPI Card,Overdue,Count of overdue renewals with exposure,Render count + exposure,GET /api/renewals/metrics?type=overdue,-
+Renewals,Health Metrics - At-Risk,KPI Card,At-Risk Exposure,Total premium in at-risk status,Render at-risk exposure,GET /api/renewals/metrics?type=at_risk,-
+Renewals,Health Metrics - Loss Ratio,KPI Card,Loss Ratio > 100%,Count and exposure of high-loss policies,Count policies with loss ratio > 100%,GET /api/renewals/metrics?lossRatio=high,-
+Renewals,Health Metrics - Quote Coverage,KPI Card,Quote Coverage - <60d,Percentage of renewals <60d with quotes,Compute % of <60d renewals with quotes,GET /api/renewals/metrics?type=quote_coverage,-
+Renewals,Time-Window Filter,Button,All Renewals,Shows all renewals without time filter,Clear time filter,?window URL param,Clears ?window
+Renewals,Time-Window Filter,Button,Within 120 days,Filter renewals expiring within 120 days,Filter by window,?window URL param,Sets ?window=120
+Renewals,Time-Window Filter,Button,Within 90 days,Filter renewals expiring within 90 days,Filter by window,?window URL param,Sets ?window=90
+Renewals,Time-Window Filter,Button,Within 60 days,Filter renewals expiring within 60 days,Filter by window,?window URL param,Sets ?window=60
+Renewals,Time-Window Filter,Button,Within 30 days,Filter renewals expiring within 30 days,Filter by window,?window URL param,Sets ?window=30
+Renewals,Time-Window Filter,Button,Overdue,Filter overdue renewals,Filter to overdue,?window URL param,Sets ?window=overdue
+Renewals,Renewals Table - Card Header,Section Header,Renewal Pipeline,Table title with exposure summary,Render table title,Static text + filtered exposure,-
+Renewals,Renewals Table - Toolbar,Tab,Upcoming,Filter to upcoming renewals within 45 days,Set scope to upcoming,?scope URL param,Sets ?scope=upcoming
+Renewals,Renewals Table - Toolbar,Tab,My Renewals,Filter to renewals assigned to current user,Set scope to mine,?scope URL param,Sets ?scope=mine
+Renewals,Renewals Table - Toolbar,Tab,At Risk,Filter to at-risk status renewals,Set scope to at-risk,?scope URL param,Sets ?scope=at_risk
+Renewals,Renewals Table - Toolbar,Tab,Bound,Filter to bound/closed renewals,Set scope to bound,?scope URL param,Sets ?scope=bound
+Renewals,Renewals Table - Toolbar,Select,Status Filter,Dropdown to filter by specific renewal status,Filter by status,?status URL param,Sets ?status=<value>
+Renewals,Renewals Table - Column Headers,Column,Policy,Policy ID,Render policy ID,renewal.policyId,Route: /policies/{id}
+Renewals,Renewals Table - Column Headers,Column,Account,Account name and metadata,Render account name,renewal.account,-
+Renewals,Renewals Table - Column Headers,Column,Product,Insurance product line,Render product line,renewal.product,-
+Renewals,Renewals Table - Column Headers,Column,Expires,Expiration date and urgency indicator,Render expiry with urgency,renewal.expiresAt + now(),-
+Renewals,Renewals Table - Column Headers,Column,Premium,Expiring premium amount,Render premium,renewal.premium,-
+Renewals,Renewals Table - Column Headers,Column,Loss Ratio,Loss ratio percentage with visual bar,Render loss ratio bar,renewal.lossRatio,-
+Renewals,Renewals Table - Column Headers,Column,Assignee,User assigned to renewal,Render assignee,renewal.assignee,-
+Renewals,Renewals Table - Column Headers,Column,Status,Renewal status badge,Render status badge,renewal.status,-
+Renewals,Renewals Table - Pagination,Button,Previous,Navigate to previous page,Navigate to previous page,?page URL param,Sets ?page=<prev>
+Renewals,Renewals Table - Pagination,Button,Page Number,Jump to specific page number,Jump to page,User click,Sets ?page=<n>
+Renewals,Renewals Table - Pagination,Button,Next,Navigate to next page,Navigate to next page,?page URL param,Sets ?page=<next>
+Quote Builder,Page Header,Section Header,Quote Builder,Page title with submission ID,Render page title,submission.id,-
+Quote Builder,Page Header,Button,Issue Quote,Issue quote and change status to issued,Issue the quote; transition status to issued,Quote draft state,PATCH /api/quotes/{id}/issue
+Quote Builder,Page Header,Button,Send to Broker,Open modal to send quote to broker,Open send-to-broker modal,User click,Modal open state
+Quote Builder,Product Selection - Liability,Checkbox,Employment Practices Liability (EPL),Select/deselect EPL coverage,Toggle EPL product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Liability,Checkbox,Educators Legal Liability (ELL),Select/deselect ELL coverage,Toggle ELL product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Liability,Checkbox,General Liability (GL),Select/deselect GL coverage,Toggle GL product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Liability,Checkbox,Management Liability (ML),Select/deselect ML coverage,Toggle ML product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Property & Auto,Checkbox,Property,Select/deselect Property coverage,Toggle Property product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Property & Auto,Checkbox,Commercial Automobile (Auto),Select/deselect Auto coverage,Toggle Auto product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Specialty,Checkbox,Crime / Fidelity (Crime),Select/deselect Crime coverage,Toggle Crime product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Specialty,Checkbox,Cyber Liability (Cyber),Select/deselect Cyber coverage,Toggle Cyber product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Product Selection - Specialty,Checkbox,Student Accident (SA),Select/deselect Student Accident coverage,Toggle SA product inclusion,quote.products selection,Updates quote.products
+Quote Builder,Option Management,Button,Add Option,Add additional option for selected product,Append new option to product,product.options,Updates product.options
+Quote Builder,Option Management,Button,Duplicate Option,Duplicate current option with same settings,Clone current option,current option,Updates product.options
+Quote Builder,Option Management,Button,Remove Option,Remove option from product (min 1 required),Remove option (min 1 required),product.options,Updates product.options
+Quote Builder,Option Tab - Policy,Section Header,Coverage Limits & Terms,Coverage field configuration section,Render section header,Static text,-
+Quote Builder,Option Tab - Policy,Field (Select),Each Claim Limit,Select claim limit (varies by product),User selects per-claim limit,Limit options list,Updates option.eachClaimLimit
+Quote Builder,Option Tab - Policy,Field (Select),Aggregate Limit,Select aggregate limit (varies by product),User selects aggregate limit,Limit options list,Updates option.aggregateLimit
+Quote Builder,Option Tab - Policy,Field (Select),Retention (Deductible),Select deductible amount,User selects retention,Retention options list,Updates option.retention
+Quote Builder,Option Tab - Policy,Field (Date),Retroactive Date,Select coverage retroactive date,User picks retro date,User selection,Updates option.retroactiveDate
+Quote Builder,Option Tab - Policy,Field (Select),Defense Basis,Choose within or outside limit defense,User selects defense basis,Static options,Updates option.defenseBasis
+Quote Builder,Option Tab - Policy,Field (Select),Coverage Territory,Select USA Only / USA & Canada / Worldwide,User selects territory,Static options,Updates option.territory
+Quote Builder,Option Tab - Policy,Section Header,Coverage Checklist & Pricing,Selected coverage items,Render section header,Static text,-
+Quote Builder,Option Tab - Policy,Link,Select all,Quick action to select all coverage items,Select all coverage items,Coverage items list,Updates option.coverages (all checked)
+Quote Builder,Option Tab - Policy,Link,Required only,Quick action to show only required items,Toggle view to required-only,UI state,Updates filter view
+Quote Builder,Option Tab - Policy,Checkbox,Coverage Item,Individual coverage selection (varies by product),Toggle coverage inclusion,Coverage item config,Updates option.coverages
+Quote Builder,Option Tab - Policy,Currency Input,Coverage Item Price,Edit surcharge price for optional coverage,Edit coverage surcharge,User entry,Updates option.coverageSurcharges
+Quote Builder,Option Tab - Endorsements,Section Header,Endorsements,Available endorsements for product,Render section header,Static text,-
+Quote Builder,Option Tab - Endorsements,Checkbox,Endorsement,Select endorsement to add to option,Toggle endorsement,Endorsements catalog,Updates option.endorsements
+Quote Builder,Option Tab - Premium,Section Header,Premium Summary,Premium calculation breakdown,Render section header,Static text,-
+Quote Builder,Option Tab - Premium,Currency Display,Base Premium,Starting premium amount,Render base premium,Computed from product + limits,-
+Quote Builder,Option Tab - Premium,Currency Display,Coverage Surcharges,Total optional coverage surcharges,Sum coverage surcharges,option.coverageSurcharges,-
+Quote Builder,Option Tab - Premium,Currency Display,Endorsement Premium,Total endorsement premium,Sum endorsement premium,option.endorsements pricing,-
+Quote Builder,Option Tab - Premium,Currency Input,Manual Adjustment,Dollar amount adjustment field,Apply UW manual adjustment,User entry,Updates option.manualAdjustment
+Quote Builder,Option Tab - Premium,Select,Adjustment Percentage,Percentage-based premium adjustment,Apply % adjustment,User selection,Updates option.adjustmentPct
+Quote Builder,Option Tab - Premium,Currency Display,Total Premium,Final calculated premium,Compute: base + surcharges + endorsements + adjustment,All option fields,-
+Quote Builder,Send Modal,Section Header,Send Quote to Broker,Modal title,Render modal title,Static text,-
+Quote Builder,Send Modal,Field (Text),Broker / Agency,Broker/agency name input,Capture broker/agency,User entry,Form state: brokerName
+Quote Builder,Send Modal,Field (Email),Broker Email,Broker email address input,Capture broker email,User entry,Form state: brokerEmail
+Quote Builder,Send Modal,Field (Date),Quote Expiry Date,Quote expiration date picker,Capture quote expiry,User selection,Form state: expiryDate
+Quote Builder,Send Modal,Field (Textarea),Cover Message,Message to broker accompanying quote,Capture cover message,User entry,Form state: coverMessage
+Quote Builder,Send Modal,Button,Cancel,Close modal without sending,Close modal,User click,Modal closed
+Quote Builder,Send Modal,Button,Send to Broker,Send quote to broker,Send quote email and transition status,Form state + quote.id,POST /api/quotes/{id}/send + email
+Quote Builder,Negotiation Banner (if sent),Section Header,Quote Sent to Broker,Status of sent quote,Render status banner,quote.status = sent,-
+Quote Builder,Negotiation Banner (if sent),Button,Open for Negotiation,Switch quote to negotiation status,Transition quote to negotiation,quote.id,PATCH /api/quotes/{id}/negotiate
+Quote Builder,Negotiation Banner (if negotiating),Section Header,Under Negotiation,Status when negotiating,Render status banner,quote.status = negotiating,-
+Quote Builder,Negotiation Banner (if negotiating),Button,Edit Quote,Edit quote while under negotiation,Enter edit mode on quote,quote.id,Edit mode state
+Quote Preview,Page Header,Button,Back to Underwriting,Navigate back to submission/rating tab,Navigate back,User click,Route: /submissions/{id}?tab=rating
+Quote Preview,Page Header,Badge,Quote Number,Quote ID (QTE-XXXXXX format),Render quote ID,quote.id,-
+Quote Preview,Page Header,Badge,Status,DRAFT status badge,Render status badge,quote.status,-
+Quote Preview,Page Header,Button,Print,Print quote document,Trigger browser print,User click,window.print()
+Quote Preview,Page Header,Button,Download PDF,Download quote as PDF,Generate and download PDF,quote.id,GET /api/quotes/{id}/pdf -> file download
+Quote Preview,Quote Summary,Field,Quote No.,Quote ID display,Render quote ID,quote.id,-
+Quote Preview,Quote Summary,Field,Insured,Insured entity name,Render insured name,quote.insured,-
+Quote Preview,Quote Summary,Field,Effective,Policy effective and expiration dates,Render effective + expiration dates,quote.effectiveDate + quote.expirationDate,-
+Quote Preview,Quote Summary,Field,Broker,Broker name and firm,Render broker info,quote.broker,-
+Quote Preview,Quote Summary,Field,Generated,Quote generation date,Render generation date,quote.generatedAt,-
+Quote Preview,Quote Summary,Field,Products,Number of product lines,Render product count,quote.products.length,-
+Quote Preview,Product Section - Header,Checkbox,Master Product Selection,Select/deselect all options for product,Toggle all options for product,product.options,Updates selection state
+Quote Preview,Product Section - Header,Badge,Product Abbreviation,"Product code (GL, EPL, etc.)",Render product code,product.abbr,-
+Quote Preview,Product Section - Header,Section Header,Product Name,Full product name,Render product name,product.name,-
+Quote Preview,Product Section - Header,Badge,Category,"Product category (Liability, Property & Auto, etc.)",Render category,product.category,-
+Quote Preview,Product Section - Header,Stat,Option Count,Number of options for product,Render option count,product.options.length,-
+Quote Preview,Option Card,Checkbox,Option Selection,Select option for quote creation,Toggle option selection,selection state,Updates selectedOptions
+Quote Preview,Option Card,Section Header,Option Label,"Option name (Option A, B, C, etc.)",Render option label,option.label,-
+Quote Preview,Option Card,Badge,Selected,Indicator showing option is selected,Render selected indicator,selectedOptions contains option.id,-
+Quote Preview,Option Card - Inline Details,Field,Coverage Field,First 3 coverage fields shown inline,Render top-3 coverage fields,option.coverages,-
+Quote Preview,Option Card,Currency Display,Option Premium,Premium for this option,Render option premium,option.premium,-
+Quote Preview,Option Card,Button,Edit,Edit option in rating/quote builder,Navigate to quote builder,User click,Route: /submissions/{id}/quote-builder
+Quote Preview,Option Card,Button,Expand Details,Toggle expanded details view,Toggle expanded state,UI state,Updates expanded option state
+Quote Preview,Option Card - Expanded,Section Header,Coverage Terms,Full coverage limits display,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Section Header,Selected Coverage,Checked coverage items,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Badge,REQUIRED,Indicator for required coverage,Render required badge,coverage.required,-
+Quote Preview,Option Card - Expanded,Currency Display,Coverage Surcharge,Optional coverage price,Render coverage surcharge,coverage.surcharge,-
+Quote Preview,Option Card - Expanded,Section Header,Endorsements,Included endorsements,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Badge,DEFAULT / ADDED,Endorsement origin indicator,Render endorsement origin badge,endorsement.origin,-
+Quote Preview,Option Card - Expanded,Section Header,Schedules,Schedule information,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Column,Schedule Name,Named schedule,Render schedule name,schedule.name,-
+Quote Preview,Option Card - Expanded,Column,Effective/Expiration Date,Schedule term,Render schedule dates,schedule.effective + schedule.expiration,-
+Quote Preview,Option Card - Expanded,Currency Display,Schedule Limit,Limit for schedule,Render schedule limit,schedule.limit,-
+Quote Preview,Option Card - Expanded,Section Header,Member Benefits,Included member benefits,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Column,Benefit Title,Benefit program name,Render benefit title,benefit.title,-
+Quote Preview,Option Card - Expanded,Column,Service Item,Individual included service,Render service item,benefit.service,-
+Quote Preview,Option Card - Expanded,Column,Date Range,Benefit effective/expiration dates,Render benefit dates,benefit.dates,-
+Quote Preview,Option Card - Expanded,Section Header,Notifications,Required notifications,Render section header,Static text,-
+Quote Preview,Option Card - Expanded,Column,Notification Code,"Code identifier (TRIADS, BIDS, etc.)",Render notification code,notification.code,-
+Quote Preview,Option Card - Expanded,Column,Notification Label,Full notification description,Render notification label,notification.label,-
+Quote Preview,Option Card - Expanded,Column,Edition Date,Notification edition date,Render edition date,notification.editionDate,-
+Quote Preview,Create Quote Section,Section Header,Quote Ready,Status message for quote creation,Render status message,Selected options count,-
+Quote Preview,Create Quote Section,Stat,Selected Options,Count of selected options,Count selected options,selectedOptions.length,-
+Quote Preview,Create Quote Section,Button,Create Quote,Create quote from selections,Create quote from selected options,selectedOptions,POST /api/quotes
+Quote Preview,Create Quote Section,Button,Send to Broker,Send created quote to broker (post-creation),Send quote to broker,quote.id,POST /api/quotes/{id}/send
+Quote Preview,Create Quote Section,Button,Bind Quote,Move to bind quote workflow (post-send),Navigate to bind workflow,quote.id,Route: /submissions/{id}/bind
+Bind Quote,Page Header,Button,Back to Underwriting,Navigate back to submission,Navigate back,User click,Route: /submissions/{id}
+Bind Quote,Page Header,Badge,Quote Number,Quote ID being bound,Render quote ID,quote.id,-
+Bind Quote,Page Header,Badge,Status,READY TO ISSUE or ISSUED status,Render status badge,quote.status,-
+Bind Quote,Page Header,Stat,Product Count,Number of products in quote,Render product count,quote.products.length,-
+Bind Quote,Selection Summary Bar,Section Header,Selected Options Total,Shows all currently selected options,Render section header,Static text,-
+Bind Quote,Selection Summary Bar,Stat,Option Selection,Currently selected option and premium by product,Render selected option per product,selectedOptions by product,-
+Bind Quote,Selection Summary Bar,Stat,Total Premium,Total premium of all selected options,Sum premium across selections,selectedOptions.premium,-
+Bind Quote,Product Card - Header,Badge,Product Abbreviation,Product code,Render product code,product.abbr,-
+Bind Quote,Product Card - Header,Section Header,Product Name,Full product name,Render product name,product.name,-
+Bind Quote,Product Card - Header,Badge,Category,Product category,Render category,product.category,-
+Bind Quote,Product Card - Header,Stat,Option Count,Number of options for this product,Render option count,product.options.length,-
+Bind Quote,Product Card - Options,Radio,Option Selection,Radio button to select single option per product,Single-select option for product,product.options,Updates selectedOption per product
+Bind Quote,Product Card - Options,Stat,Option Label,"Option name (Option A, B, C, etc.)",Render option label,option.label,-
+Bind Quote,Product Card - Options,Badge,Selected,Indicator for currently selected option,Render selected indicator,selectedOption,-
+Bind Quote,Product Card - Options,Field,Coverage Field,First 3 coverage fields shown in-line,Render top-3 coverage fields,option.coverages,-
+Bind Quote,Product Card - Options,Stat,Endorsement Count,Count of added endorsements,Render endorsement count,option.endorsements.length,-
+Bind Quote,Product Card - Options,Currency Display,Option Premium,Premium for option,Render option premium,option.premium,-
+Bind Quote,Action Bar,Section Header,Issuance Recipient,Broker receiving bound policy,Render section header,Static text,-
+Bind Quote,Action Bar,Field,Broker Name,Broker contact name,Capture broker name,User entry / prefilled from quote,Form state: brokerName
+Bind Quote,Action Bar,Field,Broker Company,Broker firm name,Capture broker company,User entry / prefilled,Form state: brokerCompany
+Bind Quote,Action Bar,Field,Broker Email,Broker contact email,Capture broker email,User entry / prefilled,Form state: brokerEmail
+Bind Quote,Action Bar,Button,Issue & Send to Broker,Send binding documents to broker,Issue policy and send to broker,Selections + broker info,POST /api/quotes/{id}/bind + email
+Bind Quote,Success State - Card,Section Header,Issuance Document Sent,Success confirmation,Render success card,Bind success state,-
+Bind Quote,Success State - Recipient,Field,Broker Contact,Broker name and company,Render broker contact,broker info,-
+Bind Quote,Success State - Recipient,Field,Broker Email,Broker email address,Render broker email,broker.email,-
+Bind Quote,Success State - Selections,Section Header,Bound Selections,Summary of bound options per product,Render section header,Static text,-
+Bind Quote,Success State - Totals,Section Header,Total Bound Premium,Final bound premium total,Render section header,Static text,-
+Bind Quote,Success State - Totals,Currency Display,Grand Total,Total premium across all products,Sum bound premium,Bound selections,-
+Bind Quote,Success State - Action,Button,Return to Submission,Navigate back to submission record,Navigate back to submission,User click,Route: /submissions/{id}
+Submissions List,Hero Strip,Section Header,Submissions,Page title with gradient background,Render page title,Static text,-
+Submissions List,Hero Strip,Stat,Open Submissions,KPI card - across all stages,Count open submissions,GET /api/submissions?status=open,Click sets ?status=open
+Submissions List,Hero Strip,Stat,New This Week,KPI card - vs. 14 last week,Count submissions created this week,GET /api/submissions/metrics?period=7d,Click sets ?createdWithin=7d
+Submissions List,Hero Strip,Stat,Awaiting Info,KPI card - broker follow-up,Count submissions awaiting broker info,GET /api/submissions?status=awaiting_info,Click sets ?status=awaiting_info
+Submissions List,Hero Strip,Stat,Ready for Review,KPI card - complete submissions,Count submissions ready for review,GET /api/submissions?status=ready_for_review,Click sets ?status=ready_for_review
+Submissions List,Hero Strip,Stat,Avg. Time in Queue,KPI card - rolling 7 days,Compute average queue time,GET /api/submissions/metrics?type=time_in_queue,-
+Submissions List,Hero Strip,Stat,SLA At Risk,KPI card - within 24h,Count submissions at SLA risk,GET /api/submissions?slaAtRisk=true,Click sets ?slaAtRisk=true
+Submissions List,Hero Strip,Button,Export,Download submissions list,Export filtered list,Current URL filter params,GET /api/submissions/export -> file download
+Submissions List,Hero Strip,Button,New Submission,Create new submission (navigates to /submissions/new),Navigate to new submission page,User click,Route: /submissions/new
+Submissions List,Toolbar,Tab,My Submissions,View submissions assigned to me,Set scope filter to mine,?scope URL param,Sets ?scope=mine
+Submissions List,Toolbar,Tab,My Team,View submissions assigned to my team,Set scope filter to team,?scope URL param,Sets ?scope=team
+Submissions List,Toolbar,Tab,All,View all submissions,Set scope filter to all,?scope URL param,Sets ?scope=all
+Submissions List,Toolbar,Field,Search,"Search member, broker, sub ID...",Filter list by search query,User text,Sets ?q=<text>
+Submissions List,Toolbar,Filter Chip,Filter Button,Open/close filter panel with active count badge,Toggle filter panel,UI state + URL filter count,Filter panel open state
+Submissions List,Filter Panel,Section Header,Stage,Filter section (collapsible),Render section header,Static text,-
+Submissions List,Filter Panel,Checkbox,New,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,Draft,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,In Review,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,Quoted,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,Bound,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,Declined,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Checkbox,Pending Info,Filter by status,Toggle status filter value,?status URL param,Updates ?status multi-value
+Submissions List,Filter Panel,Section Header,Kind,Filter section,Render section header,Static text,-
+Submissions List,Filter Panel,Checkbox,Individual,Filter by kind,Toggle kind filter,?kind URL param,Updates ?kind
+Submissions List,Filter Panel,Checkbox,Group / Multi-Member,Filter by kind,Toggle kind filter,?kind URL param,Updates ?kind
+Submissions List,Filter Panel,Section Header,Assigned Underwriter,Filter section,Render section header,Static text,-
+Submissions List,Filter Panel,Checkbox,[Underwriter names],Filter by assigned underwriter (dynamic list),Toggle UW filter value,?uw URL param,Updates ?uw multi-value
+Submissions List,Filter Panel,Section Header,Submission Date,Filter section,Render section header,Static text,-
+Submissions List,Filter Panel,Field,From Date,Filter submissions from date,Set submission-date lower bound,User selection,Sets ?from=<date>
+Submissions List,Filter Panel,Field,To Date,Filter submissions to date,Set submission-date upper bound,User selection,Sets ?to=<date>
+Submissions List,Filter Panel,Section Header,Premium,Filter section,Render section header,Static text,-
+Submissions List,Filter Panel,Field,Premium From,Filter by minimum premium,Set min premium,User entry,Sets ?premiumMin=<n>
+Submissions List,Filter Panel,Field,Premium To,Filter by maximum premium,Set max premium,User entry,Sets ?premiumMax=<n>
+Submissions List,Filter Panel,Button,Reset,Clear all filters,Clear all URL filter params,Current URL filter params,Clears all filter params
+Submissions List,Active Filters,Pill/Badge,Status: [value],Remove individual filter,Render active filter chip; X removes,?status URL param,Removes value from ?status
+Submissions List,Active Filters,Pill/Badge,Kind: [value],Remove individual filter,Render active filter chip,?kind URL param,Removes value from ?kind
+Submissions List,Active Filters,Pill/Badge,Product: [value],Remove individual filter,Render active filter chip,?product URL param,Removes value from ?product
+Submissions List,Active Filters,Pill/Badge,State: [value],Remove individual filter,Render active filter chip,?state URL param,Removes value from ?state
+Submissions List,Active Filters,Pill/Badge,Broker: [value],Remove individual filter,Render active filter chip,?broker URL param,Removes value from ?broker
+Submissions List,Active Filters,Pill/Badge,UW: [value],Remove individual filter,Render active filter chip,?uw URL param,Removes value from ?uw
+Submissions List,Active Filters,Button,Clear all,Clear all active filters,Clear all URL filter params,Current URL filter params,Clears all filter params
+Submissions List,Table Header,Column,Member / Institution,"Sortable, draggable",Render column; click to sort; drag to reorder,submission.member,Sets ?sort=member
+Submissions List,Table Header,Column,Need By,"Sortable, draggable",Render column; click to sort,submission.needByDate,Sets ?sort=needBy
+Submissions List,Table Header,Column,Effective,"Sortable, draggable",Render column; click to sort,submission.effectiveDate,Sets ?sort=effective
+Submissions List,Table Header,Column,Type,Draggable,Render column header,Static text,-
+Submissions List,Table Header,Column,Products,Draggable,Render column header,Static text,-
+Submissions List,Table Header,Column,Stage,Draggable,Render column header,Static text,-
+Submissions List,Table Header,Column,Underwriter,Draggable,Render column header,Static text,-
+Submissions List,Table Header,Column,Premium,"Sortable, draggable",Render column; click to sort,submission.premium,Sets ?sort=premium
+Submissions List,Table Header,Column,Appetite,Draggable,Render column header,Static text,-
+Submissions List,Table Row,Checkbox,Row checkbox,Select individual row,Toggle row selection,UI selection state,Updates selectedRows
+Submissions List,Table Header,Checkbox,Select all checkbox,Select all rows on page,Toggle all rows selection,UI selection state,Updates selectedRows
+Submissions List,Table Row,Pill/Badge,Critical / High Priority / Aging,Urgency indicator,Render urgency chip,submission.urgency,-
+Submissions List,Table Row,Pill/Badge,Group - [count],Shows group member count if applicable,Render group chip,submission.groupSize,-
+Submissions List,Pagination,Button,Previous,Go to previous page,Navigate to previous page,?page URL param,Sets ?page=<prev>
+Submissions List,Pagination,Button,Next,Go to next page,Navigate to next page,?page URL param,Sets ?page=<next>
+Submissions List,Empty State,Section Header,No submissions found,Shown when filtered results are empty,Render empty state message,filtered.length === 0,-
+Submissions List,Empty State,Button,Clear all filters,Reset filters to show results,Clear all URL filter params,Current URL filter params,Clears all filter params
+Submission Detail,Breadcrumb,Link,Dashboard,Navigate to home,Navigate to dashboard,User click,Route: /dashboard
+Submission Detail,Breadcrumb,Link,Submissions,Navigate to submissions list,Navigate to submissions list,User click,Route: /submissions
+Submission Detail,Breadcrumb,Badge,[Institution name],Current submission display,Render submission name,submission.member.name,-
+Submission Detail,Breadcrumb,Badge,[Active tab label],Shows current tab with icon,Render active tab label,?tab URL param,-
+Submission Detail - Header,Identity,Section Header,[Institution name],Main account title,Render account name,submission.member.name,-
+Submission Detail - Header,Identity,Chip,[Sub ID],Submission ID chip (gold),Render submission ID,submission.id,Copy to clipboard on click
+Submission Detail - Header,Identity,Chip,M [number],Member number chip,Render member number,submission.member.id,Copy to clipboard on click
+Submission Detail - Header,Identity,Pill/Badge,Group - [count],Group submission indicator,Render group chip,submission.groupSize,-
+Submission Detail - Header,Sub-identity,Field,[Enrollment] - [Location],Quiet metadata,Render enrollment + location,submission.member.enrollment + state,-
+Submission Detail - Header,Stage,Dropdown,[Stage],Current lifecycle stage (grouped dropdown),Change submission stage,submission.stage + stage options,PATCH /api/submissions/{id} { stage }
+Submission Detail - Header,Risk Continuity,Pill/Badge,Member since [year],Shows membership duration,Render membership duration,submission.member.memberSince,-
+Submission Detail - Header,Risk Continuity,Pill/Badge,Continuous coverage,Green badge when clean,Render coverage continuity badge,submission.member.continuousCoverage,-
+Submission Detail - Header,Risk Continuity,Pill/Badge,Coverage gap,Amber badge with gap description,Render coverage gap badge,submission.member.coverageGap,-
+Submission Detail - Header,Segmentation,Pill/Badge,[Institution type],Member type badge,Render institution type,submission.member.type,-
+Submission Detail - Header,Segmentation,Pill/Badge,Athletics Risk - Football,High-risk indicator,Render high-risk segment badge,submission.riskFlags,-
+Submission Detail - Header,Segmentation,Pill/Badge,Housing Risk - Boarding,High-risk indicator,Render high-risk segment badge,submission.riskFlags,-
+Submission Detail,Tab Strip,Tab,Review,Underwriting review tab,Switch to Review tab,?tab URL param,Sets ?tab=review
+Submission Detail,Tab Strip,Tab,Details,Overview/details tab,Switch to Details tab,?tab URL param,Sets ?tab=details
+Submission Detail,Tab Strip,Tab,Member & Brokerage,Member info tab,Switch to Member tab,?tab URL param,Sets ?tab=member
+Submission Detail,Tab Strip,Tab,Group Members,Group roster tab (when group submission),Switch to Group tab (conditional),?tab URL param + submission.kind,Sets ?tab=group
+Submission Detail,Tab Strip,Tab,Risk & Exposure,Risk analysis tab,Switch to Risk tab,?tab URL param,Sets ?tab=risk
+Submission Detail,Tab Strip,Tab,Loss History,Loss data tab,Switch to Loss tab,?tab URL param,Sets ?tab=loss
+Submission Detail,Tab Strip,Tab,Subjectivities & Contingencies,Conditions tab,Switch to Conditions tab,?tab URL param,Sets ?tab=conditions
+Submission Detail,Tab Strip,Tab,Terms & Conditions,Rating/terms tab,Switch to Rating tab,?tab URL param,Sets ?tab=rating
+Submission Detail,Tab Strip,Tab,Documents,Document management tab,Switch to Documents tab,?tab URL param,Sets ?tab=documents
+Submission Detail,Tab Strip,Tab,Email History,Correspondence tab,Switch to Correspondence tab,?tab URL param,Sets ?tab=correspondence
+Submission Detail,Tab Strip,Tab,Notes,Internal notes tab,Switch to Notes tab,?tab URL param,Sets ?tab=notes
+Submission Detail,Tab Strip,Tab,Tasks,Task tracking tab,Switch to Tasks tab,?tab URL param,Sets ?tab=tasks
+Submission Detail,Tab Strip,Tab,Approvals,Approval workflow tab,Switch to Approvals tab,?tab URL param,Sets ?tab=approvals
+Submission Detail,Tab Strip,Tab,Audit Trail,Change log tab,Switch to Audit Trail tab,?tab URL param,Sets ?tab=audit
+Submission Details Card,Header,Section Header,Submission Details,Card title,Render card title,Static text,-
+Submission Details Card,Header,Chip,[Sub ID],Copy-able submission ID,Render submission ID,submission.id,Copy to clipboard on click
+Submission Details Card,Header,Button,Copy,Copy Sub ID,Copy ID to clipboard,submission.id,Clipboard API
+Submission Details Card,Header,Stat,Need-by [days],Days until need-by date,Compute days to need-by,submission.needByDate + now(),-
+Submission Details Card,Header,Stat,Approvals [count],Approval progress,Count approval items,GET /api/approvals?submissionId={id},-
+Submission Details Card,Header,Stat,Risk [score],Risk score with In appetite tag,Render risk score with appetite tag,submission.riskScore + submission.appetite,-
+Submission Details Card,Header,Button,Edit Submission,Navigate to edit form,Navigate to edit form,User click,Route: /submissions/{id}/edit
+Submission Details Card,Identification,Field,Submission ID,Sub ID display,Render submission ID,submission.id,-
+Submission Details Card,Identification,Field,Type,Renewal or New Business,Render submission type,submission.type,-
+Submission Details Card,Identification,Field,Line of business,Coverage lines,Render LOB,submission.lineOfBusiness,-
+Submission Details Card,Identification,Field,Products,Primary product lines,Render product list,submission.products,-
+Submission Details Card,Dates,Field,Submitted,Submission date,Render submitted date,submission.submittedAt,-
+Submission Details Card,Dates,Field,Effective,Policy effective date,Render effective date,submission.effectiveDate,-
+Submission Details Card,Dates,Field,Expiration,Policy expiration date,Render expiration date,submission.expirationDate,-
+Submission Details Card,Dates,Field,Need-by,Need-by deadline,Render need-by date,submission.needByDate,-
+Submission Details Card,Routing & Assignment,Field,Stage,Current stage pill,Render stage pill,submission.stage,-
+Submission Details Card,Routing & Assignment,Field,Underwriter,Underwriter name and avatar,Render UW info,submission.underwriter,-
+Submission Details Card,Routing & Assignment,Field,Underwriter Specialist,Specialist name and avatar,Render specialist info,submission.uwSpecialist,-
+Submission Details Card,Routing & Assignment,Field,Claims analyst,Analyst name and avatar,Render claims analyst,submission.claimsAnalyst,-
+Submission Details Card,Premium,Field,Expiring,Expiring premium amount,Render expiring premium,submission.premium.expiring,-
+Submission Details Card,Premium,Field,Quoted,Quoted premium with delta tag,Render quoted premium + delta vs expiring,submission.premium.quoted,-
+Submission Details Card,Premium,Field,Bound,Bound premium,Render bound premium,submission.premium.bound,-
+Submission Details Card,Premium,Field,Indicated change,Premium change percentage,Compute (quoted - expiring) / expiring,submission.premium,-
+Submission Details Card,Decision & Authority,Field,Approvals Open,Approval count with progress bar,Render approvals progress,approvals count + total,-
+Submission Details Card,Decision & Authority,Field,Risk score,Risk score with In appetite tag,Render risk score,submission.riskScore,-
+Submission Details Card,Decision & Authority,Field,Loss propensity,Loss propensity status pill,Render loss propensity,submission.lossPropensity,-
+Submission Details Card,Decision & Authority,Field,SLA status,SLA status with days,Render SLA status,submission.slaStatus + days remaining,-
+Submission Details Card,Compliance & Documents,Field,Application,Status with checkmark or alert,Render application doc status,submission.docs.application.status,-
+Submission Details Card,Compliance & Documents,Field,Loss runs,Status with checkmark,Render loss runs status,submission.docs.lossRuns.status,-
+Submission Details Card,Compliance & Documents,Field,Financials,Status with checkmark,Render financials status,submission.docs.financials.status,-
+Submission Details Card,Compliance & Documents,Field,Supplemental Application,Status with checkmark,Render supplemental status,submission.docs.supplemental.status,-
+Submission Details Card,Member,Field,Name,Institution name with award icon,Render member name,submission.member.name,-
+Submission Details Card,Member,Field,Member #,Member number (copy-able),Render member number,submission.member.id,Copy to clipboard
+Submission Details Card,Member,Field,Group Name,Group name if applicable,Render group name,submission.group.name,-
+Submission Details Card,Member,Field,Group Number,Group ID (copy-able),Render group ID,submission.group.id,Copy to clipboard
+Submission Details Card,Member,Field,Type,K-12 - Private - Day,Render member type classification,submission.member.classification,-
+Submission Details Card,Brokerage,Field,Name,Broker name with building icon,Render broker name,submission.broker.name,-
+Submission Details Card,Brokerage,Field,Parent Name,Parent company name,Render parent broker,submission.broker.parent,-
+Submission Details Card,Brokerage,Field,Account ID,Broker account ID,Render broker account ID,submission.broker.accountId,Copy to clipboard
+Submission Details Card,Brokerage,Field,Parent Account ID,Parent account ID,Render parent account ID,submission.broker.parentAccountId,Copy to clipboard
+Submission Details Card,Brokerage,Field,Office,Broker office location,Render broker office,submission.broker.office,-
+Submission Details Card,Broker Contact,Field,Producer,Contact name and avatar,Render producer info,submission.broker.contact,-
+Submission Details Card,Broker Contact,Field,Role,Contact role,Render contact role,submission.broker.contact.role,-
+Submission Details Card,Broker Contact,Field,Permission,Bind authority level,Render bind authority,submission.broker.contact.bindAuthority,-
+Submission Details Card,Broker Contact,Field,Email,Linked email address,Render email link,submission.broker.contact.email,mailto: link
+Submission Details Card,Broker Contact,Field,Phone,Linked phone number,Render phone link,submission.broker.contact.phone,tel: link
+Submission Milestone Tracker,Header,Section Header,Underwriting Lifecycle,Progress tracker title,Render section title,Static text,-
+Submission Milestone Tracker,Header,Stat,[count] of [total] stages complete,Progress indicator,Compute complete stages count,milestones,-
+Submission Milestone Tracker,Header,Pill/Badge,[count] Action Required,Blocked milestone alert,Count action-required milestones,milestones filtered by blocked,-
+Submission Milestone Tracker,Horizontal Stepper,Step,Intake & Document Upload,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Horizontal Stepper,Step,Dimensional Auto-Review,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Horizontal Stepper,Step,Supplemental Addendums,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Horizontal Stepper,Step,Mock Underwriting Review,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Horizontal Stepper,Step,Action Items & Companion Recommendations,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Horizontal Stepper,Step,Final Submission,Milestone node (desktop),Render milestone node + status,milestone.status,Click selects milestone
+Submission Milestone Tracker,Checklist,Checkbox,[Checklist items],Individual checklist items with assignee,Toggle checklist item complete,checklist.item,PATCH /api/milestones/{id}/checklist
+Submission Milestone Tracker,Checklist,Button,Request Documents,Action button for blocked stage,Open request docs flow for blocked stage,blocked stage context,POST /api/requests/documents
+Submission Milestone Tracker,Checklist,Button,View Live Analysis,Action button for in-progress stage,Open live analysis view,in-progress stage context,Modal/route to analysis
+Submission Milestone Tracker,Checklist,Button,View Submitted Documents,Action button for completed stage,Open submitted docs view,completed stage context,Route: /submissions/{id}?tab=documents
+Lifecycle Progress Bar,Header,Section Header,Underwriting Lifecycle,Progress bar title,Render section title,Static text,-
+Lifecycle Progress Bar,Header,Pill/Badge,Currently: [sub-stage],Active sub-stage indicator,Render current sub-stage,lifecycle.currentSubStage,-
+Lifecycle Progress Bar,Header,Button,Collapse / Expand,Toggle detail panel,Toggle detail panel expanded state,UI state,Toggled UI state
+Lifecycle Progress Bar,Horizontal Stepper,Step,Intake & Triage,Primary stage node,Render primary stage node,lifecycle.stages,Click selects stage
+Lifecycle Progress Bar,Horizontal Stepper,Step,Underwriting,Primary stage node,Render primary stage node,lifecycle.stages,Click selects stage
+Lifecycle Progress Bar,Horizontal Stepper,Step,Quoting,Primary stage node,Render primary stage node,lifecycle.stages,Click selects stage
+Lifecycle Progress Bar,Horizontal Stepper,Step,Decision,Primary stage node,Render primary stage node,lifecycle.stages,Click selects stage
+Lifecycle Progress Bar,Horizontal Stepper,Step,Post-Bind,Primary stage node,Render primary stage node,lifecycle.stages,Click selects stage
+Create Submission Modal,Header,Section Header,Create New Submission,Modal title,Render modal title,Static text,-
+Create Submission Modal,Header,Subheader,Manually enter submission details...,Description,Render modal description,Static text,-
+Create Submission Modal,Header,Button,Close,Close modal (X button),Close modal,User click,Modal closed
+Create Submission Modal,Submission Type,Field,New Business,Option card with icon and description,Select submission type,Form state,Updates form.type = new_business
+Create Submission Modal,Submission Type,Field,Cross-Sell,Option card with icon and description,Select submission type,Form state,Updates form.type = cross_sell
+Create Submission Modal,Submission Type,Field,Renewal,Option card with icon and description,Select submission type,Form state,Updates form.type = renewal
+Create Submission Modal,Account Info,Field,Account Number,Account number input with numeric validation,Capture account number; lookup,User entry,Form state + GET /api/accounts/{number}
+Create Submission Modal,Account Info,Field,Account Name,Auto-populated account name (read-only),Render account name from lookup,Account lookup result,-
+Create Submission Modal,Dates,Field,Need By Date,Date picker,Capture need-by date,User selection,Form state: needByDate
+Create Submission Modal,Dates,Field,Effective Date,Date picker,Capture effective date,User selection,Form state: effectiveDate
+Create Submission Modal,Dates,Field,Expiration Date,Auto-calculated date (read-only),Compute expiration as effective + 1yr,form.effectiveDate,Form state: expirationDate (computed)
+Create Submission Modal,Stage,Dropdown,[Stage],Grouped stage selection dropdown,Capture initial stage,User selection,Form state: stage
+Create Submission Modal,Footer,Button,Cancel,Cancel modal,Close without saving,User click,Modal closed
+Create Submission Modal,Footer,Button,Create Submission,Submit form with spinner on submit,Submit new submission,Form state,POST /api/submissions -> Route: /submissions/{id}
+Doc Preview Modal,Header,Section Header,[Document name],Document title,Render document name,document.name,-
+Doc Preview Modal,Header,Chip,[Category],Document category badge,Render category chip,document.category,-
+Doc Preview Modal,Header,Chip,[Status],Document status badge (Verified/Pending/Missing),Render status chip,document.status,-
+Doc Preview Modal,Header,Pill/Badge,[Highlights count],Number of highlights on document,Render highlight count,document.highlights.length,-
+Doc Preview Modal,Header,Button,Close,Close modal (X button),Close modal,User click,Modal closed
+Doc Preview Modal,Toolbar,Button,Prev,Navigate to previous document,Switch to previous doc in folder,Current doc index,Updates current doc
+Doc Preview Modal,Toolbar,Button,Next,Navigate to next document,Switch to next doc in folder,Current doc index,Updates current doc
+Doc Preview Modal,Toolbar,Button,Highlight Mode,Toggle highlighting mode on/off,Toggle highlight mode,UI state,Updates highlight mode
+Doc Preview Modal,Toolbar,Color Swatch,Yellow,Select Review highlight color,Select highlight color,UI state,Updates active color
+Doc Preview Modal,Toolbar,Color Swatch,Green,Select Approved highlight color,Select highlight color,UI state,Updates active color
+Doc Preview Modal,Toolbar,Color Swatch,Blue,Select Note highlight color,Select highlight color,UI state,Updates active color
+Doc Preview Modal,Toolbar,Color Swatch,Pink,Select Flag highlight color,Select highlight color,UI state,Updates active color
+Doc Preview Modal,Toolbar,Button,Clear all,Remove all highlights,Clear all highlights,document.highlights,DELETE /api/documents/{id}/highlights
+Doc Preview Modal,Toolbar,Button,Zoom Out,Decrease document zoom (70-150%),Decrease zoom level,UI state,Updates zoom %
+Doc Preview Modal,Toolbar,Field,[Zoom %],Current zoom percentage,Render zoom %,UI state,-
+Doc Preview Modal,Toolbar,Button,Zoom In,Increase document zoom,Increase zoom level,UI state,Updates zoom %
+Doc Preview Modal,Toolbar,Button,Download,Download document,Download document file,document.id,GET /api/documents/{id}/download
+Doc Preview Modal,Document Canvas,Section,Named Insured Information,Highlightable section,Render section; highlightable,document content + highlights,Click in highlight mode -> POST highlight
+Doc Preview Modal,Document Canvas,Section,Coverages Requested,Highlightable section,Render section; highlightable,document content + highlights,Click in highlight mode -> POST highlight
+Doc Preview Modal,Document Canvas,Section,Loss History Attestation,Highlightable section,Render section; highlightable,document content + highlights,Click in highlight mode -> POST highlight
+Doc Preview Modal,Document Canvas,Section,Signature & Certification,Highlightable section,Render section; highlightable,document content + highlights,Click in highlight mode -> POST highlight
+Doc Preview Modal,Document Canvas,Field,Named Insured,Two-column field row (highlightable),Render insured name field,document.namedInsured,-
+Doc Preview Modal,Document Canvas,Field,FEIN,Two-column field row (highlightable),Render FEIN,document.fein,-
+Doc Preview Modal,Document Canvas,Field,Mailing Address,Two-column field row (highlightable),Render mailing address,document.mailingAddress,-
+Doc Preview Modal,Document Canvas,Table Column,Line of Coverage,Table column header,Render column header,Static text,-
+Doc Preview Modal,Document Canvas,Table Column,Requested Limit,Table column header,Render column header,Static text,-
+Doc Preview Modal,Document Canvas,Table Column,Current Deductible,Table column header,Render column header,Static text,-
+Doc Preview Modal,Highlights Panel,Section Header,Highlights,Collapsible highlights summary panel,Render section header,Static text,-
+Doc Preview Modal,Highlights Panel,Pill/Badge,[Highlight label],Individual highlight entry with label and color,Render highlight entry,document.highlights[i],-
+Doc Preview Modal,Highlights Panel,Button,Remove,Delete individual highlight,Delete this highlight,highlight.id,DELETE /api/documents/{docId}/highlights/{id}
+New Submission Page,Hero,Section Header,New Submission,Page title,Render page title,Static text,-
+New Submission Page,Form,Field,Submission Type,Radio selection (New Business / Cross-Sell / Renewal),Select submission type,User selection,Form state: type
+New Submission Page,Form,Field,Account Number,Account lookup with validation,Capture and validate account number,User entry,Form state + GET /api/accounts/{number}
+New Submission Page,Form,Field,Account Name,Auto-populated from account number,Render looked-up account name,Account lookup result,-
+New Submission Page,Form,Field,Member Type,"Dropdown (K-12 Public, Charter, Private, University, etc.)",Select member type,User selection,Form state: memberType
+New Submission Page,Form,Field,Enrollment,Numeric input,Capture enrollment count,User entry,Form state: enrollment
+New Submission Page,Form,Field,State,State/region selection,Select state,User selection,Form state: state
+New Submission Page,Form,Field,Effective Date,Date picker,Capture effective date,User selection,Form state: effectiveDate
+New Submission Page,Form,Field,Need By Date,Date picker,Capture need-by date,User selection,Form state: needByDate
+New Submission Page,Form,Field,Products,Multi-select product lines dropdown,Select products,User selection,Form state: products
+New Submission Page,Form,Field,Brokerage,Dropdown of brokerages,Select brokerage,User selection + GET /api/brokerages,Form state: brokerageId
+New Submission Page,Form,Field,Broker Contact,Dropdown filtered by selected brokerage,Select broker contact,form.brokerageId + GET /api/brokerages/{id}/contacts,Form state: brokerContactId
+New Submission Page,Form,Field,Underwriter,Dropdown of UW team members,Select assigned UW,GET /api/users?role=underwriter,Form state: underwriterId
+New Submission Page,Form,Field,UW Specialist,Dropdown of UW specialists,Select UW specialist,GET /api/users?role=specialist,Form state: specialistId
+New Submission Page,Form,Field,Notes,Free-text notes field,Capture notes,User entry,Form state: notes
+New Submission Page,Documents,Section Header,Submission Documents,Document upload section,Render section header,Static text,-
+New Submission Page,Documents,Button,Add Document,Trigger file upload,Open file picker,User click,File picker state
+New Submission Page,Documents,Drop Zone,Drop files here or click to browse,Drag-drop area for files,Accept dropped files,User drag-drop,POST /api/documents (multipart)
+New Submission Page,Documents,Button,Preview,Preview uploaded document,Open Doc Preview modal,document.id,Modal open state
+New Submission Page,Documents,Button,Remove,Delete uploaded document,Remove document from submission,document.id,DELETE /api/documents/{id}
+New Submission Page,AI Banner,Section Header,AI Recognition,AI parse results summary,Render AI banner,AI parse result,-
+New Submission Page,AI Banner,Badge,Detected Kind,AI-inferred submission type,Render detected kind,aiResult.kind,-
+New Submission Page,AI Banner,Badge,Member Count,Detected member count in submission,Render detected member count,aiResult.memberCount,-
+New Submission Page,AI Banner,Button,Use Detected Kind,Accept AI suggestion,Apply AI suggestion to form,aiResult.kind,Updates form.type
+New Submission Page,AI Banner,Button,Dismiss,Close banner,Dismiss AI banner,UI state,Banner dismissed
+New Submission Page,Footer,Button,Cancel,Exit page without saving,Navigate back,User click,Route: /submissions (back)
+New Submission Page,Footer,Button,Create Submission,Submit form and create submission,Submit new submission,Form state + documents,POST /api/submissions -> Route: /submissions/{id}
+Submission Detail,Risk Tab - Key Exposure Metrics,Section Header,Key Exposure Metrics,Top left card with accent color,Render section header,Static text,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,Total Insured Value (TIV),"Read-only display: $412,000,000",Render TIV value,submission.risk.tiv,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,Per-Occurrence SIR,"Read-only display: $50,000",Render per-occurrence SIR,submission.risk.sir.perOccurrence,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,Annual Aggregate SIR,"Read-only display: $150,000",Render annual aggregate SIR,submission.risk.sir.aggregate,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,Largest Single Location,"Read-only display: $28,400,000",Render largest single location TIV,submission.risk.largestLocation,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,Total Sq. Footage,"Read-only display: 2,140,000 sq ft",Render total square footage,submission.risk.totalSqFt,-
+Submission Detail,Risk Tab - Key Exposure Metrics,Field,No. of Buildings,Read-only display: 142,Render building count,submission.risk.buildingCount,-
+Submission Detail,Risk Tab - Property & Construction Details,Section Header,Property & Construction Details,Top right card spanning 2 columns,Render section header,Static text,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Primary Construction,Read-only: Masonry / Steel Frame,Render construction type,submission.risk.construction,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Roof Type,Read-only: Modified Bitumen / TPO,Render roof type,submission.risk.roofType,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Year Built (Avg.),Read-only: 1968 (Range: 1942-2019),Render average year built,submission.risk.yearBuiltAvg,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Sprinkler Coverage,Read-only: 94% of Buildings,Render sprinkler coverage %,submission.risk.sprinklerCoverage,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Occupancy Type,Read-only: Educational (K-12 Public),Render occupancy type,submission.risk.occupancy,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Coinsurance Clause,Read-only: 90% Agreed Value,Render coinsurance,submission.risk.coinsurance,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Valuation Basis,Read-only: Replacement Cost Value,Render valuation basis,submission.risk.valuationBasis,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Flood Zone,Read-only: Zone X - Low Risk,Render flood zone,submission.risk.floodZone,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Earthquake Zone,Read-only: Zone 3 - Moderate,Render earthquake zone,submission.risk.earthquakeZone,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Fire Protection Class,Read-only: Class 3 (ISO),Render fire protection class,submission.risk.fireProtectionClass,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,Distance to Fire Stn.,Read-only: 0.8 Miles (Avg.),Render distance to fire station,submission.risk.fireStationDistance,-
+Submission Detail,Risk Tab - Property & Construction Details,Field,COPE Score,Read-only: 82 / 100,Render COPE score,submission.risk.copeScore,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Section Header,Risk Score Breakdown,Left card with risk scoring bars,Render section header,Static text,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Campus Safety Rating,Score bar: 88/100 (green),Render score bar,submission.risk.scores.campusSafety,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Claims Severity Index,Score bar: 34/100 (green),Render score bar,submission.risk.scores.claimsSeverity,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Policy Complexity,Score bar: 61/100 (amber),Render score bar,submission.risk.scores.policyComplexity,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Litigation Exposure,Score bar: 22/100 (green),Render score bar,submission.risk.scores.litigationExposure,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Cyber / Data Risk,Score bar: 48/100 (amber),Render score bar,submission.risk.scores.cyberRisk,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Natural Catastrophe Hazard,Score bar: 39/100 (green),Render score bar,submission.risk.scores.natCat,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Student Injury Frequency,Score bar: 27/100 (green),Render score bar,submission.risk.scores.studentInjury,-
+Submission Detail,Risk Tab - Risk Score Breakdown,Stat,Overall Risk Score,Emphasized value: 74 / 100,Compute weighted overall risk score,submission.risk.scores,-
+Submission Detail,Risk Tab - Safety & Security Programs,Section Header,Safety & Security Programs,Right card with programs checklist,Render section header,Static text,-
+Submission Detail,Risk Tab - Safety & Security Programs,Accordion Section,Emergency Preparedness,Icon + label header,Render accordion section header,Static text,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Active Shooter Response Drills,Check mark indicator (true),Render program status,submission.risk.programs.activeShooterDrills,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Fire Evacuation Plan (Current),Check mark indicator (true),Render program status,submission.risk.programs.fireEvacuation,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Earthquake/Lockdown Protocol,Check mark indicator (true),Render program status,submission.risk.programs.lockdownProtocol,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Crisis Management Team Active,Check mark indicator (true),Render program status,submission.risk.programs.crisisTeam,-
+Submission Detail,Risk Tab - Safety & Security Programs,Accordion Section,Physical Security,Icon + label header,Render accordion section header,Static text,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,24/7 Campus Security Personnel,Check mark indicator (true),Render program status,submission.risk.programs.security247,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,CCTV Coverage (All Campuses),Partial indicator (amber),Render program status,submission.risk.programs.cctv,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Visitor Check-In System,Check mark indicator (true),Render program status,submission.risk.programs.visitorCheckIn,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Perimeter Fencing,Check mark indicator (true),Render program status,submission.risk.programs.perimeterFencing,-
+Submission Detail,Risk Tab - Safety & Security Programs,Accordion Section,Risk Management Programs,Icon + label header,Render accordion section header,Static text,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Formal Safety Committee,Check mark indicator (true),Render program status,submission.risk.programs.safetyCommittee,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Annual Risk Assessment Conducted,Check mark indicator (true),Render program status,submission.risk.programs.annualRiskAssessment,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Workers Comp Safety Program,Check mark indicator (true),Render program status,submission.risk.programs.wcSafety,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Student Supervision Policy,Check mark indicator (true),Render program status,submission.risk.programs.studentSupervision,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Background Checks - All Staff,Check mark indicator (true),Render program status,submission.risk.programs.backgroundChecks,-
+Submission Detail,Risk Tab - Safety & Security Programs,Checkbox,Playground Safety Inspection,Partial indicator (amber),Render program status,submission.risk.programs.playgroundInspection,-
+Submission Detail,Risk Tab - Liability & Specialized Exposure Details,Section Header,Liability & Specialized Exposure Details,Bottom card with 4 icon cards,Render section header,Static text,-
+Submission Detail,Risk Tab - Liability & Specialized Exposure Details,KPI Card,Abuse & Molestation,Endorsed - $1M sublimit,Render endorsement card,submission.risk.coverages.abuseMolestation,-
+Submission Detail,Risk Tab - Liability & Specialized Exposure Details,KPI Card,Educators Legal Liability,Included - $3M limit,Render coverage card,submission.risk.coverages.ell,-
+Submission Detail,Risk Tab - Liability & Specialized Exposure Details,KPI Card,Environmental Liability,Excluded - Standalone Policy,Render coverage card,submission.risk.coverages.environmental,-
+Submission Detail,Risk Tab - Liability & Specialized Exposure Details,KPI Card,Student Accident,$500K / $1M Agg.,Render coverage card,submission.risk.coverages.studentAccident,-
+Submission Detail,Group Members Tab - Header,Pill/Badge,Group Submission,Label badge,Render group badge,submission.kind = group,-
+Submission Detail,Group Members Tab - Header,Pill/Badge,Multi-layered rules,Secondary badge,Render secondary badge,group.rules,-
+Submission Detail,Group Members Tab - Header,Section Header,Central Texas Schools Consortium,Group name,Render group name,group.name,-
+Submission Detail,Group Members Tab - Header,Stat,7 members,Count display,Render member count,group.members.length,-
+Submission Detail,Group Members Tab - Header,Stat,3 member types,Diversity count,Count distinct member types,group.members distinct by type,-
+Submission Detail,Group Members Tab - Header,Pill/Badge,1 referrals pending,Warning badge with flag icon,Count referrals pending,group.referralsPending,-
+Submission Detail,Group Members Tab - KPI Strip,KPI Card,Members,7 (4 member types),Render members count + type count,group.members,-
+Submission Detail,Group Members Tab - KPI Strip,KPI Card,Total Enrollment,"7,237 (Across all members)",Sum enrollment across members,group.members.enrollment,-
+Submission Detail,Group Members Tab - KPI Strip,KPI Card,Group Premium,"$147,000 (Indicated, pre-credit)",Sum group premium pre-credit,group.members.premium,-
+Submission Detail,Group Members Tab - KPI Strip,KPI Card,Group Loss Ratio,54% (Premium-weighted),Compute premium-weighted loss ratio,group.members.lossRatio,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Member Type,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Count,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Group Premium,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Weighted Loss Ratio,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Pricing Tier,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Performance by Member Type,Column,Authority,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Filter Chip,All,Tier filter button,Clear tier filter,?tier URL param,Clears ?tier
+Submission Detail,Group Members Tab - Member Roster,Filter Chip,Preferred,Tier filter button,Filter by tier=preferred,?tier URL param,Sets ?tier=preferred
+Submission Detail,Group Members Tab - Member Roster,Filter Chip,Standard,Tier filter button,Filter by tier=standard,?tier URL param,Sets ?tier=standard
+Submission Detail,Group Members Tab - Member Roster,Filter Chip,Referred,Tier filter button,Filter by tier=referred,?tier URL param,Sets ?tier=referred
+Submission Detail,Group Members Tab - Member Roster,Column,Member,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Type,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,State,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Enrollment,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Products,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Est. Premium,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Loss Ratio,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Tier,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - Member Roster,Column,Issues,Table column header,Render column header,Static text,-
+Submission Detail,Group Members Tab - AI Account Recognition,Section Header,AI Account Recognition - Group Signals,Insights card,Render AI insights section,GET /api/ai/group-signals,-
+Submission Detail,Member Broker Tab - View Toggle,Button,Member,View selector button (toggles member view),Switch view to member,?view URL param,Sets ?view=member
+Submission Detail,Member Broker Tab - View Toggle,Button,Brokerage,View selector button (toggles brokerage view),Switch view to brokerage,?view URL param,Sets ?view=brokerage
+Submission Detail,Member Broker Tab - Member View - Quick Stats,Field,Account Record Type,Stat cell: Institution,Render record type,member.recordType,-
+Submission Detail,Member Broker Tab - Member View - Quick Stats,Field,Member Number,Stat cell: 473,Render member number,member.id,-
+Submission Detail,Member Broker Tab - Member View - Quick Stats,Field,Physical City,"Stat cell: Westport, CT",Render city + state,member.address.city + state,-
+Submission Detail,Member Broker Tab - Member View - Quick Stats,Field,Status,Stat cell: Active,Render member status,member.status,-
+Submission Detail,Member Broker Tab - Member View - Quick Stats,Field,Member Since,Stat cell: 2014 - 12 yrs,Render member tenure,member.memberSince,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Section Header,Account Information,Account details card,Render section header,Static text,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Account Name,Read-only: Brookfield Day School,Render account name,member.accountName,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,DEC Page Name,Read-only: Brookfield Day School,Render DEC page name,member.decPageName,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Preferred Account Name,Read-only: Brookfield Day,Render preferred name,member.preferredAccountName,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Member Number,Read-only: 473,Render member number,member.id,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Parent Account,Read-only,Render parent account,member.parentAccount,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Group,Read-only,Render group,member.group,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Group Number,Read-only,Render group number,member.groupNumber,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Account Record Type,Read-only: Institution,Render record type,member.recordType,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Account Sub-Type,Read-only: Insured,Render sub-type,member.subType,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Member Status,Read-only: Member,Render member status,member.memberStatus,-
+Submission Detail,Member Broker Tab - Member View - Account Information,Field,Account Status,Read-only: Active,Render account status,member.accountStatus,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Section Header,Institution Profile,Profile details card,Render section header,Static text,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Institution Type,Read-only: K-12,Render institution type,member.institutionType,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Sub-Category,Read-only: Private,Render sub-category,member.subCategory,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Boarding Options,Read-only: Day only - No boarding,Render boarding options,member.boardingOptions,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Underwriting Track,Read-only: Choice,Render UW track,member.uwTrack,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Intercollegiate Football,Read-only: N/A,Render football indicator,member.intercollegiateFootball,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Education Segment,Read-only: Schools / Colleges,Render segment,member.educationSegment,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Total Enrollment,Read-only: 842,Render enrollment,member.enrollment,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Renewal Type,Read-only: Annual,Render renewal type,member.renewalType,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Budget,"Read-only: $28,400,000",Render budget,member.budget,-
+Submission Detail,Member Broker Tab - Member View - Institution Profile,Field,Territory,Read-only: Northeast,Render territory,member.territory,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Section Header,Address Information,Address details card,Render section header,Static text,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical Address 1,Read-only: 32 Riverside Avenue,Render physical address line 1,member.address.line1,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical Address 2,Read-only,Render physical address line 2,member.address.line2,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical City,Read-only: Westport,Render physical city,member.address.city,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical State/Province,Read-only: CT,Render state,member.address.state,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical Zip/Postal Code,Read-only: 06880,Render zip,member.address.zip,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical County,Read-only: Fairfield,Render county,member.address.county,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Physical Country,Read-only: United States,Render country,member.address.country,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Copy from Physical,Read-only,Copy physical to mailing address,member.address,Updates mailing address fields
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing Address 1,Read-only: 32 Riverside Avenue,Render mailing address line 1,member.mailingAddress.line1,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing Address 2,Read-only,Render mailing address line 2,member.mailingAddress.line2,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing City,Read-only: Westport,Render mailing city,member.mailingAddress.city,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing State/Province,Read-only: CT,Render state,member.mailingAddress.state,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing Zip/Postal Code,Read-only: 06880,Render zip,member.mailingAddress.zip,-
+Submission Detail,Member Broker Tab - Member View - Address Information,Field,Mailing Country,Read-only: United States,Render country,member.mailingAddress.country,-
+Submission Detail,Member Broker Tab - Brokerage View - Quick Stats,Field,Account Record Type,Stat cell: Agency - Brokerage,Render record type,brokerage.recordType,-
+Submission Detail,Member Broker Tab - Brokerage View - Quick Stats,Field,Account ID,Stat cell: 10591,Render account ID,brokerage.id,-
+Submission Detail,Member Broker Tab - Brokerage View - Quick Stats,Field,Physical City,Stat cell: New York,Render city,brokerage.address.city,-
+Submission Detail,Member Broker Tab - Brokerage View - Quick Stats,Field,Physical State,Stat cell: NY,Render state,brokerage.address.state,-
+Submission Detail,Member Broker Tab - Brokerage View - Quick Stats,Field,Parent Account,Stat cell: Marsh & McLennan Companies,Render parent account,brokerage.parentAccount,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Account Name,Read-only: Marsh McLennan Agency,Render account name,brokerage.accountName,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Preferred Account Name,Read-only: Marsh McLennan,Render preferred name,brokerage.preferredAccountName,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Parent Account,Read-only: Marsh & McLennan Companies,Render parent account,brokerage.parentAccount,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Account Record Type,Read-only: Agency - Brokerage,Render record type,brokerage.recordType,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Account Sub-Type,Read-only: Brokerage,Render sub-type,brokerage.subType,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Account ID,Read-only: 10591,Render account ID,brokerage.id,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Account Status,Read-only: Active,Render account status,brokerage.accountStatus,-
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Phone,Read-only: (203) 555-1100,Render phone,brokerage.phone,tel: link
+Submission Detail,Member Broker Tab - Brokerage View - Account Information,Field,Fax,Read-only: (203) 555-1109,Render fax,brokerage.fax,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical Address 1,Read-only: 1166 Ave of the Americas,Render physical address line 1,brokerage.address.line1,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical Address 2,Read-only: Floor 4,Render physical address line 2,brokerage.address.line2,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical City,Read-only: New York,Render city,brokerage.address.city,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical State/Province,Read-only: NY,Render state,brokerage.address.state,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical Zip/Postal Code,Read-only: 10036-2708,Render zip,brokerage.address.zip,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Physical Country,Read-only: United States,Render country,brokerage.address.country,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing Address 1,Read-only: 1166 Ave of the Americas,Render mailing address line 1,brokerage.mailingAddress.line1,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing Address 2,Read-only: Floor 4,Render mailing address line 2,brokerage.mailingAddress.line2,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing City,Read-only: New York,Render city,brokerage.mailingAddress.city,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing State/Province,Read-only: NY,Render state,brokerage.mailingAddress.state,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing Zip/Postal Code,Read-only: 10036-2708,Render zip,brokerage.mailingAddress.zip,-
+Submission Detail,Member Broker Tab - Brokerage View - Address Information,Field,Mailing Country,Read-only: United States,Render country,brokerage.mailingAddress.country,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Section Header,Broker Roles,Contacts table with badge,Render section header,Static text,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Column,Contact,Table column header,Render column header,Static text,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Column,Phone,Table column header,Render column header,Static text,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Column,Email,Table column header,Render column header,Static text,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Column,Product Access,Table column header,Render column header,Static text,-
+Submission Detail,Member Broker Tab - Brokerage View - Broker Roles,Column,Broker Role,Table column header,Render column header,Static text,-
+Submission Detail,Documents Tab - Documents,Section Header,Documents,Main documents card,Render section header,Static text,-
+Submission Detail,Documents Tab - Documents,Button,Upload Document,Primary action button,Open file picker to upload document,User click,POST /api/documents (multipart)
+Submission Detail,Documents Tab - Folder Sidebar,Button,Submission-level,Folder selector (Shared docs),Switch folder to submission-level,?folder URL param,Sets ?folder=submission
+Submission Detail,Documents Tab - Folder Sidebar,Button,Employment Practices,Folder selector (EPL docs),Switch folder to EPL,?folder URL param,Sets ?folder=epl
+Submission Detail,Documents Tab - Folder Sidebar,Button,Educators Legal,Folder selector (ELL docs),Switch folder to ELL,?folder URL param,Sets ?folder=ell
+Submission Detail,Documents Tab - Folder Sidebar,Button,General Liability,Folder selector (GL docs),Switch folder to GL,?folder URL param,Sets ?folder=gl
+Submission Detail,Documents Tab - Folder Sidebar,Button,Cyber Liability,Folder selector (Cyber docs),Switch folder to Cyber,?folder URL param,Sets ?folder=cyber
+Submission Detail,Documents Tab - Folder Header,Pill/Badge,Uploaded Count,Display: X Uploaded,Count uploaded docs in folder,documents filtered by status,-
+Submission Detail,Documents Tab - Folder Header,Pill/Badge,Missing Count,Display: X Missing,Count missing required docs,documents filtered by status,-
+Submission Detail,Documents Tab - Folder Header,Search,Search Input,Placeholder: Search in folder...,Filter folder docs by query,User text,Sets ?q=<text>
+Submission Detail,Documents Tab - Document List,Section Header,Application,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Loss,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Financial,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Property,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Compliance,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Member,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document List,Section Header,Broker,Category pill badge,Render category section,Static text,-
+Submission Detail,Documents Tab - Document Card,Stat,Document Name,Clickable link to preview,Render doc name; open preview on click,document.name,Modal open (Doc Preview)
+Submission Detail,Documents Tab - Document Card,Stat,File Type,Display: PDF/XLSX/MSG,Render file extension,document.fileType,-
+Submission Detail,Documents Tab - Document Card,Stat,File Size,Display: KB/MB,Render file size,document.size,-
+Submission Detail,Documents Tab - Document Card,Stat,Upload Date,Display: upload timestamp,Render upload date,document.uploadedAt,-
+Submission Detail,Documents Tab - Document Card,Stat,Uploaded By,Display: uploader name,Render uploader name,document.uploadedBy,-
+Submission Detail,Documents Tab - Document Card,Pill/Badge,Status,Uploaded/InReview/Missing indicator,Render status badge,document.status,-
+Submission Detail,Documents Tab - Document Card,Pill/Badge,Required Indicator,Required or Missing Required badge,Render required badge,document.required,-
+Submission Detail,Documents Tab - Document Card,Button,Preview,Document preview button,Open Doc Preview modal,document.id,Modal open state
+Submission Detail,Documents Tab - Document Card,Button,Download,Document download button,Download document file,document.id,GET /api/documents/{id}/download
+Submission Detail,Correspondence Tab - Counter Tiles,KPI Card,Total Messages,Count display,Count messages on submission,GET /api/correspondence?submissionId={id},-
+Submission Detail,Correspondence Tab - Counter Tiles,KPI Card,Unread,Unread count with status,Count unread messages,messages filtered by unread,-
+Submission Detail,Correspondence Tab - Counter Tiles,KPI Card,Last Activity,Relative time + full date,Compute last activity timestamp,messages max(timestamp),-
+Submission Detail,Correspondence Tab - Correspondence,Section Header,Correspondence,Main card with unread badge,Render section header,Static text,-
+Submission Detail,Correspondence Tab - Thread List - Filters,Search,Search Input,Placeholder: Search subject or message body...,Filter threads by query,User text,Sets ?q=<text>
+Submission Detail,Correspondence Tab - Thread List - Filters,Filter Chip,All,Direction filter: all directions,Clear direction filter,?direction URL param,Clears ?direction
+Submission Detail,Correspondence Tab - Thread List - Filters,Filter Chip,Inbound,Direction filter: inbound only,Filter to inbound,?direction URL param,Sets ?direction=inbound
+Submission Detail,Correspondence Tab - Thread List - Filters,Filter Chip,Outbound,Direction filter: outbound only,Filter to outbound,?direction URL param,Sets ?direction=outbound
+Submission Detail,Correspondence Tab - Thread List - Filters,Button,Clear Filters,Clears applied filters,Clear all filter params,Current URL filter params,Clears all filter params
+Submission Detail,Correspondence Tab - Thread Row,Stat,Sender Name,Display: from/to participant,Render sender name,thread.lastSender,-
+Submission Detail,Correspondence Tab - Thread Row,Stat,Time,Display: relative time,Render relative timestamp,thread.lastMessageAt + now(),-
+Submission Detail,Correspondence Tab - Thread Row,Pill/Badge,Unread Badge,X New badge (if unread),Render unread count badge,thread.unreadCount,-
+Submission Detail,Correspondence Tab - Thread Row,Stat,Subject,Display: thread subject line,Render subject,thread.subject,-
+Submission Detail,Correspondence Tab - Thread Row,Stat,Message Preview,Display: preview of last message,Render truncated last message,thread.lastMessage,-
+Submission Detail,Correspondence Tab - Thread Row,Stat,Message Count,Display: X msgs,Render message count,thread.messages.length,-
+Submission Detail,Correspondence Tab - Thread Row,Stat,Attachment Count,Display: attachment icon + count,Count attachments across thread,thread.attachments.length,-
+Submission Detail,Correspondence Tab - Thread View - Message,Pill/Badge,Direction,Inbound/Outbound badge,Render direction badge,message.direction,-
+Submission Detail,Correspondence Tab - Thread View - Message,Stat,Body,Display: message text content,Render message body,message.body,-
+Submission Detail,Correspondence Tab - Thread View - Message,Stat,Attachment,Display: attachment name + size,Render attachment chip,message.attachments,GET /api/files/{id}/download
+Submission Detail,Correspondence Tab - Composer,Textarea,Reply Input,"Placeholder: Type your reply... (Ctrl+Enter to send)",Capture reply text,User entry,Form state: draft
+Submission Detail,Correspondence Tab - Composer,Button,Send,Send message button,Send reply to thread,Form state + thread.id,POST /api/correspondence/{threadId}/reply
+Submission Detail,Loss Tab - KPI Summary,KPI Card,5-Yr Incurred Total,"Displays $87,200 with trend indicator",Sum 5-yr incurred losses,GET /api/loss?submissionId={id}&period=5y,-
+Submission Detail,Loss Tab - KPI Summary,KPI Card,5-Yr Avg. Loss Ratio,Displays 21.0% with down trend,Compute 5-yr average loss ratio,loss.lossRatio,-
+Submission Detail,Loss Tab - KPI Summary,KPI Card,Total Open Claims,Displays 2 with warning accent,Count open claims,claims filtered by open,-
+Submission Detail,Loss Tab - KPI Summary,KPI Card,Total Claims (5yr),Displays 9 claims total,Count claims in 5-yr period,claims.length,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Section Header,Year-by-Year Loss Summary,Main table title,Render section header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Toggle,By Year,Switch to year view (active),Switch summary view to year,?lossView URL param,Sets ?lossView=year
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Toggle,By Member,Switch to member view (group only),Switch summary view to member,?lossView URL param + submission.kind,Sets ?lossView=member
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Policy Year,Year label in summary table,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,# Claims,Claim count per year,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Paid,Paid amount per year,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Reserve,Reserve amount per year,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Incurred Total,Total incurred per year,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Loss Ratio,Loss ratio % per year with badge,Render column header,Static text,-
+Submission Detail,Loss Tab - Year-by-Year Loss Summary,Column,Trend,Trend indicator (up/down/neutral),Render column header,Static text,-
+Submission Detail,Loss Tab - Claim Detail Log,Section Header,Claim Detail Log,Claims table title,Render section header,Static text,-
+Submission Detail,Loss Tab - Claim Detail Log,Status Indicator,2 Open,Badge showing open claim count,Count open claims,claims filtered by open,-
+Submission Detail,Loss Tab - Claim Detail Log,Status Indicator,7 Closed,Badge showing closed claim count,Count closed claims,claims filtered by closed,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Claim ID,Claim identifier with Flagged badge,Render claim ID,claim.id,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Date,Claim date,Render claim date,claim.date,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Type,Claim type/peril,Render claim type,claim.type,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Location,Location of claim,Render claim location,claim.location,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Paid,Paid amount,Render paid amount,claim.paid,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Reserve,Reserve amount,Render reserve amount,claim.reserve,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Total,Total paid + reserve,Compute: paid + reserve,claim.paid + claim.reserve,-
+Submission Detail,Loss Tab - Claim Detail Log,Column,Status,Claim status (Open/Closed),Render status,claim.status,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Section Header,Primary General Liability (CGL),Product coverage section,Render section header,Static text,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,Each Occurrence,"$1,000,000 limit selector",Select per-occurrence limit,User selection + limit options,Updates rating.cgl.eachOccurrence
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,General Aggregate,"$3,000,000 limit selector",Select aggregate limit,User selection,Updates rating.cgl.aggregate
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,Products/Completed Ops,"$2,000,000 limit selector",Select products/completed ops limit,User selection,Updates rating.cgl.products
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,Personal & Adv. Injury,"$1,000,000 limit selector",Select personal/adv injury limit,User selection,Updates rating.cgl.personalAdvInjury
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,Med. Payments (per person),"$10,000 limit selector",Select medical payments limit,User selection,Updates rating.cgl.medPayments
+Submission Detail,Rating Tab - Coverage/Premium Calc,Field,Fire Legal Liability,"$300,000 limit selector",Select fire legal liability limit,User selection,Updates rating.cgl.fireLegal
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Premises & Operations,"Required coverage item, checked",Toggle coverage (required by default),Coverage config,Updates rating.cgl.coverages
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Products & Completed Operations,"Required coverage item, checked",Toggle coverage (required by default),Coverage config,Updates rating.cgl.coverages
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Personal & Advertising Injury,"Required coverage item, checked",Toggle coverage (required by default),Coverage config,Updates rating.cgl.coverages
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Medical Payments,"Optional coverage item, +$1,800",Toggle optional coverage,Coverage config,Updates rating.cgl.coverages + premium calc
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Fire Legal Liability,"Optional coverage item, +$1,200",Toggle optional coverage,Coverage config,Updates rating.cgl.coverages + premium calc
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Host Liquor Liability,"Optional coverage item, +$1,600",Toggle optional coverage,Coverage config,Updates rating.cgl.coverages + premium calc
+Submission Detail,Rating Tab - Coverage/Premium Calc,Section Header,Endorsements,Product endorsements section,Render section header,Static text,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Sexual Abuse & Molestation,"Optional endorsement, +$8,400",Toggle endorsement,Endorsement config,Updates rating.cgl.endorsements
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Liquor Liability Extension,"Optional endorsement, +$1,600",Toggle endorsement,Endorsement config,Updates rating.cgl.endorsements
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Volunteer Liability,"Optional endorsement, +$900",Toggle endorsement,Endorsement config,Updates rating.cgl.endorsements
+Submission Detail,Rating Tab - Coverage/Premium Calc,Checkbox,Broad Form Contractual,"Optional endorsement, +$1,100",Toggle endorsement,Endorsement config,Updates rating.cgl.endorsements
+Submission Detail,Rating Tab - Coverage/Premium Calc,Stat,Base Premium (CGL),"$11,200 base",Compute base premium from limits,rating.cgl.limits,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Stat,Coverage Adjustments,Sum of selected optional items,Sum optional coverage surcharges,rating.cgl.coverages,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Stat,Endorsement Premium,Sum of selected endorsements,Sum endorsement premiums,rating.cgl.endorsements,-
+Submission Detail,Rating Tab - Coverage/Premium Calc,Stat,Manual/Discretionary Adjustment,Underwriter adjustment field,Capture manual adjustment,User entry,Updates rating.cgl.manualAdjustment
+Submission Detail,Rating Tab - Coverage/Premium Calc,Stat,Total Premium (CGL),Final calculated premium,Compute: base + adjustments + endorsements + manual,All rating fields,-
+Submission Detail,UW Review Tab - Review Checklist,Section Header,Underwriting Review Checklist,Main tab title,Render section header,Static text,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Pass,Count of passed reviews,Count reviews with status=pass,reviewItems filtered by status,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Caution,Count of caution reviews,Count reviews with status=caution,reviewItems filtered by status,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Fail,Count of failed reviews,Count reviews with status=fail,reviewItems filtered by status,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Missing,Count of missing doc reviews,Count reviews with status=missing,reviewItems filtered by status,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Approved,Count of approved decisions,Count reviews with decision=approved,reviewItems filtered by decision,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Referred,Count of referred decisions,Count reviews with decision=referred,reviewItems filtered by decision,-
+Submission Detail,UW Review Tab - Review Checklist,Stat,Pending,Count of pending decisions,Count reviews with decision=pending,reviewItems filtered by decision,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Loss Run & Claims History Analysis,"Checklist item 01, status caution",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Financial Document Review (FDM),"Checklist item 02, status pass",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Operational & Exposure Review,"Checklist item 03, status pass",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Governance & Management Liability Scrub,"Checklist item 04, status missing-docs",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Contractual & Risk Control Review,"Checklist item 05, status caution",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Field,Comparable Risk Benchmarking,"Checklist item 06, status pass",Render review item row,reviewItem,-
+Submission Detail,UW Review Tab - Review Checklist,Button,Approve,Approve decision for review item,Approve review item,reviewItem.id + user.id,PATCH /api/reviews/{id}/approve
+Submission Detail,UW Review Tab - Review Checklist,Button,Refer,Refer decision for review item,Refer review item,reviewItem.id + user.id,PATCH /api/reviews/{id}/refer
+Submission Detail,UW Review Tab - Review Checklist,Button,Analytics,Open detail view for review item,Switch to analytics detail view,reviewItem.id,Sets ?review=<id>
+Submission Detail,UW Review Tab - Analytics Detail,KPI Card,5-yr Loss Ratio,58% - good,Compute 5-yr loss ratio,GET /api/reviews/{id}/analytics,-
+Submission Detail,UW Review Tab - Analytics Detail,KPI Card,Claim Frequency,2.4/yr - warn,Compute claim frequency per year,analytics.claimFrequency,-
+Submission Detail,UW Review Tab - Analytics Detail,KPI Card,Avg Severity,$38K - neutral,Compute average severity,analytics.avgSeverity,-
+Submission Detail,UW Review Tab - Analytics Detail,KPI Card,Open Claims,2 - neutral,Count open claims,analytics.openClaims,-
+Submission Detail,UW Review Tab - Analytics Detail,Section Header,Analysis Findings,Sub-points section,Render section header,Static text,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Frequency vs. Severity,Identifies 12 claims in 5-yr with 1 severity event,Render finding,analytics.findings.frequencyVsSeverity,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Trend Identification,Slip-and-fall pattern flagged (4 of 12),Render finding,analytics.findings.trends,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Reserve Adequacy,"$182K incurred, $46K reserves adequate",Render finding,analytics.findings.reserveAdequacy,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Layer Piercing,No primary breaches in 5-yr,Render finding,analytics.findings.layerPiercing,-
+Submission Detail,UW Review Tab - Analytics Detail,Button,Task,Create task from finding,Open new task modal with finding context,Finding context,Modal open + prefilled task
+Submission Detail,UW Review Tab - Analytics Detail,Section Header,Document Validation,Validation checklist section,Render section header,Static text,-
+Submission Detail,UW Review Tab - Analytics Detail,Stat,Validated,4 docs pass,Count validated docs,validations filtered by pass,-
+Submission Detail,UW Review Tab - Analytics Detail,Stat,Failed,0 docs fail,Count failed docs,validations filtered by fail,-
+Submission Detail,UW Review Tab - Analytics Detail,Stat,Outstanding,0 docs outstanding,Count outstanding docs,validations filtered by outstanding,-
+Submission Detail,UW Review Tab - Analytics Detail,Stat,Pass Rate Gauge,100% animated radial gauge,Compute pass rate %,validations,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,5-Year Loss Runs,"Required, received, passed",Render validation row,validation.lossRuns,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Open Claims Summary,"Required, received, passed",Render validation row,validation.openClaims,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Reserve Schedule,"Required, received, passed",Render validation row,validation.reserveSchedule,-
+Submission Detail,UW Review Tab - Analytics Detail,Field,Excess Layer Loss History,"Optional, received, passed",Render validation row,validation.excessLayerHistory,-
+Submission Detail,UW Review Tab - Analytics Detail,Chart,Claim Count by Year,Bar chart showing 5-year frequency trend,Render chart,claims grouped by year,-
+Submission Detail,UW Review Tab - Analytics Detail,Button,Approve,Hero approve button for review item,Approve review item,reviewItem.id + user.id,PATCH /api/reviews/{id}/approve
+Submission Detail,UW Review Tab - Analytics Detail,Button,Refer,Hero refer button for review item,Refer review item,reviewItem.id + user.id,PATCH /api/reviews/{id}/refer
+Submission Detail,UW Review Tab - Analytics Detail,Button,Back to checklist,Return to list view,Navigate back to checklist,User click,Clears ?review param
+Submission Detail,Conditions Tab - Subjectivities,Section Header,Subjectivities,Subjectivities list header,Render section header,Static text,-
+Submission Detail,Conditions Tab - Subjectivities,Stat,1 / 3 satisfied,Progress indicator,Count satisfied subjectivities,subjectivities,-
+Submission Detail,Conditions Tab - Subjectivities,Button,Add,Add new subjectivity,Open Add Condition modal (subjectivity),User click,Modal open state
+Submission Detail,Conditions Tab - Subjectivities,Column,Type,Subjectivity type badge (BIND/QUOTE/POLICY),Render column header,Static text,-
+Submission Detail,Conditions Tab - Subjectivities,Column,Title & Description,Condition title and description,Render column header,Static text,-
+Submission Detail,Conditions Tab - Subjectivities,Column,Status,Status dropdown (Open/Satisfied/Deferred),Render column header,Static text,-
+Submission Detail,Conditions Tab - Subjectivities,Column,Date Satisfied,Date when satisfied,Render column header,Static text,-
+Submission Detail,Conditions Tab - Subjectivities,Pill/Badge,BIND,Type badge for BIND conditions,Render type chip,condition.type,-
+Submission Detail,Conditions Tab - Subjectivities,Pill/Badge,QUOTE,Type badge for QUOTE conditions,Render type chip,condition.type,-
+Submission Detail,Conditions Tab - Subjectivities,Pill/Badge,POLICY,Type badge for POLICY conditions,Render type chip,condition.type,-
+Submission Detail,Conditions Tab - Subjectivities,Button,Delete,Remove condition (hover action),Delete subjectivity,condition.id,DELETE /api/conditions/{id}
+Submission Detail,Conditions Tab - Contingencies,Section Header,Contingencies,Contingencies list header,Render section header,Static text,-
+Submission Detail,Conditions Tab - Contingencies,Stat,0 / 0 satisfied,Progress indicator (empty state),Count satisfied contingencies,contingencies,-
+Submission Detail,Conditions Tab - Contingencies,Button,Add,Add new contingency,Open Add Condition modal (contingency),User click,Modal open state
+Submission Detail,Conditions Tab - Add Condition Modal,Field,Type,Dropdown for BIND/QUOTE/POLICY,Capture condition type,User selection,Form state: type
+Submission Detail,Conditions Tab - Add Condition Modal,Field,Title,Preset or custom title selector,Capture condition title from presets,User selection,Form state: title
+Submission Detail,Conditions Tab - Add Condition Modal,Field,Custom title,Free-text input if Free Text... selected,Capture custom title,User entry,Form state: customTitle
+Submission Detail,Conditions Tab - Add Condition Modal,Button,Cancel,Dismiss modal,Close modal,User click,Modal closed
+Submission Detail,Conditions Tab - Add Condition Modal,Button,Add Subjectivity,Submit new subjectivity,Create subjectivity,Form state,POST /api/conditions (kind=subjectivity)
+Submission Detail,Conditions Tab - Add Condition Modal,Button,Add Contingency,Submit new contingency,Create contingency,Form state,POST /api/conditions (kind=contingency)
+Submission Detail,Approvals Tab - Approval List,Filter Chip,Pending,"Shows pending count, click to filter",Filter to pending,?status URL param,Sets ?status=pending
+Submission Detail,Approvals Tab - Approval List,Filter Chip,Approved,"Shows approved count, click to filter",Filter to approved,?status URL param,Sets ?status=approved
+Submission Detail,Approvals Tab - Approval List,Filter Chip,Declined,"Shows declined count, click to filter",Filter to declined,?status URL param,Sets ?status=declined
+Submission Detail,Approvals Tab - Approval List,Button,Clear filter,Reset status filter to All,Clear status filter,?status URL param,Clears ?status
+Submission Detail,Approvals Tab - Approval List,Button,Request approval,Open new approval modal,Open new approval modal,User click,Modal open state
+Submission Detail,Approvals Tab - Approval Card,Status Indicator,Pending,Yellow badge with dot,Render pending badge,approval.status,-
+Submission Detail,Approvals Tab - Approval Card,Status Indicator,Approved,Green badge with dot,Render approved badge,approval.status,-
+Submission Detail,Approvals Tab - Approval Card,Status Indicator,Declined,Red badge with dot,Render declined badge,approval.status,-
+Submission Detail,Approvals Tab - Approval Card,Stat,Overdue,Red alert for overdue approvals,Render overdue alert,approval.dueAt + now(),-
+Submission Detail,Approvals Tab - Approval Card,Stat,Due in Xd,Warning for approvals due within 3 days,Render due-soon alert,approval.dueAt + now(),-
+Submission Detail,Approvals Tab - Approval Card,Button,Actions,Open action modal for pending approvals,Open action modal,approval.id,Modal open state
+Submission Detail,Approvals Tab - New Approval Modal,Field,Account,Read-only account name,Render account name,submission.member.name,-
+Submission Detail,Approvals Tab - New Approval Modal,Field,Submission,Read-only submission ID,Render submission ID,submission.id,-
+Submission Detail,Approvals Tab - New Approval Modal,Field,Reason for approval,Dropdown selector,Capture approval reason,User selection,Form state: reason
+Submission Detail,Approvals Tab - New Approval Modal,Field,Assign to,Dropdown selector for approver name,Capture approver,User selection + GET /api/users?role=approver,Form state: assigneeId
+Submission Detail,Approvals Tab - New Approval Modal,Field,Urgency,Dropdown selector (High/Medium/Low),Capture urgency,User selection,Form state: urgency
+Submission Detail,Approvals Tab - New Approval Modal,Field,Approve by,Date picker for decision deadline,Capture decision deadline,User selection,Form state: dueAt
+Submission Detail,Approvals Tab - New Approval Modal,Field,Note for Approver,Text area for context/rationale,Capture note,User entry,Form state: note
+Submission Detail,Approvals Tab - New Approval Modal,Button,Cancel,Dismiss modal,Close modal,User click,Modal closed
+Submission Detail,Approvals Tab - New Approval Modal,Button,Send approval,Submit new approval request,Create approval request,Form state + submission.id,POST /api/approvals
+Submission Detail,Approvals Tab - Action Modal,Section Header,Approve request / Decline request,Modal title based on action,Render modal title,Selected action,-
+Submission Detail,Approvals Tab - Action Modal,Field,Decision,Segmented control for Approve vs Decline,Capture decision,User selection,Form state: decision
+Submission Detail,Approvals Tab - Action Modal,Field,Approval note / Decline reason,Text area for decision justification,Capture justification,User entry,Form state: note
+Submission Detail,Approvals Tab - Action Modal,Button,Cancel,Dismiss modal,Close modal,User click,Modal closed
+Submission Detail,Approvals Tab - Action Modal,Button,Confirm approval / Confirm decline,Submit decision,Submit approval decision,Form state + approval.id,PATCH /api/approvals/{id}/decide
+Submission Detail,Notes Tab - Working Scratchpad,Section Header,Working Scratchpad,Transient draft area for underwriter thoughts,Render section header,Static text,-
+Submission Detail,Notes Tab - Working Scratchpad,Textarea,Scratchpad text input,Main editable text field for drafting notes,Capture scratchpad text,User entry,Local UI state: scratchpad
+Submission Detail,Notes Tab - Working Scratchpad,Button,Clear,Removes all text from scratchpad,Clear scratchpad,User click,Clears scratchpad state
+Submission Detail,Notes Tab - Working Scratchpad,Label,Character count,Displays number of characters,Render scratchpad length,scratchpad.length,-
+Submission Detail,Notes Tab - Working Scratchpad,Button,Commit to journal,Moves scratchpad text to Official Journal,Commit scratchpad as journal entry,scratchpad text + submission.id,POST /api/journal -> append entry; clear scratchpad
+Submission Detail,Notes Tab - Official Journal,Section Header,Official Journal,Read-only append-only audit trail,Render section header,Static text,-
+Submission Detail,Notes Tab - Official Journal,Label,Entry count,Shows total number of journal entries,Count journal entries,journal.entries.length,-
+Submission Detail,Notes Tab - Official Journal,Stat,Entry position indicator,"Displays ordinal anchor (#001, #002)",Render entry ordinal,entry.position,-
+Submission Detail,Notes Tab - Main Panel,Section Header,Notes,Main section for all note entries,Render section header,Static text,-
+Submission Detail,Notes Tab - Main Panel,Search,Search notes on this submission,"Full-text search across authors, content, and tags",Filter notes by query,User text,Sets ?q=<text>
+Submission Detail,Notes Tab - Main Panel,Filter Chip,All,Filter showing all notes with count badge,Clear notes filter,?noteFilter URL param,Clears ?noteFilter
+Submission Detail,Notes Tab - Main Panel,Filter Chip,Mine,Filter showing only user notes,Filter to user notes,?noteFilter URL param,Sets ?noteFilter=mine
+Submission Detail,Notes Tab - Main Panel,Filter Chip,Pinned,Filter showing only pinned notes,Filter to pinned notes,?noteFilter URL param,Sets ?noteFilter=pinned
+Submission Detail,Notes Tab - Main Panel,Button,New note,Opens modal to create a new note entry,Open new note modal,User click,Modal open state
+Submission Detail,Notes Tab - Main Panel,Pill/Badge,Note tags,"Colored tag badges (Renewal, Risk control, Loss run, etc.)",Render tag badges,note.tags,-
+Submission Detail,Notes Tab - Main Panel,Button,Pin / Pinned,Toggle to pin or unpin a note,Toggle note pinned state,note.id + note.pinned,PATCH /api/notes/{id} { pinned }
+Submission Detail,Notes Tab - New Note Modal,Section Header,New note,Modal title with current date,Render modal title,Static text + now(),-
+Submission Detail,Notes Tab - New Note Modal,Field,Account,Read-only field locked to current account,Render account name,submission.member.name,-
+Submission Detail,Notes Tab - New Note Modal,Field,Submission,Read-only field locked to current submission,Render submission ID,submission.id,-
+Submission Detail,Notes Tab - New Note Modal,Textarea,Note,Text input for note content,Capture note content,User entry,Form state: body
+Submission Detail,Notes Tab - New Note Modal,Field,Tags input field,Tag container where tags can be added and removed,Manage tag chips,User entry + tags state,Form state: tags
+Submission Detail,Notes Tab - New Note Modal,Button,Add tag from input,Adds custom tag when Enter is pressed,Add tag to note,User entry,Updates form.tags
+Submission Detail,Notes Tab - New Note Modal,Button,Quick-add tag,Pre-configured quick-add buttons for common tags,Add preset tag,Preset list,Updates form.tags
+Submission Detail,Notes Tab - New Note Modal,Button,Cancel,Closes modal without saving,Close modal,User click,Modal closed
+Submission Detail,Notes Tab - New Note Modal,Button,Add note,Submits and creates new note,Submit note,Form state + submission.id,POST /api/notes
+Submission Detail,Notes Tab - View Note Modal,Button,Pin / Pinned (modal),Toggle to pin or unpin note from full-screen view,Toggle pinned state,note.id + note.pinned,PATCH /api/notes/{id}
+Submission Detail,Notes Tab - View Note Modal,Button,Close,Closes the note view modal,Close modal,User click,Modal closed
+Submission Detail,Notes Tasks Tab - Status Tracker,Section Header,Submission Status Tracker,Timeline of workflow stages,Render section header,Static text,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Intake & Triage,First workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Information Gathering,Workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Risk Assessment,Current workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Referral Review,Future workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Quote Preparation,Future workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Status Tracker,Timeline Event,Bind,Final workflow stage,Render stage node + status,submission.stage,-
+Submission Detail,Notes Tasks Tab - Notes & Communications,Section Header,Notes & Communications,Container for notes and communications,Render section header,Static text,-
+Submission Detail,Notes Tasks Tab - Notes & Communications,Button,UW Note,Tab to select UW Note type when adding,Set note type to UW Note,UI state,Updates form.noteType=uw
+Submission Detail,Notes Tasks Tab - Notes & Communications,Button,Internal,Tab to select Internal note type,Set note type to Internal,UI state,Updates form.noteType=internal
+Submission Detail,Notes Tasks Tab - Notes & Communications,Button,Broker Communication,Tab to select Broker Communication type,Set note type to Broker Communication,UI state,Updates form.noteType=broker
+Submission Detail,Notes Tasks Tab - Notes & Communications,Textarea,Add note input,Text field to compose a new note,Capture note body,User entry,Form state: body
+Submission Detail,Notes Tasks Tab - Notes & Communications,Button,Add Note,Submits the new note entry,Submit note,Form state + submission.id,POST /api/notes
+Submission Detail,Notes Tasks Tab - Notes & Communications,Pill/Badge,Note type badge,"Colored badge (UW Note, Internal, Broker Communication)",Render note type chip,note.noteType,-
+Submission Detail,Notes Tasks Tab - Workflow Actions,Section Header,Workflow Actions,Panel of available workflow state changes,Render section header,Static text,-
+Submission Detail,Notes Tasks Tab - Workflow Actions,Button,Reassign Submission,Changes assigned underwriter,Open reassign popover,User click,Popover open -> PATCH /api/submissions/{id} { assigneeId }
+Submission Detail,Notes Tasks Tab - Workflow Actions,Button,Escalate to Manager,Flags for supervisor review,Escalate submission,submission.id,POST /api/submissions/{id}/escalate
+Submission Detail,Notes Tasks Tab - Workflow Actions,Button,Delegate to Analyst,Assigns sub-task to analyst,Delegate to analyst,User selection,POST /api/submissions/{id}/delegate
+Submission Detail,Notes Tasks Tab - Workflow Actions,Button,Flag: Referral Required / Clear Referral Flag,Toggles referral requirement status,Toggle referral flag,submission.id + submission.referralFlag,PATCH /api/submissions/{id} { referralFlag }
+Submission Detail,Notes Tasks Tab - Open Tasks,Section Header,Open Tasks,Container for task list with status counts,Render section header,Static text,-
+Submission Detail,Notes Tasks Tab - Open Tasks,Label,Task count pills,"Shows Open, Active, and Done task counts",Render task status counts,tasks grouped by status,-
+Submission Detail,Notes Tasks Tab - Open Tasks,Button,Add Task,Opens modal to create new task,Open new task modal,User click,Modal open state
+Submission Detail,Tasks Tab - Task Table,Section Header,Tasks for this submission,Main title with open and completed counts,Render section header,Static text + tasks counts,-
+Submission Detail,Tasks Tab - Task Table,Search,Search tasks,"Full-text search for task title, assignee, or type",Filter tasks by query,User text,Sets ?q=<text>
+Submission Detail,Tasks Tab - Task Table,Button,New task,Opens modal to create new task,Open new task modal,User click,Modal open state
+Submission Detail,Tasks Tab - Task Table,Alert Banner,Action Required,"Shows when tasks are overdue, due today, or blocked",Render alert banner,tasks filtered by urgent,-
+Submission Detail,Tasks Tab - Task Table,Label,Overdue count,Number of overdue tasks,Count overdue tasks,tasks filtered by overdue,-
+Submission Detail,Tasks Tab - Task Table,Label,Due today count,Number of tasks due today,Count tasks due today,tasks filtered by dueToday,-
+Submission Detail,Tasks Tab - Task Table,Label,Blocked count,Number of blocked tasks,Count blocked tasks,tasks filtered by blocked,-
+Submission Detail,Tasks Tab - Task Table,Button,Show urgent only / Show all,Toggles filter to urgent-only tasks,Toggle urgent-only filter,?urgent URL param,Toggles ?urgent
+Submission Detail,Tasks Tab - Task Table,Column,Task,Column for task title,Render column header,Static text,-
+Submission Detail,Tasks Tab - Task Table,Column,Type,Column for task type,Render column header,Static text,-
+Submission Detail,Tasks Tab - Task Table,Column,Assignee,Column for assigned person,Render column header,Static text,-
+Submission Detail,Tasks Tab - Task Table,Column,Due Date,Column for due date,Render column header,Static text,-
+Submission Detail,Tasks Tab - Task Table,Column,Priority,Column for priority level,Render column header,Static text,-
+Submission Detail,Tasks Tab - Task Table,Checkbox,Task checkbox,Circular checkbox to mark task complete,Toggle task completion,task.id + task.status,PATCH /api/tasks/{id} { status }
+Submission Detail,Tasks Tab - Task Table,Pill/Badge,Task type chip,"Badge showing task type (Review, Follow-up, Communication, etc.)",Render task type chip,task.type,-
+Submission Detail,Tasks Tab - Task Table,Pill/Badge,Overdue badge,Red badge showing days overdue,Render overdue badge,task.dueDate + now(),-
+Submission Detail,Tasks Tab - Task Table,Pill/Badge,Due today badge,Orange badge indicating due today,Render due-today badge,task.dueDate,-
+Submission Detail,Tasks Tab - Task Table,Pill/Badge,Blocked badge,Red badge indicating task is blocked,Render blocked badge,task.blocked,-
+Submission Detail,Tasks Tab - Task Table,Button,Resolve (urgent rows),Action button on urgent rows to mark complete,Mark task complete from urgent row,task.id,PATCH /api/tasks/{id}/complete
+Submission Detail,Tasks Tab - Task Table,Button,Completed toggle,Expands/collapses completed tasks section,Toggle completed section visibility,UI state,Toggled UI state
+Submission Detail,Tasks Tab - Task Table,Button,Reopen,Reopens a completed task (hover to reveal),Reopen completed task,task.id,PATCH /api/tasks/{id}/reopen
+Submission Detail,Tasks Tab - New Task Modal,Section Header,New task,Modal title,Render modal title,Static text,-
+Submission Detail,Tasks Tab - New Task Modal,Field,Account,Read-only account field,Render account name,submission.member.name,-
+Submission Detail,Tasks Tab - New Task Modal,Field,Submission,Read-only submission field,Render submission ID,submission.id,-
+Submission Detail,Tasks Tab - New Task Modal,Field,Type,Dropdown to select task type,Capture task type,User selection,Form state: type
+Submission Detail,Tasks Tab - New Task Modal,Field,Task,Text input for task title/description,Capture task title,User entry,Form state: title
+Submission Detail,Tasks Tab - New Task Modal,Field,Priority,Dropdown to select High/Medium/Low priority,Capture priority,User selection,Form state: priority
+Submission Detail,Tasks Tab - New Task Modal,Field,Assignee,Dropdown to select team member,Capture assignee,User selection + GET /api/users,Form state: assigneeId
+Submission Detail,Tasks Tab - New Task Modal,Field,Due Date,Date picker (optional) for due date,Capture due date,User selection,Form state: dueDate
+Submission Detail,Tasks Tab - New Task Modal,Textarea,Notes,Optional context notes for the task,Capture notes,User entry,Form state: notes
+Submission Detail,Tasks Tab - New Task Modal,Button,Cancel,Closes modal without saving,Close modal,User click,Modal closed
+Submission Detail,Tasks Tab - New Task Modal,Button,Create task,Submits and creates new task,Submit task,Form state + submission.id,POST /api/tasks
+Submission Detail,History Tab - UW Action Timeline,Section Header,Underwriting Action History,Historical UW decisions and rate changes,Render section header,Static text,-
+Submission Detail,History Tab - UW Action Timeline,Timeline Event,Timeline row,"Year, carrier, policy number, action, detail, premium, and UW note",Render UW action row,history.uwActions[i],-
+Submission Detail,History Tab - UW Action Timeline,Label,Year,Policy year displayed at left,Render year,uwAction.year,-
+Submission Detail,History Tab - UW Action Timeline,Label,Carrier name,Insurance carrier name,Render carrier name,uwAction.carrier,-
+Submission Detail,History Tab - UW Action Timeline,Label,Policy number,Policy number or dash if not applicable,Render policy number,uwAction.policyNumber,-
+Submission Detail,History Tab - UW Action Timeline,Label,Action title,"Main UW action taken (Rate Cap Applied, SIR Increased, etc.)",Render action title,uwAction.title,-
+Submission Detail,History Tab - UW Action Timeline,Pill/Badge,Rate change badge,Colored badge showing rate change percentage,Render rate change badge,uwAction.rateChange,-
+Submission Detail,History Tab - UW Action Timeline,Label,Action detail,Description of what was done and why,Render action description,uwAction.detail,-
+Submission Detail,History Tab - UW Action Timeline,KPI Card,UW Note box,Boxed note with context explaining underwriting decision,Render UW note,uwAction.note,-
+Submission Detail,History Tab - UW Action Timeline,Label,Premium,Dollar amount of the premium,Render premium,uwAction.premium,-
+Submission Detail,History Tab - Prior Application Responses,Section Header,Prior Application Responses,Table of historical application Q&A,Render section header,Static text,-
+Submission Detail,History Tab - Prior Application Responses,Column,Year,Column for policy year,Render column header,Static text,-
+Submission Detail,History Tab - Prior Application Responses,Column,Question,Column for application question text,Render column header,Static text,-
+Submission Detail,History Tab - Prior Application Responses,Column,Insured Response,Column for insured answer,Render column header,Static text,-
+Submission Detail,History Tab - Prior Application Responses,Column,Flag,Column for flag status,Render column header,Static text,-
+Submission Detail,History Tab - Prior Application Responses,Pill/Badge,Review flag,Orange flag badge for responses needing review,Render review flag,response.flag,-
+Submission Detail,History Tab - Prior Application Responses,Pill/Badge,Clear flag,Green checkmark badge for cleared responses,Render clear flag,response.flag,-
+Submission Detail,Audit Trail Tab - Header,Section Header,Audit Trail,Main title of audit log,Render section header,Static text,-
+Submission Detail,Audit Trail Tab - Header,Button,Hide/Show System Events,Toggle to hide or show system-generated events,Toggle system events visibility,?showSystem URL param,Toggles ?showSystem
+Submission Detail,Audit Trail Tab - Filter Chips,Button,All Events,Filter chip showing all event types,Clear event type filter,?eventType URL param,Clears ?eventType
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Status,Filter chip for status change events,Filter to status events,?eventType URL param,Sets ?eventType=status
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Documents,Filter chip for document-related events,Filter to doc events,?eventType URL param,Sets ?eventType=document
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Notes,Filter chip for note events,Filter to note events,?eventType URL param,Sets ?eventType=note
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Tasks,Filter chip for task events,Filter to task events,?eventType URL param,Sets ?eventType=task
+Submission Detail,Audit Trail Tab - Filter Chips,Button,UW Actions,Filter chip for underwriting action events,Filter to UW action events,?eventType URL param,Sets ?eventType=uw_action
+Submission Detail,Audit Trail Tab - Filter Chips,Button,System,Filter chip for system events,Filter to system events,?eventType URL param,Sets ?eventType=system
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Referrals,Filter chip for referral events,Filter to referral events,?eventType URL param,Sets ?eventType=referral
+Submission Detail,Audit Trail Tab - Filter Chips,Button,Reassign,Filter chip for reassignment events,Filter to reassign events,?eventType URL param,Sets ?eventType=reassign
+Submission Detail,Audit Trail Tab - Event List,Avatar,Event actor avatar,Initials in colored circle or system icon,Render actor avatar,event.actor,-
+Submission Detail,Audit Trail Tab - Event List,Pill/Badge,Event type badge,Colored badge with icon and event type label,Render event type badge,event.type,-
+Submission Detail,Audit Trail Tab - Event List,Label,Event action,Main action description,Render event action,event.action,-
+Submission Detail,Audit Trail Tab - Event List,Label,Timestamp,Date and time the event occurred,Render timestamp,event.timestamp,-
+Submission Detail,Audit Trail Tab - Event List,Label,User name,Name of person who triggered the event,Render user name,event.actor.name,-
+Submission Detail,Audit Trail Tab - Event List,Label,User role,Job title/role of event actor,Render user role,event.actor.role,-
+Submission Detail,Audit Trail Tab - Event List,Label,Event detail,Full description of what happened,Render event detail,event.detail,-
+Submission Detail,Audit Trail Tab - Event List,Label,Field changed,Name of field that was changed,Render field name,event.fieldChanged,-
+Submission Detail,Audit Trail Tab - Event List,Label,From value,Previous value before change,Render previous value,event.fromValue,-
+Submission Detail,Audit Trail Tab - Event List,Label,To value,New value after change,Render new value,event.toValue,-
+Submission Detail,Audit Trail Tab - Footer,Label,Event summary,Shows count of displayed events and total count,Render event counts,filtered.length + total,-
+Submission Detail,Audit Trail Tab - Footer,Label,Last updated timestamp,Date and time of last event in log,Render last event timestamp,events max(timestamp),-
+Submission Detail,Audit Trail Tab - Footer,Button,Export Audit Log,Button to export audit trail as file,Export audit log,Current filter params,GET /api/audit/export -> file download

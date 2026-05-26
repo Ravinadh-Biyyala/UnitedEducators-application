@@ -39,12 +39,14 @@ export function SubmissionsFiltersContainer({ onClose }: Props) {
 
   return (
     <aside
+      id="filters-drawer"
+      aria-label="Submission filters"
       className="flex flex-col shrink-0 bg-white h-full"
       style={{ width: 280, borderRight: `1px solid ${colors.slate200}` }}
     >
       {/* Header */}
       <div
-        className="flex items-center shrink-0"
+        className="flex items-center justify-between shrink-0"
         style={{
           height:       ds.headerHeight,
           paddingLeft:  ds.headerPaddingX,
@@ -52,9 +54,21 @@ export function SubmissionsFiltersContainer({ onClose }: Props) {
           borderBottom: `1px solid ${ds.headerBorderColor}`,
         }}
       >
-        <span style={{ fontSize: ds.titleSize, fontWeight: ds.titleWeight, color: ds.titleColor }}>
+        <h2
+          className="m-0"
+          style={{ fontSize: ds.titleSize, fontWeight: ds.titleWeight, color: ds.titleColor }}
+        >
           Filters
-        </span>
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close filters"
+          className="inline-flex items-center justify-center text-neutral-500 hover:text-neutral-700 rounded ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
+          style={{ width: 32, height: 32 }}
+        >
+          ×
+        </button>
       </div>
 
       {/* Body — scrollable */}
@@ -92,16 +106,15 @@ export function SubmissionsFiltersContainer({ onClose }: Props) {
           type="button"
           onClick={resetFilters}
           disabled={activeFilterCount === 0}
-          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-opacity"
+          aria-label={`Reset all ${activeFilterCount} filters`}
+          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-opacity rounded ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
           style={{
-            color:         fs.resetColor,
-            fontSize:      fs.resetSize,
-            fontWeight:    fs.resetWeight,
-            background:    'transparent',
-            border:        'none',
-            padding:       '8px 12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
+            color:      fs.resetColor,
+            fontSize:   fs.resetSize,
+            fontWeight: fs.resetWeight,
+            background: 'transparent',
+            border:     'none',
+            padding:    '8px 12px',
           }}
         >
           Reset all
@@ -109,7 +122,7 @@ export function SubmissionsFiltersContainer({ onClose }: Props) {
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer transition-opacity hover:opacity-90"
+          className="cursor-pointer transition-opacity hover:opacity-90 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid focus-visible:ring-offset-2"
           style={{
             backgroundColor: colors.brandBlue,
             color:           colors.white,

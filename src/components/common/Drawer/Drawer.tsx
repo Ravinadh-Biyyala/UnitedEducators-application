@@ -106,8 +106,8 @@ export function DrawerClose({ ariaLabel = 'Close drawer' }: { ariaLabel?: string
   return (
     <Dialog.Close
       aria-label={ariaLabel}
-      className="inline-flex items-center justify-center cursor-pointer rounded-sm hover:bg-neutral-100 transition-colors"
-      style={{ width: 28, height: 28, color: ds.closeIconColor }}
+      className="inline-flex items-center justify-center cursor-pointer rounded-sm hover:bg-neutral-100 transition-colors ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
+      style={{ width: 44, height: 44, color: ds.closeIconColor }}
     >
       <X size={ds.closeIconSize} />
     </Dialog.Close>

@@ -35,9 +35,11 @@ export function MultiSelect<TId extends string = string>({
   ariaLabel,
 }: MultiSelectProps<TId>) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef      = useRef<HTMLButtonElement | null>(null);
   const dropdownRef     = useRef<HTMLDivElement | null>(null);
   const dropdownId      = useId();
+  const typeAheadRef    = useRef<{ query: string; lastAt: number }>({ query: '', lastAt: 0 });
 
   const valueSet     = useMemo(() => new Set(value), [value]);
   const selectedOpts = useMemo(
@@ -100,6 +102,44 @@ export function MultiSelect<TId extends string = string>({
     onChange(value.filter((v) => v !== id));
   };
 
+  const onTriggerKey = (e: React.KeyboardEvent) => {
+    if (!open && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      setOpen(true);
+      setActiveIndex(0);
+    }
+  };
+
+  const onDropdownKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, options.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveIndex(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActiveIndex(options.length - 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const opt = options[activeIndex];
+      if (opt) toggle(opt.id);
+    } else if (e.key.length === 1 && /\S/.test(e.key)) {
+      const now = Date.now();
+      const prev = typeAheadRef.current;
+      const query = (now - prev.lastAt > 500 ? '' : prev.query) + e.key.toLowerCase();
+      typeAheadRef.current = { query, lastAt: now };
+      const match = options.findIndex((o) => o.label.toLowerCase().startsWith(query));
+      if (match >= 0) setActiveIndex(match);
+    }
+  };
+
+  const selectAll = () => onChange(options.map((o) => o.id));
+  const clearAll = () => onChange([]);
+
   return (
     <div>
       <button
@@ -110,7 +150,8 @@ export function MultiSelect<TId extends string = string>({
         aria-expanded={open}
         aria-controls={open ? dropdownId : undefined}
         onClick={() => setOpen((o) => !o)}
-        className="relative w-full text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        onKeyDown={onTriggerKey}
+        className="relative w-full text-left cursor-pointer ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
         style={{
           minHeight:       inputStyles.height,
           backgroundColor: inputStyles.bg,
@@ -153,22 +194,14 @@ export function MultiSelect<TId extends string = string>({
                 }}
               >
                 {o.label}
-                <span
-                  role="button"
+                <button
+                  type="button"
                   aria-label={`Remove ${o.label}`}
-                  tabIndex={0}
                   onClick={(e) => removeChip(o.id, e)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onChange(value.filter((v) => v !== o.id));
-                    }
-                  }}
-                  className="inline-flex items-center justify-center cursor-pointer"
+                  className="inline-flex items-center justify-center cursor-pointer ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
                 >
-                  <X size={ms.chipCloseIconSize} color={ms.chipCloseColor} />
-                </span>
+                  <X size={ms.chipCloseIconSize} color={ms.chipCloseColor} aria-hidden />
+                </button>
               </span>
             ))}
           </span>
@@ -211,7 +244,10 @@ export function MultiSelect<TId extends string = string>({
             id={dropdownId}
             ref={(el) => { dropdownRef.current = el; refs.setFloating(el); }}
             role="listbox"
-            aria-multiselectable
+            aria-multiselectable="true"
+            aria-label={ariaLabel}
+            tabIndex={-1}
+            onKeyDown={onDropdownKey}
             className="z-[1000] overflow-y-auto"
             style={{
               ...floatingStyles,
@@ -221,14 +257,36 @@ export function MultiSelect<TId extends string = string>({
               border:          `${s.dropdownBorderWidth}px solid ${s.dropdownBorderColor}`,
             }}
           >
-            {options.map((opt) => {
+            {/* Bulk actions — keeps long option lists usable */}
+            {options.length > 4 && (
+              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-brand-vivid hover:underline ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  disabled={value.length === 0}
+                  className="text-slate-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid rounded"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            {options.map((opt, i) => {
               const isSelected = valueSet.has(opt.id);
+              const isActive   = i === activeIndex;
               return (
                 <button
                   key={opt.id}
                   type="button"
                   role="option"
                   aria-selected={isSelected}
+                  onMouseEnter={() => setActiveIndex(i)}
                   onClick={() => toggle(opt.id)}
                   className="flex w-full items-center justify-between text-left"
                   style={{
@@ -236,7 +294,13 @@ export function MultiSelect<TId extends string = string>({
                     paddingRight:    s.optionPaddingX,
                     paddingTop:      s.optionPaddingY,
                     paddingBottom:   s.optionPaddingY,
-                    backgroundColor: isSelected ? s.optionSelectedBg : 'transparent',
+                    backgroundColor: isSelected
+                      ? s.optionSelectedBg
+                      : isActive
+                      ? s.optionHoverBg
+                      : 'transparent',
+                    outline: isActive ? '2px solid #0123D4' : 'none',
+                    outlineOffset: '-2px',
                   }}
                 >
                   <span

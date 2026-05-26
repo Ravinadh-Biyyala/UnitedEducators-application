@@ -1,3 +1,4 @@
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { UnderwriterPerformance } from '@/shared/types/teamPerformance';
 import { formatHitRatio }    from '@/shared/utils/formatHitRatio';
 import { formatDaysToQuote } from '@/shared/utils/formatDaysToQuote';
@@ -9,76 +10,90 @@ interface TeamPerformanceRowProps {
   isLast?:     boolean;
 }
 
-const colStyle: React.CSSProperties = {
-  width:      teamPerfDims.columnWidth,
-  flexShrink: 0,
-  display:    'flex',
-  alignItems: 'center',
-  fontFamily: fonts.sans,
+const cellStyle: React.CSSProperties = {
+  verticalAlign: 'middle',
+  fontFamily:    fonts.sans,
 };
 
 export function TeamPerformanceRow({ underwriter: u, isLast }: TeamPerformanceRowProps) {
-  const dtqColor = u.daysToQuote < daysToQuoteThreshold.fastUnder
-    ? daysToQuoteThreshold.fastColor
-    : daysToQuoteThreshold.slowColor;
+  const isFast = u.daysToQuote < daysToQuoteThreshold.fastUnder;
+  const dtqColor = isFast ? daysToQuoteThreshold.fastColor : daysToQuoteThreshold.slowColor;
+  const dtqLabel = isFast ? 'On track' : 'Above target';
+  const DtqIcon = isFast ? CheckCircle2 : AlertTriangle;
 
   return (
-    <div
+    <tr
       style={{
-        display:      'flex',
         height:       teamPerfDims.rowHeight,
-        paddingLeft:  20,
         borderBottom: isLast ? 'none' : `1px solid ${colors.borderDefault}`,
         background:   colors.bgSurface,
       }}
     >
-      {/* Underwriter column */}
-      <div style={{ ...colStyle, gap: teamPerfDims.avatarGap }}>
-        <Avatar name={u.name} role={u.role} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: teamPerfDims.nameFontSize, fontWeight: 600, color: colors.textHeading }}>
-            {u.name}
-          </span>
-          <span style={{ fontSize: teamPerfDims.roleLabelFontSize, fontWeight: 400, color: colors.textMuted }}>
-            {u.roleLabel}
-          </span>
+      {/* Underwriter */}
+      <th
+        scope="row"
+        style={{
+          ...cellStyle,
+          paddingLeft: 20,
+          textAlign:   'left',
+          fontWeight:  600,
+        }}
+      >
+        <div className="inline-flex items-center" style={{ gap: teamPerfDims.avatarGap }}>
+          <Avatar name={u.name} role={u.role} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: teamPerfDims.nameFontSize, fontWeight: 600, color: colors.textHeading }}>
+              {u.name}
+            </span>
+            <span style={{ fontSize: teamPerfDims.roleLabelFontSize, fontWeight: 400, color: colors.textMuted }}>
+              {u.roleLabel}
+            </span>
+          </div>
         </div>
-      </div>
+      </th>
 
-      {/* In Review */}
-      <div style={colStyle}>
-        <span style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.inReview.color }}>
+      <td style={cellStyle}>
+        <span
+          className="tabular-nums"
+          style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.inReview.color }}
+        >
           {u.inReview}
         </span>
-      </div>
-
-      {/* Quoted */}
-      <div style={colStyle}>
-        <span style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.quoted.color }}>
+      </td>
+      <td style={cellStyle}>
+        <span
+          className="tabular-nums"
+          style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.quoted.color }}
+        >
           {u.quoted}
         </span>
-      </div>
-
-      {/* Bound */}
-      <div style={colStyle}>
-        <span style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.bound.color }}>
+      </td>
+      <td style={cellStyle}>
+        <span
+          className="tabular-nums"
+          style={{ fontSize: teamPerfDims.statFontSize, fontWeight: 700, color: teamPerfStatStyles.bound.color }}
+        >
           {u.bound}
         </span>
-      </div>
-
-      {/* Hit Ratio — always textHeading, never threshold-colored */}
-      <div style={colStyle}>
-        <span style={{ fontSize: teamPerfDims.scoreFontSize, fontWeight: 700, color: colors.textHeading }}>
+      </td>
+      <td style={cellStyle}>
+        <span
+          className="tabular-nums"
+          style={{ fontSize: teamPerfDims.scoreFontSize, fontWeight: 700, color: colors.textHeading }}
+        >
           {formatHitRatio(u.hitRatioPct)}
         </span>
-      </div>
-
-      {/* Days to Quote — threshold-colored */}
-      <div style={colStyle}>
-        <span style={{ fontSize: teamPerfDims.scoreFontSize, fontWeight: 600, color: dtqColor }}>
+      </td>
+      <td style={cellStyle}>
+        <span
+          aria-label={`${dtqLabel}: ${formatDaysToQuote(u.daysToQuote)}`}
+          className="inline-flex items-center gap-1 tabular-nums"
+          style={{ fontSize: teamPerfDims.scoreFontSize, fontWeight: 600, color: dtqColor }}
+        >
+          <DtqIcon size={12} aria-hidden />
           {formatDaysToQuote(u.daysToQuote)}
         </span>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }

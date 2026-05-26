@@ -42,12 +42,10 @@ export function SectionPanel({
           <h3
             className="m-0"
             style={{
-              fontSize:      s.headerTitleSize,
-              lineHeight:    `${s.headerTitleLineHeight}px`,
-              fontWeight:    s.headerTitleWeight,
-              letterSpacing: s.headerTitleLetterSpacing,
-              textTransform: 'uppercase',
-              color:         s.headerTitleColor,
+              fontSize:   s.headerTitleSize,
+              lineHeight: `${s.headerTitleLineHeight}px`,
+              fontWeight: s.headerTitleWeight,
+              color:      s.headerTitleColor,
             }}
           >
             {title}

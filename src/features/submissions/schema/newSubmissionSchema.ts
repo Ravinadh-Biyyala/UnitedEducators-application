@@ -31,7 +31,13 @@ export const newSubmissionSchema = z.object({
   brokerageId:              z.string().optional(),
   brokerContactId:          z.string().optional(),
   brokerEmail:              z.string().email().optional().or(z.literal('')),
-  brokerPhone:              z.string().optional(),
+  // Loose phone regex: digits, spaces, parens, dashes, plus. Doesn't enforce
+  // a specific country format — just rejects obviously-invalid input.
+  brokerPhone:              z
+    .string()
+    .regex(/^[\d\-\+\(\)\.\s]+$/, 'Use digits, spaces, dashes, parentheses, or +')
+    .optional()
+    .or(z.literal('')),
   underwriterId:            z.string().optional(),
   underwritingSpecialistId: z.string().optional(),
   documents:                z.array(uploadedDocumentSchema),

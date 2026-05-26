@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGetAlertsQuery } from '@/services/alerts/alertsApi';
 import { AlertsPanel } from '@/components/domain/AlertsPanel';
+import { PanelErrorState } from '@/components/common/ErrorBoundary/PanelErrorState';
 import { formatAlertTimestamp } from '@/shared/utils';
 import {
   ALERT_FILTER_PARAM,
@@ -11,7 +12,7 @@ import {
 import type { AlertFilter } from '@/shared/types';
 
 export function AlertsPanelContainer() {
-  const { data } = useGetAlertsQuery();
+  const { data, isLoading, error, refetch } = useGetAlertsQuery();
   const [params, setParams] = useSearchParams();
 
   const raw           = params.get(ALERT_FILTER_PARAM);
@@ -49,6 +50,18 @@ export function AlertsPanelContainer() {
     console.log('[Alerts] view all clicked');
   };
 
+  if (error) return <PanelErrorState panelName="Alerts" onRetry={refetch} />;
+  if (isLoading && !data) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading alerts"
+        className="bg-white border border-neutral-200 animate-pulse"
+        style={{ minHeight: 200 }}
+      />
+    );
+  }
   if (!data) return null;
 
   return (

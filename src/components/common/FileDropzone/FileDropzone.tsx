@@ -199,17 +199,35 @@ function FileRow({ doc, onView, onRetry, onRemove }: FileRowProps) {
       {/* actions */}
       <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: s.actionsGap, flexShrink: 0 }}>
         {isError && (
-          <button type="button" onClick={() => onRetry(doc.clientId)} style={iconBtn} title="Retry upload">
-            <RotateCcw size={13} />
+          <button
+            type="button"
+            onClick={() => onRetry(doc.clientId)}
+            style={iconBtn}
+            title="Retry upload"
+            aria-label={`Retry upload of ${doc.filename}`}
+          >
+            <RotateCcw size={13} aria-hidden />
           </button>
         )}
         {isSuccess && (
-          <button type="button" onClick={() => onView(doc)} style={iconBtn} title="View document">
-            <Eye size={13} />
+          <button
+            type="button"
+            onClick={() => onView(doc)}
+            style={iconBtn}
+            title="View document"
+            aria-label={`View ${doc.filename}`}
+          >
+            <Eye size={13} aria-hidden />
           </button>
         )}
-        <button type="button" onClick={() => onRemove(doc.clientId)} style={iconBtn} title="Remove document">
-          <Trash2 size={13} />
+        <button
+          type="button"
+          onClick={() => onRemove(doc.clientId)}
+          style={iconBtn}
+          title="Remove document"
+          aria-label={`Remove ${doc.filename}`}
+        >
+          <Trash2 size={13} aria-hidden />
         </button>
       </div>
     </div>
@@ -231,11 +249,13 @@ function DropZoneArea({ isDragOver, onDragOver, onDragLeave, onDrop, onClick }: 
     <div
       role="button"
       tabIndex={0}
+      aria-label="Upload documents. Click or drag files into this area."
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      className="ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vivid"
       style={{
         display:         'flex',
         flexDirection:   'column',
@@ -250,9 +270,12 @@ function DropZoneArea({ isDragOver, onDragOver, onDragLeave, onDrop, onClick }: 
         border:          isDragOver
           ? `${s.dropZoneBorderWidth}px solid ${s.activeBorderColor}`
           : `${s.dropZoneBorderWidth}px dashed ${s.dropZoneBorderColor}`,
-        outline: 'none',
       }}
     >
+      {/* Announce drag state to AT users */}
+      <span aria-live="polite" className="sr-only">
+        {isDragOver ? 'Drop files to upload' : ''}
+      </span>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
         <Paperclip size={s.dropZoneIconSize} color={s.primaryColor} />
         <span

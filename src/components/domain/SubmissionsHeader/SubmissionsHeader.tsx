@@ -105,7 +105,8 @@ function ExportButton() {
   return (
     <button
       type="button"
-      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90"
+      aria-label="Export submissions"
+      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-vivid"
       style={{
         width:           submissionsHeaderButtonStyles.exportWidth,
         height:          submissionsHeaderButtonStyles.exportHeight,
@@ -132,8 +133,9 @@ function NewSubmissionButton() {
   return (
     <button
       type="button"
+      aria-label="Create new submission"
       onClick={() => navigate('/submissions/new')}
-      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90"
+      className="inline-flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 ring-custom focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-vivid"
       style={{
         width:           submissionsHeaderButtonStyles.newSubmissionWidth,
         height:          submissionsHeaderButtonStyles.newSubmissionHeight,
@@ -182,11 +184,9 @@ function HeaderKpiTile({ tileKey, value, isLast }: HeaderKpiTileProps) {
     >
       <span
         style={{
-          fontSize:      submissionsHeaderTileStyles.labelSize,
-          fontWeight:    submissionsHeaderTileStyles.labelWeight,
-          color:         submissionsHeaderTileStyles.labelColor,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
+          fontSize:   submissionsHeaderTileStyles.labelSize,
+          fontWeight: submissionsHeaderTileStyles.labelWeight,
+          color:      submissionsHeaderTileStyles.labelColor,
         }}
       >
         {submissionsHeaderTileLabels[tileKey]}

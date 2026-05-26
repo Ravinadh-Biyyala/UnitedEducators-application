@@ -3,20 +3,18 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Inbox, CheckSquare,
   Mail, BarChart2, ShieldCheck, Settings, LogOut,
-  Bell, ChevronDown, X,
+  Bell, ChevronDown, Menu, X,
   UserCheck, Briefcase, Crown, Users,
-  ChevronsLeft, ChevronsRight,
   Calendar, Flag, Activity,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import type { AppRole } from "../context/AuthContext";
 import { CompanionPanel, CompanionBackgroundTray } from "./companion/CompanionPanel";
+import { useCompanion } from "./companion/CompanionContext";
 import ueLogo from "../Images/ue-logo.webp";
-import ueLogoFavIcon from "../Images/ue-logo-fav-icon.jpg";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const N   = "#0123D4";
-const G   = "#C9A227";
 const BD  = "#C4CDD8";
 const BDL = "#DCE3EC";
 const TM  = "#4A5D6E";
@@ -32,7 +30,7 @@ const ROLE_COLORS: Record<AppRole, { bg: string; text: string; border: string; i
   admin:       { bg: "#1A7A4A14", text: "#1A7A4A", border: "#1A7A4A30", icon: <Crown size={10}/> },
 };
 
-// ─── Nav items ────────────────────────────────────────────────────────────────
+// ─── Nav items (unchanged) ────────────────────────────────────────────────────
 const NAV_BASE = [
   { id: "dashboard",     label: "Dashboard",      icon: LayoutDashboard, path: "/",              roles: ["uw","sr-uw","lead","director"] as RoleId[] },
   { id: "submissions",   label: "Submissions",    icon: Inbox,           path: "/submissions",   roles: ["uw","sr-uw","lead","director"] as RoleId[] },
@@ -59,15 +57,18 @@ interface AppShellProps {
 export function AppShell({
   activePage,
   role: roleProp,
-  onRoleChange,
   children,
 }: AppShellProps) {
-  const navigate        = useNavigate();
+  const navigate         = useNavigate();
   const { user, logout } = useAuth();
-  const [userDrop,        setUserDrop]        = useState(false);
-  const [showLogout,      setShowLogout]      = useState(false);
-  const [sidebarOpen,     setSidebarOpen]     = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { collapsed: companionCollapsed } = useCompanion();
+  const [userDrop,   setUserDrop]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Must match the width of the open CompanionPanel <aside>. Reserve that
+  // space on the right of <main> so page content shifts left instead of
+  // being overlapped.
+  const COMPANION_WIDTH = 300;
 
   const effectiveRoleId: RoleId = user?.roleId ?? roleProp ?? "uw";
   const navItems = NAV_BASE.filter(item => item.roles.includes(effectiveRoleId));
@@ -83,7 +84,7 @@ export function AppShell({
     else if (item.id === "activity")      navigate("/activity");
     else if (item.id === "portfolio")     navigate("/portfolio");
     else if (item.id === "appetite")      navigate("/appetite");
-    setSidebarOpen(false);
+    setMobileOpen(false);
   };
 
   const handleLogout = () => {
@@ -95,104 +96,40 @@ export function AppShell({
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
+      className="flex flex-col h-screen overflow-hidden"
       style={{ fontFamily: font, background: "#EEF1F6" }}
     >
-      {/* ── Mobile backdrop ─────────────────────────────────────────────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── SIDEBAR ─────────────────────────────────────────────────────────── */}
-      <aside
-        className={[
-          "flex flex-col shrink-0",
-          "fixed top-0 left-0 bottom-0 z-50",
-          "lg:relative lg:top-auto lg:left-auto lg:bottom-auto lg:z-auto",
-          "transition-all duration-200 ease-in-out",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        ].join(" ")}
+      {/* ── TOP NAV ───────────────────────────────────────────────────────────
+          Replaces the former left sidebar. Logo (left) · primary nav items
+          (middle, horizontally scrollable on narrow viewports) · user pill
+          (right). On mobile the middle collapses into a hamburger that
+          reveals a vertical drawer below the header. */}
+      <header
+        className="flex items-stretch shrink-0 relative z-30"
         style={{
-          width: sidebarCollapsed ? 60 : 160,
-          minWidth: sidebarCollapsed ? 60 : 160,
           background: "white",
-          borderRight: `1px solid ${BDL}`,
-          height: "100vh",
-          // overflow left as `visible` so the user-pill dropdown (anchored just
-          // outside the right edge) isn't clipped. Internal scrolling is
-          // already scoped to <nav className="overflow-y-auto">.
-          position: "relative",
+          borderBottom: `1px solid ${BDL}`,
+          minHeight: 56,
         }}
       >
-        {/* Logo + close btn */}
+        {/* Logo */}
         <div
-          className="flex shrink-0"
-          style={{
-            borderBottom: `1px solid ${BDL}`,
-            minHeight: 64,
-            flexDirection: sidebarCollapsed ? "column" : "row",
-            alignItems: "center",
-            padding: sidebarCollapsed ? "10px 0" : "0 10px 0 12px",
-            justifyContent: sidebarCollapsed ? "center" : "flex-start",
-            gap: sidebarCollapsed ? 6 : 8,
-          }}
+          className="flex items-center shrink-0"
+          style={{ padding: "0 18px", borderRight: `1px solid ${BDL}` }}
         >
-          {sidebarCollapsed ? (
-            <div
-              className="flex items-center justify-center shrink-0"
-              style={{ width: 32, height: 30 }}
-            >
-              <img
-                src={ueLogoFavIcon}
-                alt="United Educators"
-                style={{ height: 28, width: "auto", objectFit: "contain" }}
-              />
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0 flex items-center">
-              <img
-                src={ueLogo}
-                alt="United Educators"
-                style={{ height: 28, width: "auto", maxWidth: "100%", objectFit: "contain" }}
-              />
-            </div>
-          )}
-          {/* Collapse toggle – desktop only */}
-          <button
-            onClick={() => setSidebarCollapsed(v => !v)}
-            className="hidden lg:flex items-center justify-center shrink-0 transition-colors hover:bg-slate-100"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{
-              width: 22, height: 22,
-              border: `1px solid ${BDL}`,
-              background: "white",
-              cursor: "pointer",
-              borderRadius: 5,
-            }}
-          >
-            {sidebarCollapsed
-              ? <ChevronsRight size={11} color={TM} />
-              : <ChevronsLeft size={11} color={TM} />
-            }
-          </button>
-          {/* Close btn – mobile only */}
-          {!sidebarCollapsed && (
-            <button
-              className="flex items-center justify-center lg:hidden shrink-0"
-              onClick={() => setSidebarOpen(false)}
-              style={{ width: 22, height: 22, border: `1px solid ${BDL}`, borderRadius: 5 }}
-            >
-              <X size={12} color={TT} />
-            </button>
-          )}
+          <img
+            src={ueLogo}
+            alt="United Educators"
+            style={{ height: 30, width: "auto", maxWidth: 168, objectFit: "contain" }}
+          />
         </div>
 
-        {/* Nav */}
-        <nav className="flex flex-col py-1.5 flex-1 overflow-y-auto">
+        {/* Primary nav — desktop */}
+        <nav
+          className="hidden lg:flex items-stretch flex-1 min-w-0 overflow-x-auto"
+          aria-label="Primary"
+          style={{ scrollbarWidth: "thin" }}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
@@ -200,46 +137,65 @@ export function AppShell({
               <button
                 key={item.id}
                 onClick={() => handleNav(item)}
-                title={sidebarCollapsed ? item.label : undefined}
-                className="flex items-center w-full text-left transition-all relative"
+                aria-current={isActive ? "page" : undefined}
+                title={item.label}
+                className="inline-flex items-center gap-2 shrink-0 transition-colors"
+                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "#F6F8FB"; }}
+                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                 style={{
-                  fontSize: "0.76rem",
-                  fontWeight: isActive ? 700 : 400,
-                  color: isActive ? "white" : TM,
-                  background: isActive ? N : "transparent",
-                  borderLeft: isActive ? `3px solid ${G}` : "3px solid transparent",
-                  justifyContent: sidebarCollapsed ? "center" : "flex-start",
-                  gap: sidebarCollapsed ? 0 : 9,
-                  padding: sidebarCollapsed ? "10px 0" : "9px 12px",
-                  borderRadius: 6,
+                  padding: "0 16px",
+                  fontSize: "0.82rem",
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? N : TM,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  borderBottom: isActive ? `3px solid ${N}` : "3px solid transparent",
+                  // Compensate so active border doesn't push label up
+                  paddingTop: 3,
                   whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
-                <Icon size={15} style={{ opacity: isActive ? 1 : 0.65, flexShrink: 0 }} />
-                {!sidebarCollapsed && (
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-                )}
+                <Icon size={15} style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }} />
+                <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* ── Sidebar user pill ─────────────────────────────────────────────── */}
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMobileOpen(v => !v)}
+          className="lg:hidden ml-auto inline-flex items-center justify-center"
+          aria-label="Toggle navigation"
+          style={{
+            margin: "12px 12px 12px 0",
+            width: 34, height: 34,
+            border: `1px solid ${BDL}`, borderRadius: 6,
+            background: "white", cursor: "pointer",
+          }}
+        >
+          {mobileOpen ? <X size={15} color={TM}/> : <Menu size={15} color={TM}/>}
+        </button>
+
+        {/* User pill (right) */}
         {user && (
-          <div className="relative shrink-0" style={{ borderTop: `1px solid ${BDL}`, padding: sidebarCollapsed ? "8px 6px" : "8px" }}>
+          <div
+            className="relative shrink-0 flex items-center"
+            style={{
+              padding: "0 12px",
+              borderLeft: `1px solid ${BDL}`,
+            }}
+          >
             <button
               onClick={() => setUserDrop(v => !v)}
-              className="w-full flex items-center transition-colors hover:bg-slate-50"
-              title={sidebarCollapsed ? `${user.name} · ${user.roleLabel}` : undefined}
+              className="flex items-center transition-colors hover:bg-slate-50"
               style={{
-                gap: sidebarCollapsed ? 0 : 8,
-                padding: sidebarCollapsed ? "6px 0" : "6px 8px",
+                gap: 8,
+                padding: "6px 10px",
                 border: `1px solid ${BDL}`, borderRadius: 7,
                 background: userDrop ? "#F0F3F8" : "white",
                 cursor: "pointer",
-                justifyContent: sidebarCollapsed ? "center" : "flex-start",
               }}
             >
               <div
@@ -248,28 +204,23 @@ export function AppShell({
               >
                 {user.initials}
               </div>
-              {!sidebarCollapsed && (
-                <>
-                  <div className="text-left flex-1 min-w-0">
-                    <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.name}</p>
-                    <p style={{ fontSize: "0.58rem", color: roleColor.text, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.roleLabel}</p>
-                  </div>
-                  <ChevronDown size={12} color={TT} style={{ transform: userDrop ? "rotate(180deg)" : "none", transition: "transform 0.2s ease", flexShrink: 0 }} />
-                </>
-              )}
+              <div className="hidden md:flex flex-col text-left min-w-0">
+                <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }}>{user.name}</p>
+                <p style={{ fontSize: "0.58rem", color: roleColor.text, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }}>{user.roleLabel}</p>
+              </div>
+              <ChevronDown size={12} color={TT} style={{ transform: userDrop ? "rotate(180deg)" : "none", transition: "transform 0.2s ease", flexShrink: 0 }} />
             </button>
 
             {userDrop && (
               <div
                 className="absolute z-50"
                 style={{
-                  width: 260,
+                  width: 280,
                   background: "white", border: `1px solid ${BD}`,
                   boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
                   borderRadius: 8,
-                  bottom: "100%",
-                  left: "calc(100% + 6px)",
-                  marginBottom: 4,
+                  top: "calc(100% + 6px)",
+                  right: 12,
                 }}
               >
                 <div className="px-4 py-4" style={{ borderBottom: `1px solid ${BDL}`, background: "#F8FAFC" }}>
@@ -343,23 +294,56 @@ export function AppShell({
             )}
           </div>
         )}
+      </header>
 
-      </aside>
-
-      {/* ── RIGHT SIDE ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 min-w-0 h-screen">
-
-        {/* CONTENT */}
-        <main
-          className="flex-1 overflow-y-auto"
-          style={{ background: "#EEF1F6" }}
-          onClick={() => {
-            if (!sidebarCollapsed) setSidebarCollapsed(true);
-          }}
+      {/* ── Mobile nav drawer ─────────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden shrink-0"
+          style={{ background: "white", borderBottom: `1px solid ${BDL}` }}
         >
-          {children}
-        </main>
-      </div>
+          <nav className="flex flex-col py-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNav(item)}
+                  aria-current={isActive ? "page" : undefined}
+                  className="flex items-center w-full text-left transition-colors"
+                  style={{
+                    fontSize: "0.84rem",
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? "white" : TM,
+                    background: isActive ? N : "transparent",
+                    gap: 10, padding: "10px 16px",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  <Icon size={16} style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+
+      {/* ── CONTENT ───────────────────────────────────────────────────────────
+          When the Companion panel is open, shrink <main> by 400px on the
+          right so page content (and the scrollbar) sit beside the panel
+          instead of underneath it. */}
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{
+          background: "#EEF1F6",
+          marginRight: companionCollapsed ? 0 : COMPANION_WIDTH,
+          transition: "margin-right 0.2s ease",
+        }}
+      >
+        {children}
+      </main>
 
       {/* Page-aware Companion right rail + background-job tray */}
       <CompanionPanel />

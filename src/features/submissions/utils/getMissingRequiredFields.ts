@@ -8,6 +8,7 @@ export function getMissingRequiredFieldsLabels(
   if (!values.productLines || values.productLines.length === 0) missing.push('Product Line(s)');
   if (!values.needByDate)                            missing.push('Need By Date');
   if (!values.effectiveDate)                         missing.push('Effective Date');
+  if (!values.expirationDate)                        missing.push('Expiration Date');
   return missing;
 }
 

@@ -209,11 +209,9 @@ export function AiAutoFillSection() {
               >
                 <p
                   style={{
-                    fontSize:      '0.60rem',
-                    color:         colors.textMuted,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom:  2,
+                    fontSize:     '0.60rem',
+                    color:        colors.textMuted,
+                    marginBottom: 2,
                   }}
                 >
                   {row.label}

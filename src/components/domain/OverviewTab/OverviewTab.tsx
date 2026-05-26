@@ -38,11 +38,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="mb-3">
         <span
           style={{
-            fontSize:      '0.60rem',
-            fontWeight:    800,
-            color:         colors.textMuted,
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.12em',
+            fontSize:   '0.60rem',
+            fontWeight: 800,
+            color:      colors.textMuted,
           }}
         >
           {title}
@@ -303,11 +301,9 @@ export function OverviewTab() {
         >
           <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${colors.borderDefault}`, background: colors.slate100 }}>
             <h3 style={{
-              fontSize:      '0.78rem',
-              fontWeight:    700,
-              color:         colors.textHeading,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              fontSize:   '0.78rem',
+              fontWeight: 700,
+              color:      colors.textHeading,
             }}>
               Coverage Summary
             </h3>
@@ -320,12 +316,10 @@ export function OverviewTab() {
                     key={h}
                     className="px-5 py-3 text-left"
                     style={{
-                      fontSize:      '0.62rem',
-                      fontWeight:    700,
-                      color:         colors.textMuted,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      borderBottom:  `1px solid ${colors.borderDefault}`,
+                      fontSize:     '0.62rem',
+                      fontWeight:   700,
+                      color:        colors.textMuted,
+                      borderBottom: `1px solid ${colors.borderDefault}`,
                     }}
                   >
                     {h}
@@ -360,11 +354,9 @@ export function OverviewTab() {
         >
           <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${colors.borderDefault}`, background: colors.slate100 }}>
             <h3 style={{
-              fontSize:      '0.78rem',
-              fontWeight:    700,
-              color:         colors.textHeading,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              fontSize:   '0.78rem',
+              fontWeight: 700,
+              color:      colors.textHeading,
             }}>
               Loss Experience
             </h3>
@@ -376,11 +368,9 @@ export function OverviewTab() {
                 <span
                   key={h}
                   style={{
-                    fontSize:      '0.60rem',
-                    fontWeight:    700,
-                    color:         colors.textMuted,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
+                    fontSize:   '0.60rem',
+                    fontWeight: 700,
+                    color:      colors.textMuted,
                   }}
                 >
                   {h}

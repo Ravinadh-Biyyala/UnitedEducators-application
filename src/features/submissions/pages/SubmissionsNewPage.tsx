@@ -1,4 +1,5 @@
-import { useForm, FormProvider } from 'react-hook-form';
+import { useEffect } from 'react';
+import { useForm, FormProvider, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ErrorBoundary, PanelErrorState } from '@/components/common';
 import {
@@ -12,6 +13,25 @@ import type { NewSubmissionFormValues } from '@/shared/types';
 import { newSubmissionSchema } from '../schema/newSubmissionSchema';
 import { NEW_SUBMISSION_DEFAULT_VALUES } from '../schema/defaultValues';
 
+/**
+ * Warns the user before they lose unsaved changes via tab close / refresh / back.
+ * Router-level guards (useBlocker) belong in the route definition; this covers
+ * the browser-level cases that aren't governed by React Router.
+ */
+function UnsavedChangesGuard() {
+  const { isDirty, isSubmitSuccessful } = useFormState();
+  useEffect(() => {
+    if (!isDirty || isSubmitSuccessful) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty, isSubmitSuccessful]);
+  return null;
+}
+
 export function SubmissionsNewPage() {
   const formMethods = useForm<NewSubmissionFormValues>({
     resolver:      zodResolver(newSubmissionSchema),
@@ -21,6 +41,7 @@ export function SubmissionsNewPage() {
 
   return (
     <FormProvider {...formMethods}>
+      <UnsavedChangesGuard />
       <div className="flex flex-col -mx-8 -mt-7">
         <ErrorBoundary fallback={<PanelErrorState panelName="Header" />}>
           <NewSubmissionHeaderContainer />

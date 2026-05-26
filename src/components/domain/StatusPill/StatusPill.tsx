@@ -9,6 +9,7 @@ export function StatusPill({ status }: Props) {
   const s = statusStyles[status];
   return (
     <span
+      aria-label={`Status: ${statusLabels[status]}`}
       style={{
         display:        'inline-flex',
         alignItems:     'center',
@@ -21,9 +22,11 @@ export function StatusPill({ status }: Props) {
         fontWeight:     600,
         color:          s.text,
         whiteSpace:     'nowrap',
+        minWidth:       'max-content',
       }}
     >
       <span
+        aria-hidden
         style={{
           width:        6,
           height:       6,

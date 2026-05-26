@@ -35,7 +35,6 @@ function InfoSection({ title, accent = colors.brandBlue, badge, children }: {
         <h3 style={{
           fontSize: '0.80rem', fontWeight: 700,
           color: accent === colors.brandBlue ? colors.brandBlue : colors.textBody,
-          textTransform: 'uppercase', letterSpacing: '0.06em',
         }}>
           {title}
         </h3>
@@ -58,8 +57,7 @@ function StatCell({ label, value, dot, last }: {
   return (
     <div className="px-5 py-3 flex flex-col gap-0.5"
       style={{ borderRight: last ? undefined : `1px solid ${colors.borderDefault}` }}>
-      <span style={{ fontSize: '0.60rem', fontWeight: 700, color: colors.textMuted,
-        textTransform: 'uppercase', letterSpacing: '0.09em' }}>
+      <span style={{ fontSize: '0.60rem', fontWeight: 700, color: colors.textMuted }}>
         {label}
       </span>
       <span className="flex items-center gap-1.5"
@@ -228,7 +226,6 @@ function BrokerageView({ brokerage, contacts }: { brokerage: BrokerageDetail; co
             {['Contact', 'Phone', 'Email', 'Product Access', 'Broker Role'].map((h) => (
               <span key={h} style={{
                 fontSize: '0.62rem', fontWeight: 700, color: colors.textMuted,
-                textTransform: 'uppercase', letterSpacing: '0.08em',
                 paddingBottom: 6, borderBottom: `2px solid ${colors.borderStrong}`,
               }}>
                 {h}
@@ -293,8 +290,7 @@ export function MemberBrokerTab({ member, brokerage, contacts, activeView, onVie
               <Building2 size={18} color={colors.brandBlue} />
             </div>
             <div>
-              <p style={{ fontSize: '0.58rem', fontWeight: 700, color: colors.textMuted,
-                textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 2 }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 700, color: colors.textMuted, marginBottom: 2 }}>
                 Member
               </p>
               <p style={{ fontSize: '0.95rem', fontWeight: 800, color: colors.textHeading, lineHeight: 1.2 }}>
@@ -327,8 +323,7 @@ export function MemberBrokerTab({ member, brokerage, contacts, activeView, onVie
               <MapPin size={18} color={colors.accentGold} />
             </div>
             <div>
-              <p style={{ fontSize: '0.58rem', fontWeight: 700, color: colors.textMuted,
-                textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 2 }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 700, color: colors.textMuted, marginBottom: 2 }}>
                 Brokerage
               </p>
               <p style={{ fontSize: '0.95rem', fontWeight: 800, color: colors.textHeading, lineHeight: 1.2 }}>

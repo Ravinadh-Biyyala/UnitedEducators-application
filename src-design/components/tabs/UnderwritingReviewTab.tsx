@@ -476,21 +476,6 @@ function ReviewList({
   onApprove: (item: ReviewItem) => void;
   onRefer: (item: ReviewItem) => void;
 }) {
-  const totals = useMemo(() => {
-    const t = { pass: 0, caution: 0, fail: 0, missing: 0, approved: 0, referred: 0, pending: 0 };
-    REVIEW_DATA.forEach(r => {
-      if (r.status === "pass") t.pass++;
-      if (r.status === "caution") t.caution++;
-      if (r.status === "fail") t.fail++;
-      if (r.status === "missing-docs") t.missing++;
-      const d = decisions[r.id];
-      if (d === "approved") t.approved++;
-      else if (d === "referred") t.referred++;
-      else t.pending++;
-    });
-    return t;
-  }, [decisions]);
-
   return (
     <div style={{ fontFamily: font }} className="flex flex-col gap-3">
       {/* Header / overview strip — page-level title for this tab */}
@@ -518,16 +503,6 @@ function ReviewList({
                 6 dimensions · validated against submitted documents
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <SummaryChip label="Pass"      n={totals.pass}    tone="good"/>
-            <SummaryChip label="Caution"   n={totals.caution} tone="warn"/>
-            <SummaryChip label="Fail"      n={totals.fail}    tone="bad"/>
-            <SummaryChip label="Missing"   n={totals.missing} tone="neutral"/>
-            <span style={{ width: 1, height: 18, background: BDL }}/>
-            <SummaryChip label="Approved"  n={totals.approved} tone="good"/>
-            <SummaryChip label="Referred"  n={totals.referred} tone="purple"/>
-            <SummaryChip label="Pending"   n={totals.pending}  tone="neutral"/>
           </div>
         </div>
       </div>
@@ -560,29 +535,6 @@ function ReviewList({
   );
 }
 
-function SummaryChip({ label, n, tone }: { label: string; n: number; tone: "good" | "warn" | "bad" | "neutral" | "purple" }) {
-  const color =
-    tone === "good"    ? OK   :
-    tone === "warn"    ? WARN :
-    tone === "bad"     ? BAD  :
-    tone === "purple"  ? "#7B2FBE" : TM;
-  const bg =
-    tone === "good"    ? "#E8F5EC" :
-    tone === "warn"    ? "#FFF8E6" :
-    tone === "bad"     ? "#FEE2E2" :
-    tone === "purple"  ? "#F3E8FF" : "#F1F5F9";
-  return (
-    <span className="inline-flex items-center gap-1.5" style={{
-      background: bg, color, borderRadius: 999,
-      padding: "4px 11px",
-      fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.04em",
-      textTransform: "uppercase",
-    }}>
-      <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 900 }}>{n}</span> {label}
-    </span>
-  );
-}
-
 function ChecklistRow({
   item, idx, decision, isLast, onOpen, onApprove, onRefer,
 }: {
@@ -596,20 +548,36 @@ function ChecklistRow({
 }) {
   const docsTotal     = item.validations.length;
   const docsReceived  = item.validations.filter(v => v.received).length;
-  const docsRequired  = item.validations.filter(v => v.required).length;
   const docsMissing   = item.validations.filter(v => v.required && !v.received).length;
+
+  // Status-driven row differentiation. Pass rows stay neutral so the
+  // attention-worthy ones (caution / fail / missing-docs) read instantly.
+  const statusMeta    = STATUS_META[item.status];
+  const isAttention   = item.status !== "pass";
+  const [rowHover, setRowHover] = useState(false);
+  const baseBg       = isAttention ? statusMeta.bg : "white";
+  // Quiet hover: subtle slate wash on every row. The left accent stripe + status
+  // pills already carry the status signal — hover only needs to say "interactive".
+  const hoverBg      = "#F8FAFC"; // slate-50
+  const accentStripe = isAttention ? `inset 4px 0 0 ${statusMeta.color}` : "";
 
   return (
     <div
       onClick={onOpen}
-      className="cursor-pointer transition-colors hover:bg-slate-50"
+      onMouseEnter={() => setRowHover(true)}
+      onMouseLeave={() => setRowHover(false)}
+      className="cursor-pointer"
       style={{
         borderBottom: isLast ? "none" : `1px solid ${BDL}`,
         padding: "18px 20px",
+        paddingLeft: isAttention ? 24 : 20,
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",
         gap: 16,
         alignItems: "center",
+        background: rowHover ? hoverBg : baseBg,
+        boxShadow: accentStripe || "none",
+        transition: "background-color 0.15s ease",
       }}>
       {/* Left: index + icon */}
       <div className="flex items-center gap-3">
@@ -645,16 +613,32 @@ function ChecklistRow({
           {item.short}
         </p>
         <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: "0.78rem", color: TT }}>
-          <span className="inline-flex items-center gap-1.5">
-            <FileText size={12}/>
-            <strong style={{ color: TM, fontWeight: 700 }}>{docsReceived}/{docsTotal}</strong> docs received
-          </span>
-          <span>·</span>
-          <span>{docsRequired} required</span>
-          {docsMissing > 0 && (
+          {docsReceived === 0 ? (
+            <span
+              className="inline-flex items-center gap-1.5"
+              style={{
+                background: "#FFF8E6",
+                color: WARN,
+                border: `1px solid #F0D88A`,
+                borderRadius: 9999,
+                padding: "3px 10px",
+                fontSize: "0.72rem", fontWeight: 700,
+              }}
+            >
+              <AlertCircle size={11}/> No document uploaded
+            </span>
+          ) : (
             <>
-              <span>·</span>
-              <span style={{ color: BAD, fontWeight: 700 }}>{docsMissing} outstanding</span>
+              <span className="inline-flex items-center gap-1.5">
+                <FileText size={12}/>
+                <strong style={{ color: TM, fontWeight: 700 }}>{docsReceived}/{docsTotal}</strong> docs received
+              </span>
+              {docsMissing > 0 && (
+                <>
+                  <span>·</span>
+                  <span style={{ color: BAD, fontWeight: 700 }}>{docsMissing} outstanding</span>
+                </>
+              )}
             </>
           )}
         </div>
@@ -724,6 +708,9 @@ function ReviewDetail({
   const docsPassed   = item.validations.filter(v => v.passed === true).length;
   const docsFailed   = item.validations.filter(v => v.passed === false).length;
   const passRate     = docsTotal ? Math.round((docsPassed / docsTotal) * 100) : 0;
+  // No docs uploaded → analytics can't run; show empty states everywhere
+  // and warn the user up top so they know exactly why nothing's populated.
+  const noDocuments  = docsReceived === 0;
 
   // Trigger entrance animations on mount.
   const [ready, setReady] = useState(false);
@@ -808,12 +795,46 @@ function ReviewDetail({
         </div>
       </div>
 
+      {/* ── No-documents warning banner ────────────────────────────────
+          Surfaces the moment the underwriter opens a review item that
+          has nothing to analyse. Sits between header and analytics so
+          they don't waste a beat wondering why the rest is empty. */}
+      {noDocuments && (
+        <div
+          className="rev-fade-up"
+          role="alert"
+          style={{
+            background: "#FFF8E6",
+            border: `1px solid #F0D88A`,
+            borderRadius: 10,
+            padding: "12px 14px",
+            display: "flex", alignItems: "flex-start", gap: 10,
+            color: WARN,
+            fontSize: "0.82rem",
+            animationDelay: "60ms",
+          }}
+        >
+          <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }}/>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, lineHeight: 1.3 }}>
+              No documents uploaded for this review
+            </div>
+            <div style={{ color: TM, marginTop: 2, lineHeight: 1.4 }}>
+              Analytics, findings, and validation will populate once the
+              required documents are received.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI row — animated count-up tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {item.metrics.map((m, i) => (
-          <MetricTile key={`${item.id}-${i}`} metric={m} delay={i * 60}/>
-        ))}
-      </div>
+      {!noDocuments && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {item.metrics.map((m, i) => (
+            <MetricTile key={`${item.id}-${i}`} metric={m} delay={i * 60}/>
+          ))}
+        </div>
+      )}
 
       {/* Two-column analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -826,11 +847,15 @@ function ReviewDetail({
             animationDelay: "120ms",
           }}>
           <SectionHeader title="Analysis Findings" icon={<ShieldCheck size={13}/>}/>
-          <div>
-            {item.subPoints.map((sp, i) => (
-              <SubPointRow key={i} sp={sp} isLast={i === item.subPoints.length - 1} delay={i * 80} ready={ready} onTask={() => setTaskFor(sp)}/>
-            ))}
-          </div>
+          {noDocuments ? (
+            <NoDataBlock label="No data found"/>
+          ) : (
+            <div>
+              {item.subPoints.map((sp, i) => (
+                <SubPointRow key={i} sp={sp} isLast={i === item.subPoints.length - 1} delay={i * 80} ready={ready} onTask={() => setTaskFor(sp)}/>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Document validation */}
@@ -845,34 +870,56 @@ function ReviewDetail({
             title="Document Validation"
             icon={<FileText size={13}/>}
             extra={
-              <span style={{ fontSize: "0.62rem", fontWeight: 700, color: TM }}>
-                <span style={{ color: OK }}>{docsPassed} pass</span>
-                {docsFailed > 0 && <> · <span style={{ color: BAD }}>{docsFailed} fail</span></>}
-                {" · "}<span>{docsReceived}/{docsTotal} received</span>
-              </span>
+              noDocuments ? null : (
+                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: TM }}>
+                  <span style={{ color: OK }}>{docsPassed} pass</span>
+                  {docsFailed > 0 && <> · <span style={{ color: BAD }}>{docsFailed} fail</span></>}
+                  {" · "}<span>{docsReceived}/{docsTotal} received</span>
+                </span>
+              )
             }
           />
 
-          {/* Radial gauge + key stats */}
-          <div style={{ padding: "16px", borderBottom: `1px solid ${BDL}`, display: "flex", gap: 16, alignItems: "center" }}>
-            <RadialGauge value={passRate} ready={ready}/>
-            <div className="flex flex-col gap-2 flex-1 min-w-0">
-              <GaugeStat label="Validated" n={docsPassed} total={docsTotal} color={OK}/>
-              <GaugeStat label="Failed"    n={docsFailed} total={docsTotal} color={BAD}/>
-              <GaugeStat label="Outstanding" n={docsTotal - docsReceived} total={docsTotal} color={TM}/>
-            </div>
-          </div>
+          {noDocuments ? (
+            <NoDataBlock label="No data found"/>
+          ) : (
+            <>
+              {/* Radial gauge + key stats */}
+              <div style={{ padding: "16px", borderBottom: `1px solid ${BDL}`, display: "flex", gap: 16, alignItems: "center" }}>
+                <RadialGauge value={passRate} ready={ready}/>
+                <div className="flex flex-col gap-2 flex-1 min-w-0">
+                  <GaugeStat label="Validated" n={docsPassed} total={docsTotal} color={OK}/>
+                  <GaugeStat label="Failed"    n={docsFailed} total={docsTotal} color={BAD}/>
+                  <GaugeStat label="Outstanding" n={docsTotal - docsReceived} total={docsTotal} color={TM}/>
+                </div>
+              </div>
 
-          <div>
-            {item.validations.map((v, i) => (
-              <ValidationRow key={i} v={v} isLast={i === item.validations.length - 1} delay={i * 50} ready={ready}/>
-            ))}
-          </div>
+              <div>
+                {item.validations.map((v, i) => (
+                  <ValidationRow key={i} v={v} isLast={i === item.validations.length - 1} delay={i * 50} ready={ready}/>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Chart panel — full width */}
-      <ChartPanel chart={item.chart} ready={ready}/>
+      {/* Chart panel — full width (suppressed when no documents) */}
+      {noDocuments ? (
+        <div
+          className="rev-fade-up"
+          style={{
+            background: "white", border: `1px solid ${BDL}`, borderRadius: 10,
+            boxShadow: "0 1px 2px rgba(15,23,42,0.04)", overflow: "hidden",
+            animationDelay: "240ms",
+          }}
+        >
+          <SectionHeader title="Trend Analysis" icon={<FileText size={13}/>}/>
+          <NoDataBlock label="No data found"/>
+        </div>
+      ) : (
+        <ChartPanel chart={item.chart} ready={ready}/>
+      )}
 
       {/* Task modal — opened from a finding's "Task" button */}
       {taskFor && (
@@ -882,6 +929,38 @@ function ReviewDetail({
           onClose={() => setTaskFor(null)}
         />
       )}
+    </div>
+  );
+}
+
+/* ─── Empty-state block used inside detail-screen sections when there
+   are no documents to drive analytics. Keeps each section's chrome
+   (header + frame) intact so the layout stays calm. */
+function NoDataBlock({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: "40px 16px",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: 8, textAlign: "center",
+      }}
+    >
+      <span
+        style={{
+          width: 36, height: 36, borderRadius: 9,
+          background: "#F1F5F9", color: TM,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+        }}
+      >
+        <FileSearch size={16}/>
+      </span>
+      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: TM }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "0.74rem", color: TT, maxWidth: 280, lineHeight: 1.4 }}>
+        Upload the required documents to populate this section.
+      </div>
     </div>
   );
 }
