@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Search, Pin, Plus, X } from "lucide-react";
 import { useSubmissionWorkspaceOptional } from "../../context/SubmissionWorkspaceContext";
+import { WorkingScratchpad } from "../notes/WorkingScratchpad";
+import { OfficialJournal } from "../notes/OfficialJournal";
+import type { JournalEntry } from "../notes/OfficialJournal";
 
 /* ── Design tokens ────────────────────────────────────────────────────────── */
 const N   = "#0123D4";
@@ -93,6 +96,38 @@ export function NotesTab() {
   const [showModal, setShowModal] = useState(false);
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
 
+  /* ── Notes split: working scratchpad + official (locked) journal ─────
+     Scratchpad → transient thoughts. Journal → append-only locked record.
+     The scratchpad's "Commit to journal" button moves the text down here. */
+  const [journal, setJournal] = useState<JournalEntry[]>(freshFromInbox ? [] : [
+    {
+      id: "J-024", author: "Maya Khanna", initials: "MK", avatarColor: N,
+      timestamp: "2026-05-23 09:18 PT",
+      content:
+        "Held rate flat for renewal in exchange for $50K SIR uplift. Two open BI claims at the athletic complex remain the watch-item; tying the renewal to a documented slip-and-fall remediation plan before bind.",
+    },
+    {
+      id: "J-023", author: "Leo Tran", initials: "LT", avatarColor: "#1A7A4A",
+      timestamp: "2026-05-20 14:42 PT",
+      content:
+        "Approved rate-change request REF-039. SIR uplift rationale documented; reminder set to revisit the schedule mod at +12 months.",
+    },
+  ]);
+  const commitJournalEntry = (content: string) => {
+    setJournal(prev => [
+      {
+        id: `J-${String(25 + prev.length).padStart(3, "0")}`,
+        author: "John Michaels", initials: "JM", avatarColor: N,
+        timestamp: new Date().toLocaleString("en-US", {
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", hour12: false,
+        }),
+        content,
+      },
+      ...prev,
+    ]);
+  };
+
   // Drain any notes pushed from other tabs (e.g. UW Review approve modal).
   // Runs on mount and whenever the pending-note queue grows.
   useEffect(() => {
@@ -181,6 +216,15 @@ export function NotesTab() {
 
   return (
     <>
+      {/* ── Notes split (transient scratchpad → locked journal) ─────────
+          The scratchpad sits at the top so the underwriter can drop a thought
+          quickly; the journal beneath it is the formal, append-only record
+          that gets committed when the thought is ready to be locked in. */}
+      <div className="flex flex-col gap-3" style={{ marginBottom: 12 }}>
+        <WorkingScratchpad onCommit={commitJournalEntry} />
+        <OfficialJournal entries={journal} />
+      </div>
+
       {/* ── Main panel ─────────────────────────────────────────────────── */}
       <div style={{
         background: "white",

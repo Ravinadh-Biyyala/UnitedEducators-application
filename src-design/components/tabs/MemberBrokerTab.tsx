@@ -14,9 +14,9 @@ const font = "'Source Sans 3', system-ui, sans-serif";
 /* ── Label/Value row ────────────────────────────────────────────────────── */
 function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="flex items-start py-2" style={{ borderBottom: `1px solid ${BDL}` }}>
-      <span style={{ flex: "0 0 44%", fontSize: "0.775rem", color: TT, paddingRight: 8 }}>{label}</span>
-      <span style={{ flex: 1, fontSize: "0.775rem", fontWeight: 500, color: valueColor ?? TD }}>{value || "—"}</span>
+    <div className="flex items-start py-3" style={{ borderBottom: `1px solid ${BDL}` }}>
+      <span style={{ flex: "0 0 44%", fontSize: "0.92rem", color: TT, paddingRight: 8, lineHeight: 1.4 }}>{label}</span>
+      <span style={{ flex: 1, fontSize: "0.92rem", fontWeight: 500, color: valueColor ?? TD, lineHeight: 1.4 }}>{value || "—"}</span>
     </div>
   );
 }
@@ -33,21 +33,21 @@ function Section({ title, accent = N, badge, icon, children }: {
       overflow: "hidden",
       boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
     }}>
-      <div className="flex items-center justify-between px-5 py-3.5"
+      <div className="flex items-center justify-between px-5 py-4"
         style={{ borderBottom: `1px solid ${BDL}`, background: "#FAFBFD" }}>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           {icon && (
             <span className="inline-flex items-center justify-center"
-              style={{ width: 26, height: 26, borderRadius: 6, background: `${accent}12`, color: accent }}>
+              style={{ width: 30, height: 30, borderRadius: 7, background: `${accent}12`, color: accent }}>
               {icon}
             </span>
           )}
-          <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: TD, letterSpacing: "-0.005em" }}>
             {title}
           </h3>
         </div>
         {badge && (
-          <span style={{ fontSize: "0.70rem", color: TM, fontWeight: 500 }}>{badge}</span>
+          <span style={{ fontSize: "0.82rem", color: TM, fontWeight: 500 }}>{badge}</span>
         )}
       </div>
       <div className="px-5 pt-1 pb-3">{children}</div>
@@ -63,13 +63,13 @@ function TwoColGrid({ children }: { children: React.ReactNode }) {
 /* ── Quick stat cell ────────────────────────────────────────────────────── */
 function StatCell({ label, value, dot, last }: { label: string; value: string; dot?: boolean; last?: boolean }) {
   return (
-    <div className="px-5 py-3 flex flex-col gap-0.5"
+    <div className="px-5 py-4 flex flex-col gap-1"
       style={{ borderRight: last ? undefined : `1px solid ${BDL}` }}>
-      <span style={{ fontSize: "0.60rem", fontWeight: 700, color: TT,
+      <span style={{ fontSize: "0.74rem", fontWeight: 700, color: TT,
         textTransform: "uppercase", letterSpacing: "0.09em" }}>{label}</span>
       <span className="flex items-center gap-1.5"
-        style={{ fontSize: "0.85rem", fontWeight: 700, color: TD }}>
-        {dot && <span style={{ width: 7, height: 7, borderRadius: "50%",
+        style={{ fontSize: "1rem", fontWeight: 700, color: TD }}>
+        {dot && <span style={{ width: 8, height: 8, borderRadius: "50%",
           background: "#2E7D32", display: "inline-block", flexShrink: 0 }} />}
         {value}
       </span>
@@ -94,7 +94,7 @@ function MemberView() {
       </div>
 
       {/* Account Information */}
-      <Section title="Account Information" icon={<FileText size={13}/>}>
+      <Section title="Account Information" icon={<FileText size={15}/>}>
         <TwoColGrid>
           <div>
             <Row label="Account Name"           value="Brookfield Day School" />
@@ -115,7 +115,7 @@ function MemberView() {
       </Section>
 
       {/* Institution Profile */}
-      <Section title="Institution Profile" icon={<GraduationCap size={13}/>}>
+      <Section title="Institution Profile" icon={<GraduationCap size={15}/>}>
         <TwoColGrid>
           <div>
             <Row label="Institution Type"         value="K-12" />
@@ -135,7 +135,7 @@ function MemberView() {
       </Section>
 
       {/* Address Information */}
-      <Section title="Address Information" icon={<MapPin size={13}/>}>
+      <Section title="Address Information" icon={<MapPin size={15}/>}>
         <TwoColGrid>
           <div>
             <Row label="Physical Address 1"       value="32 Riverside Avenue" />
@@ -213,7 +213,7 @@ function BrokerageView() {
       </div>
 
       {/* Account Information */}
-      <Section title="Account Information" icon={<Building2 size={13}/>}>
+      <Section title="Account Information" icon={<Building2 size={15}/>}>
         <TwoColGrid>
           <div>
             <Row label="Account Name"           value="Marsh McLennan Agency" />
@@ -232,7 +232,7 @@ function BrokerageView() {
       </Section>
 
       {/* Address Information */}
-      <Section title="Address Information" icon={<MapPin size={13}/>}>
+      <Section title="Address Information" icon={<MapPin size={15}/>}>
         <TwoColGrid>
           <div>
             <Row label="Physical Address 1"       value="1166 Ave of the Americas" />
@@ -263,34 +263,34 @@ function BrokerageView() {
             style={{ gridTemplateColumns: "1.2fr 1fr 1.5fr 0.9fr 2fr" }}>
             {["Contact", "Phone", "Email", "Product Access", "Broker Role"].map(h => (
               <span key={h} style={{
-                fontSize: "0.62rem", fontWeight: 700, color: TT,
+                fontSize: "0.76rem", fontWeight: 700, color: TT,
                 textTransform: "uppercase", letterSpacing: "0.08em",
-                paddingBottom: 6, borderBottom: `2px solid ${BD}`,
+                paddingBottom: 8, borderBottom: `2px solid ${BD}`,
               }}>{h}</span>
             ))}
           </div>
 
           {/* Rows */}
           {BROKER_CONTACTS.map((c, i) => (
-            <div key={i} className="grid py-2.5"
+            <div key={i} className="grid py-3"
               style={{
                 gridTemplateColumns: "1.2fr 1fr 1.5fr 0.9fr 2fr",
                 borderBottom: `1px solid ${BDL}`,
                 background: i % 2 === 1 ? TH : "white",
               }}>
               {/* Contact name */}
-              <span style={{ fontSize: "0.80rem", fontWeight: 600, color: N }}>{c.name}</span>
+              <span style={{ fontSize: "0.94rem", fontWeight: 600, color: N }}>{c.name}</span>
               {/* Phone */}
-              <span style={{ fontSize: "0.78rem", color: TD }}>{c.phone}</span>
+              <span style={{ fontSize: "0.92rem", color: TD }}>{c.phone}</span>
               {/* Email */}
-              <span style={{ fontSize: "0.78rem", color: N }}>{c.email}</span>
+              <span style={{ fontSize: "0.92rem", color: N }}>{c.email}</span>
               {/* Product Access */}
-              <span style={{ fontSize: "0.78rem", color: TD }}>{c.access}</span>
+              <span style={{ fontSize: "0.92rem", color: TD }}>{c.access}</span>
               {/* Broker Roles */}
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {c.roles.map((r, ri) => (
                   <span key={ri} style={{
-                    fontSize: "0.70rem",
+                    fontSize: "0.84rem",
                     color: c.highlight ? N : TM,
                     fontWeight: c.highlight ? 600 : 400,
                   }}>
@@ -331,21 +331,21 @@ export function MemberBrokerTab() {
           }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center shrink-0"
-              style={{ width: 38, height: 38, background: "#E8EFF9", border: `1px solid #B8CCE8`, borderRadius: 6 }}>
-              <Building2 size={18} color={N} />
+              style={{ width: 44, height: 44, background: "#E8EFF9", border: `1px solid #B8CCE8`, borderRadius: 7 }}>
+              <Building2 size={20} color={N} />
             </div>
             <div>
-              <p style={{ fontSize: "0.58rem", fontWeight: 700, color: TT,
-                textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 2 }}>Member</p>
-              <p style={{ fontSize: "0.95rem", fontWeight: 800, color: TD, lineHeight: 1.2 }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TT,
+                textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 3 }}>Member</p>
+              <p style={{ fontSize: "1.1rem", fontWeight: 800, color: TD, lineHeight: 1.2 }}>
                 Brookfield Day School
               </p>
-              <p style={{ fontSize: "0.72rem", color: TM, marginTop: 2 }}>
+              <p style={{ fontSize: "0.86rem", color: TM, marginTop: 3 }}>
                 473 · Westport, CT · Active member
               </p>
             </div>
           </div>
-          {activeView === "member" && <CheckCircle2 size={18} color={N} />}
+          {activeView === "member" && <CheckCircle2 size={20} color={N} />}
         </button>
 
         {/* Brokerage card */}
@@ -361,21 +361,21 @@ export function MemberBrokerTab() {
           }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center shrink-0"
-              style={{ width: 38, height: 38, background: "#FBF6E8", border: `1px solid #E5D08A`, borderRadius: 6 }}>
-              <MapPin size={18} color={G} />
+              style={{ width: 44, height: 44, background: "#FBF6E8", border: `1px solid #E5D08A`, borderRadius: 7 }}>
+              <MapPin size={20} color={G} />
             </div>
             <div>
-              <p style={{ fontSize: "0.58rem", fontWeight: 700, color: TT,
-                textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 2 }}>Brokerage</p>
-              <p style={{ fontSize: "0.95rem", fontWeight: 800, color: TD, lineHeight: 1.2 }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TT,
+                textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 3 }}>Brokerage</p>
+              <p style={{ fontSize: "1.1rem", fontWeight: 800, color: TD, lineHeight: 1.2 }}>
                 Marsh McLennan Agency
               </p>
-              <p style={{ fontSize: "0.72rem", color: TM, marginTop: 2 }}>
+              <p style={{ fontSize: "0.86rem", color: TM, marginTop: 3 }}>
                 ID 10591 · New York, NY · T. Owens producer
               </p>
             </div>
           </div>
-          {activeView === "brokerage" && <CheckCircle2 size={18} color={N} />}
+          {activeView === "brokerage" && <CheckCircle2 size={20} color={N} />}
         </button>
       </div>
 

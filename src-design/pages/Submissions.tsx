@@ -3,9 +3,9 @@ import {
   ArrowUpDown,
   FileText, Clock, CheckCircle2, XCircle, AlertCircle,
   ChevronRight, ChevronLeft, Filter, RotateCcw, Download, Plus,
-  Check, Users, User,
+  Check, Users, User, GripVertical, FileEdit,
 } from "lucide-react";
-import { useState, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useLayoutEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppShell,
@@ -18,6 +18,8 @@ import { typo } from "../styles/typography";
 import { PageRegister } from "../components/companion/PageRegister";
 import { newId, now } from "../components/companion/CompanionContext";
 import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
+import { useSubmissionsList } from "../context/SubmissionsListContext";
+import type { Submission, StatusType, SubmissionKindCol } from "../context/SubmissionsListContext";
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 const N   = "#0123D4";
@@ -32,7 +34,8 @@ const BG  = "#EEF1F6";
 const font = "'Source Sans 3', system-ui, sans-serif";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-type StatusType = "In Review" | "Quoted" | "Bound" | "Declined" | "Pending Info" | "New";
+// Submission, StatusType and SubmissionKindCol are imported from SubmissionsListContext
+// so other pages (e.g. Inbox auto-create) can write into the same store.
 
 const STATUS_CFG: Record<StatusType, { bg: string; text: string; dot: string; border: string; icon: React.ReactNode }> = {
   "New":          { bg:"#F0F3F8", text:TM,        dot:"#7A8FA3", border:BDL,       icon:<FileText size={11}/> },
@@ -41,67 +44,62 @@ const STATUS_CFG: Record<StatusType, { bg: string; text: string; dot: string; bo
   "Bound":        { bg:"#E8F5EC", text:"#1A5C30", dot:"#2E7D32", border:"#93C8A0", icon:<CheckCircle2 size={11}/> },
   "Declined":     { bg:"#FBEAEA", text:"#7A1F1F", dot:"#B91C1C", border:"#E8A8A8", icon:<XCircle size={11}/> },
   "Pending Info": { bg:"#FFF3E0", text:"#7A4200", dot:"#E07800", border:"#F5C87A", icon:<AlertCircle size={11}/> },
+  // Auto-created submissions that flunked intake validation land here. Amber
+  // hue signals "needs review" without the harshness of a Declined / Pending tone.
+  "Draft":        { bg:"#FEF3C7", text:"#92400E", dot:"#B45309", border:"#F5C87A", icon:<FileEdit size={11}/> },
 };
-
-type SubmissionKindCol = "Individual" | "Group";
-
-interface Submission {
-  id: string;
-  subId: string;
-  member: string;
-  memberNumber: string;
-  broker: string;
-  state: string;
-  status: StatusType;
-  submissionType: "New Business" | "Cross-Sell";
-  kind: SubmissionKindCol;
-  memberCount?: number;       // populated for kind="Group"
-  products: string[];
-  assignedTo: string;
-  team: string;
-  submitted: string;
-  needByDate: string;
-  effective: string;
-  expiry: string;
-  estimatedPremium: number;
-  enrollmentCount: number;
-  appetiteScore: number;
-  priority: "High" | "Medium" | "Low";
-  daysInQueue: number;
-  lastActivity: string;
-}
-
-const ALL_SUBMISSIONS: Submission[] = [
-  { id:"1",  subId:"SUB-7829", member:"Riverside Unified School District",  memberNumber:"1184", broker:"Gallagher Education, Inc.",   state:"CA", status:"In Review",   submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","GL","Cyber"],       assignedTo:"John Michaels",    team:"Team Alpha", submitted:"2024-03-15", needByDate:"2024-05-15", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:102400, enrollmentCount:14200, appetiteScore:92, priority:"High",   daysInQueue:18, lastActivity:"2 hours ago"   },
-  { id:"2",  subId:"SUB-7830", member:"San Diego City Unified SD",          memberNumber:"1207", broker:"Lockton Companies",           state:"CA", status:"Quoted",       submissionType:"Cross-Sell",   kind:"Group",      memberCount:14,  products:["EPL","GL","ML","Property"],     assignedTo:"Sarah Mitchell",   team:"Team Alpha", submitted:"2024-03-12", needByDate:"2024-05-10", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:148200, enrollmentCount:22400, appetiteScore:88, priority:"High",   daysInQueue:21, lastActivity:"1 day ago"     },
-  { id:"3",  subId:"SUB-7831", member:"Central Texas Schools Consortium",   memberNumber:"1318", broker:"Marsh McLennan Education",    state:"TX", status:"In Review",   submissionType:"New Business", kind:"Group",      memberCount:7,   products:["EPL","ELL","GL","Auto"],        assignedTo:"John Michaels",    team:"Team Alpha", submitted:"2024-03-08", needByDate:"2024-06-05", effective:"2024-08-01", expiry:"2025-08-01", estimatedPremium:87600,  enrollmentCount:11800, appetiteScore:79, priority:"Medium", daysInQueue:25, lastActivity:"3 days ago"    },
-  { id:"4",  subId:"SUB-7832", member:"Denver Public Schools",              memberNumber:"1042", broker:"Willis Towers Watson",        state:"CO", status:"Bound",        submissionType:"Cross-Sell",   kind:"Individual",                  products:["EPL","ELL","GL","Cyber","SA"],  assignedTo:"Patricia Hoffman", team:"Team Beta",  submitted:"2024-02-28", needByDate:"2024-05-01", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:134500, enrollmentCount:18600, appetiteScore:95, priority:"Low",    daysInQueue:0,  lastActivity:"5 days ago"    },
-  { id:"5",  subId:"SUB-7833", member:"Seattle Public Schools",             memberNumber:"1129", broker:"Alliant Insurance Services",  state:"WA", status:"Pending Info", submissionType:"New Business", kind:"Individual",                  products:["EPL","ML","Cyber"],             assignedTo:"Sarah Mitchell",   team:"Team Alpha", submitted:"2024-03-10", needByDate:"2024-06-20", effective:"2024-09-01", expiry:"2025-09-01", estimatedPremium:64800,  enrollmentCount:8200,  appetiteScore:71, priority:"Medium", daysInQueue:23, lastActivity:"Today"         },
-  { id:"6",  subId:"SUB-7834", member:"Houston ISD",                        memberNumber:"0986", broker:"Arthur J. Gallagher & Co.",   state:"TX", status:"New",          submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","GL"],               assignedTo:"Unassigned",       team:"Team Beta",  submitted:"2024-03-18", needByDate:"2024-06-10", effective:"2024-08-01", expiry:"2025-08-01", estimatedPremium:92100,  enrollmentCount:13500, appetiteScore:84, priority:"High",   daysInQueue:5,  lastActivity:"Today"         },
-  { id:"7",  subId:"SUB-7835", member:"Minneapolis Public Schools",         memberNumber:"1156", broker:"Gallagher Education, Inc.",   state:"MN", status:"In Review",   submissionType:"Cross-Sell",   kind:"Individual",                  products:["EPL","GL","Crime"],             assignedTo:"John Michaels",    team:"Team Alpha", submitted:"2024-03-05", needByDate:"2024-05-12", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:54200,  enrollmentCount:7100,  appetiteScore:81, priority:"Medium", daysInQueue:28, lastActivity:"6 hours ago"   },
-  { id:"8",  subId:"SUB-7836", member:"Brookfield Day School",              memberNumber:"0473", broker:"Lockton Companies",           state:"NC", status:"Quoted",       submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","GL","ML","Property"],   assignedTo:"Patricia Hoffman", team:"Team Beta",  submitted:"2024-03-01", needByDate:"2024-06-01", effective:"2024-08-01", expiry:"2025-08-01", estimatedPremium:178900, enrollmentCount:28400, appetiteScore:91, priority:"High",   daysInQueue:32, lastActivity:"2 days ago"    },
-  { id:"9",  subId:"SUB-7837", member:"Clark County School District",       memberNumber:"1273", broker:"Marsh McLennan Education",    state:"NV", status:"Declined",     submissionType:"New Business", kind:"Individual",                  products:["EPL","GL"],                     assignedTo:"Robert Chen",      team:"Team Beta",  submitted:"2024-02-20", needByDate:"2024-04-30", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:0,      enrollmentCount:6400,  appetiteScore:38, priority:"Low",    daysInQueue:0,  lastActivity:"2 weeks ago"   },
-  { id:"10", subId:"SUB-7838", member:"Broward County Public Schools",      memberNumber:"1098", broker:"Willis Towers Watson",        state:"FL", status:"Bound",        submissionType:"Cross-Sell",   kind:"Individual",                  products:["EPL","ELL","GL","Auto","SA"],   assignedTo:"Sarah Mitchell",   team:"Team Alpha", submitted:"2024-02-15", needByDate:"2024-04-15", effective:"2024-06-01", expiry:"2025-06-01", estimatedPremium:221300, enrollmentCount:31200, appetiteScore:89, priority:"Low",    daysInQueue:0,  lastActivity:"3 days ago"    },
-  { id:"11", subId:"SUB-7839", member:"Fairfax County Public Schools",      memberNumber:"1241", broker:"Alliant Insurance Services",  state:"VA", status:"In Review",   submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","ML","Cyber"],       assignedTo:"John Michaels",    team:"Team Alpha", submitted:"2024-03-14", needByDate:"2024-06-25", effective:"2024-09-01", expiry:"2025-09-01", estimatedPremium:96700,  enrollmentCount:12900, appetiteScore:87, priority:"High",   daysInQueue:19, lastActivity:"Yesterday"     },
-  { id:"12", subId:"SUB-7840", member:"Wake County Public School System",   memberNumber:"1304", broker:"Arthur J. Gallagher & Co.",   state:"NC", status:"New",          submissionType:"New Business", kind:"Individual",                  products:["EPL","GL","Cyber"],             assignedTo:"Unassigned",       team:"Team Beta",  submitted:"2024-03-19", needByDate:"2024-06-08", effective:"2024-08-01", expiry:"2025-08-01", estimatedPremium:72400,  enrollmentCount:9800,  appetiteScore:83, priority:"Medium", daysInQueue:4,  lastActivity:"Today"         },
-  { id:"13", subId:"SUB-7841", member:"Mountain West Charter Network",      memberNumber:"1382", broker:"Gallagher Education, Inc.",   state:"GA", status:"Quoted",       submissionType:"Cross-Sell",   kind:"Group",      memberCount:11,  products:["EPL","ELL","GL","ML"],          assignedTo:"Patricia Hoffman", team:"Team Beta",  submitted:"2024-03-03", needByDate:"2024-05-20", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:112800, enrollmentCount:15600, appetiteScore:90, priority:"Medium", daysInQueue:30, lastActivity:"4 days ago"    },
-  { id:"14", subId:"SUB-7842", member:"Montgomery County Public Schools",   memberNumber:"1219", broker:"Lockton Companies",           state:"MD", status:"Pending Info", submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","ML","Crime"],       assignedTo:"John Michaels",    team:"Team Alpha", submitted:"2024-03-11", needByDate:"2024-06-30", effective:"2024-09-01", expiry:"2025-09-01", estimatedPremium:88300,  enrollmentCount:11200, appetiteScore:76, priority:"Medium", daysInQueue:22, lastActivity:"Today"         },
-  { id:"15", subId:"SUB-7843", member:"Palm Beach County School District",  memberNumber:"1167", broker:"Marsh McLennan Education",    state:"FL", status:"In Review",   submissionType:"Cross-Sell",   kind:"Individual",                  products:["EPL","GL","SA"],                assignedTo:"Sarah Mitchell",   team:"Team Alpha", submitted:"2024-03-09", needByDate:"2024-06-02", effective:"2024-08-01", expiry:"2025-08-01", estimatedPremium:58900,  enrollmentCount:7600,  appetiteScore:82, priority:"Low",    daysInQueue:24, lastActivity:"Yesterday"     },
-  { id:"16", subId:"SUB-7844", member:"Jefferson County Public Schools",    memberNumber:"1051", broker:"Willis Towers Watson",        state:"KY", status:"New",          submissionType:"New Business", kind:"Individual",                  products:["EPL","ELL","GL"],               assignedTo:"Unassigned",       team:"Team Beta",  submitted:"2024-03-20", needByDate:"2024-05-25", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:67200,  enrollmentCount:9100,  appetiteScore:80, priority:"Low",    daysInQueue:3,  lastActivity:"Today"         },
-  { id:"17", subId:"SUB-7845", member:"Pacific Coast Higher-Ed Pool",       memberNumber:"1411", broker:"Alliant Insurance Services",  state:"FL", status:"Bound",        submissionType:"Cross-Sell",   kind:"Group",      memberCount:6,   products:["EPL","ELL","GL","Auto","Cyber"], assignedTo:"Robert Chen",      team:"Team Beta",  submitted:"2024-02-10", needByDate:"2024-04-10", effective:"2024-06-01", expiry:"2025-06-01", estimatedPremium:196400, enrollmentCount:26800, appetiteScore:94, priority:"Low",    daysInQueue:0,  lastActivity:"1 week ago"    },
-  { id:"18", subId:"SUB-7846", member:"Orange County Public Schools",       memberNumber:"1029", broker:"Arthur J. Gallagher & Co.",   state:"FL", status:"Declined",     submissionType:"New Business", kind:"Individual",                  products:["EPL","ML"],                     assignedTo:"Robert Chen",      team:"Team Beta",  submitted:"2024-02-25", needByDate:"2024-04-20", effective:"2024-07-01", expiry:"2025-07-01", estimatedPremium:0,      enrollmentCount:5200,  appetiteScore:42, priority:"Low",    daysInQueue:0,  lastActivity:"3 weeks ago"   },
-];
 
 const KINDS: SubmissionKindCol[] = ["Individual", "Group"];
 
-const STATES   = [...new Set(ALL_SUBMISSIONS.map(s => s.state))].sort();
-const BROKERS  = [...new Set(ALL_SUBMISSIONS.map(s => s.broker))].sort();
-const UW_LIST  = [...new Set(ALL_SUBMISSIONS.map(s => s.assignedTo))].sort();
 const PRODUCTS = ["EPL","ELL","GL","ML","Property","Auto","Crime","Cyber","SA"];
-const STATUSES = ["New","In Review","Quoted","Bound","Declined","Pending Info"] as StatusType[];
+// Note: UW_LIST is derived from the live submissions inside the component
+// (so auto-created entries from the Inbox show up in the underwriter filter).
+// `Draft` is included so users can filter to auto-created submissions awaiting review.
+const STATUSES = ["New","Draft","In Review","Quoted","Bound","Declined","Pending Info"] as StatusType[];
 
 type SortKey = "needByDate" | "effective" | "premium";
 type SortDir = "asc" | "desc";
+
+// ─── Grid column config ───────────────────────────────────────────────────────
+// Single source of truth for the data grid's column metadata. The header row
+// and every data row both iterate the user-mutable `colOrder` state (looking
+// each key up in `COLUMNS_BY_KEY`) and derive their `gridTemplateColumns`
+// from it. To change the DEFAULT order or width, edit this array; the user's
+// drag-reordering then mutates only the `colOrder` state at runtime.
+type ColKey =
+  | "checkbox" | "member" | "needByDate" | "effective"
+  | "submissionType" | "products" | "stage" | "underwriter"
+  | "premium" | "appetite";
+
+interface ColumnConfig {
+  key: ColKey;
+  label: string;
+  /** CSS grid track size (e.g. "44px", "minmax(140px, 1.05fr)"). */
+  width: string;
+  /** When set, the header cell renders a sortable button driven by this key. */
+  sortKey?: SortKey;
+}
+
+const COLUMNS: ColumnConfig[] = [
+  { key: "checkbox",       label: "",                     width: "44px" },
+  { key: "member",         label: "Member / Institution", width: "minmax(260px, 2.6fr)" },
+  { key: "needByDate",     label: "Need By",              width: "minmax(150px, 1.1fr)",  sortKey: "needByDate" },
+  { key: "effective",      label: "Effective",            width: "minmax(130px, 0.95fr)", sortKey: "effective"  },
+  { key: "submissionType", label: "Type",                 width: "minmax(110px, 0.9fr)"  },
+  { key: "products",       label: "Products",             width: "minmax(135px, 1.05fr)" },
+  { key: "stage",          label: "Stage",                width: "minmax(115px, 0.95fr)" },
+  { key: "underwriter",    label: "Underwriter",          width: "minmax(125px, 1fr)"    },
+  { key: "premium",        label: "Premium",              width: "minmax(110px, 0.85fr)", sortKey: "premium" },
+  { key: "appetite",       label: "Appetite",             width: "minmax(95px, 0.7fr)"   },
+];
+
+// O(1) lookup keyed by ColKey, derived once at module scope.
+const COLUMNS_BY_KEY: Record<ColKey, ColumnConfig> =
+  Object.fromEntries(COLUMNS.map(c => [c.key, c])) as Record<ColKey, ColumnConfig>;
+
+// Default column order — first render uses this; user drag-reorder mutates the
+// `colOrder` state owned by the Submissions component.
+const INITIAL_ORDER: ColKey[] = COLUMNS.map(c => c.key);
 
 const fmt = (n: number) => n === 0 ? "—" : "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 
@@ -184,11 +182,12 @@ function CheckRow({ label, checked, onToggle, dot, small }: {
 type FilterSectionKey = "stage" | "kind" | "underwriter" | "date" | "premium";
 
 function FilterPanel({
-  filters, onChange, onReset,
+  filters, onChange, onReset, uwList,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   onReset: () => void;
+  uwList: string[];
 }) {
   // Accordion: only one section open at a time. Keeps the dropdown a predictable
   // height so expanded content never overflows or visually overlaps neighbouring
@@ -247,7 +246,7 @@ function FilterPanel({
       {/* Assigned Underwriter */}
       <FilterSection title="Assigned Underwriter" count={filters.assignedTo.length}
         isOpen={openSection === "underwriter"} onToggle={() => toggleSection("underwriter")}>
-        {UW_LIST.map(u => (
+        {uwList.map(u => (
           <CheckRow key={u} label={u} checked={filters.assignedTo.includes(u)} onToggle={() => toggle("assignedTo", u)}/>
         ))}
       </FilterSection>
@@ -375,8 +374,77 @@ export function Submissions() {
   const [viewTab, setViewTab]   = useState<"my" | "team" | "all">("my");
   const [page, setPage]         = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [submissions, setSubmissions] = useState(ALL_SUBMISSIONS);
+  // Submissions live in a shared context so the Inbox auto-create flow can
+  // append drafts that show up here without a page refresh.
+  const { submissions, addSubmission } = useSubmissionsList();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const PER_PAGE = 5;
+
+  // Filter facet list is derived from the live submissions list so any auto-
+  // created entries from the Inbox become filterable immediately.
+  const UW_LIST = useMemo(() => [...new Set(submissions.map(s => s.assignedTo))].sort(),  [submissions]);
+
+  const toggleSelect = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  // ─── Column reordering ────────────────────────────────────────────────
+  // `colOrder` is the live order rendered by both the header and every data
+  // row. The checkbox column is locked at index 0 — drag handlers refuse to
+  // accept it as a drag source or land another column before it.
+  const [colOrder, setColOrder] = useState<ColKey[]>(INITIAL_ORDER);
+  const [draggedKey, setDraggedKey] = useState<ColKey | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<ColKey | null>(null);
+
+  // gridTemplateColumns derived from the current order; both the header and
+  // each data row read from this so they always stay aligned.
+  const gridTemplate = useMemo(
+    () => colOrder.map(k => COLUMNS_BY_KEY[k].width).join(" "),
+    [colOrder]
+  );
+
+  const onColDragStart = (e: React.DragEvent, key: ColKey) => {
+    if (key === "checkbox") return;
+    setDraggedKey(key);
+    e.dataTransfer.effectAllowed = "move";
+    // Required for Firefox to initiate the drag at all.
+    e.dataTransfer.setData("text/plain", key);
+  };
+
+  const onColDragOver = (e: React.DragEvent, key: ColKey) => {
+    if (!draggedKey || key === "checkbox" || key === draggedKey) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverKey !== key) setDragOverKey(key);
+  };
+
+  const onColDragLeave = (key: ColKey) => {
+    if (dragOverKey === key) setDragOverKey(null);
+  };
+
+  const onColDrop = (e: React.DragEvent, key: ColKey) => {
+    e.preventDefault();
+    if (!draggedKey || key === "checkbox" || key === draggedKey) {
+      setDraggedKey(null);
+      setDragOverKey(null);
+      return;
+    }
+    setColOrder(prev => {
+      const next = prev.filter(k => k !== draggedKey);
+      const targetIdx = next.indexOf(key);
+      next.splice(targetIdx, 0, draggedKey);
+      return next;
+    });
+    setDraggedKey(null);
+    setDragOverKey(null);
+  };
+
+  const onColDragEnd = () => {
+    setDraggedKey(null);
+    setDragOverKey(null);
+  };
 
   // ── Filters dropdown anchoring ────────────────────────────────────────────
   // We position the desktop dropdown with `position: fixed` aligned to the
@@ -472,6 +540,14 @@ export function Submissions() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
+  const allOnPageSelected = paginated.length > 0 && paginated.every(s => selected.has(s.id));
+  const toggleSelectPage = () => setSelected(prev => {
+    const next = new Set(prev);
+    if (allOnPageSelected) paginated.forEach(p => next.delete(p.id));
+    else paginated.forEach(p => next.add(p.id));
+    return next;
+  });
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("desc"); }
@@ -520,27 +596,30 @@ export function Submissions() {
     ...(filters.premiumTo   ? [{ label:`Premium ≤ ${fmt(Number(filters.premiumTo))}`,   remove:()=>setFilters(f=>({...f,premiumTo:""})) }] : []),
   ];
 
-  // KPI summary
+  // KPI summary — derived from the live (context-backed) submissions list so
+  // auto-created drafts from the Inbox flow into the tile counts immediately.
   const kpis = useMemo(() => {
-    const inReview  = ALL_SUBMISSIONS.filter(s=>s.status==="In Review").length;
-    const quoted    = ALL_SUBMISSIONS.filter(s=>s.status==="Quoted").length;
-    const bound     = ALL_SUBMISSIONS.filter(s=>s.status==="Bound").length;
-    const declined  = ALL_SUBMISSIONS.filter(s=>s.status==="Declined").length;
-    const open      = ALL_SUBMISSIONS.length - bound - declined;
-    const newCount  = ALL_SUBMISSIONS.filter(s=>s.status==="New").length;
-    const awaiting  = ALL_SUBMISSIONS.filter(s=>s.status==="Pending Info").length;
+    const inReview  = submissions.filter(s=>s.status==="In Review").length;
+    const quoted    = submissions.filter(s=>s.status==="Quoted").length;
+    const bound     = submissions.filter(s=>s.status==="Bound").length;
+    const declined  = submissions.filter(s=>s.status==="Declined").length;
+    const open      = submissions.length - bound - declined;
+    const newCount  = submissions.filter(s=>s.status==="New").length;
+    const awaiting  = submissions.filter(s=>s.status==="Pending Info").length;
+    const drafts    = submissions.filter(s=>s.status==="Draft").length;
     return {
-      total:     ALL_SUBMISSIONS.length,
+      total:     submissions.length,
       inReview, quoted, bound,
       open,
       newThisWeek: newCount,
       awaitingInfo: awaiting,
       readyForReview: inReview,
+      drafts,
       avgTimeInQueue: "2.4d",
       slaAtRisk: 3,
-      totalPrem: ALL_SUBMISSIONS.filter(s=>s.status==="Bound").reduce((a,s)=>a+s.estimatedPremium,0),
+      totalPrem: submissions.filter(s=>s.status==="Bound").reduce((a,s)=>a+s.estimatedPremium,0),
     };
-  }, []);
+  }, [submissions]);
 
   return (
     <AppShell activePage="submissions" role={role} onRoleChange={() => {}}>
@@ -789,6 +868,7 @@ export function Submissions() {
                 filters={filters}
                 onChange={f => { setFilters(f); setPage(1); }}
                 onReset={() => { setFilters(EMPTY_FILTERS); setPage(1); }}
+                uwList={UW_LIST}
               />
             </div>
           </>
@@ -837,6 +917,7 @@ export function Submissions() {
                   filters={filters}
                   onChange={f => { setFilters(f); setPage(1); }}
                   onReset={() => { setFilters(EMPTY_FILTERS); setPage(1); }}
+                  uwList={UW_LIST}
                 />
               </div>
             </>
@@ -848,19 +929,110 @@ export function Submissions() {
            {/* Horizontally scrollable region — headers + rows only, pagination stays put */}
            <div style={{ overflowX:"auto" }}>
 
-            {/* Column headers */}
+            {/* Column headers — order is driven by `colOrder` state so a
+                user-driven drag-reorder of one header re-renders the whole
+                table (header + every row) in the new order. Each header
+                (except the locked checkbox) is a draggable handle; a blue
+                left-edge marker on the dragover target indicates where the
+                column will drop. */}
             <div style={{ background:"#FAFBFD", borderBottom:`1px solid ${BDL}`, position:"sticky", top:0, zIndex:5 }}>
               <div className="grid px-5 py-2.5"
-                style={{ gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(90px, 0.8fr) minmax(140px, 1.05fr) minmax(105px, 0.85fr)`, gap:"0 16px", alignItems:"center", justifyItems:"start" }}>
-                <ColLabel>Member / Institution</ColLabel>
-                <ColLabel>Type</ColLabel>
-                <ColLabel>Products</ColLabel>
-                <ColLabel>Stage</ColLabel>
-                <ColLabel>Underwriter</ColLabel>
-                <ColLabel>Appetite</ColLabel>
-                <SortBtn col="premium"          label="Premium"/>
-                <SortBtn col="needByDate"       label="Need By"/>
-                <SortBtn col="effective"        label="Effective"/>
+                style={{ gridTemplateColumns: gridTemplate, gap:"0 16px", alignItems:"center", justifyItems:"start" }}>
+                {colOrder.map(key => {
+                  const col = COLUMNS_BY_KEY[key];
+                  const isCheckbox = col.key === "checkbox";
+                  const isDragging = draggedKey === col.key;
+                  const isDragOver = dragOverKey === col.key && draggedKey !== null;
+
+                  let inner: React.ReactNode;
+                  if (isCheckbox) {
+                    inner = (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelectPage(); }}
+                        aria-label={allOnPageSelected ? "Deselect all on this page" : "Select all on this page"}
+                        className="flex items-center justify-center"
+                        style={{
+                          width:15, height:15,
+                          background: allOnPageSelected ? N : "white",
+                          border: `2px solid ${allOnPageSelected ? N : BD}`,
+                          cursor: "pointer",
+                          transition: "all 0.13s",
+                        }}>
+                        {allOnPageSelected && <Check size={9} color="white" strokeWidth={3}/>}
+                      </button>
+                    );
+                  } else if (col.sortKey) {
+                    inner = <SortBtn col={col.sortKey} label={col.label}/>;
+                  } else {
+                    inner = <ColLabel>{col.label}</ColLabel>;
+                  }
+
+                  return (
+                    <div
+                      key={col.key}
+                      draggable={!isCheckbox}
+                      onDragStart={(e) => onColDragStart(e, col.key)}
+                      onDragOver={(e) => onColDragOver(e, col.key)}
+                      onDragLeave={() => onColDragLeave(col.key)}
+                      onDrop={(e) => onColDrop(e, col.key)}
+                      onDragEnd={onColDragEnd}
+                      title={isCheckbox ? undefined : "Drag to reorder"}
+                      style={{
+                        position: "relative",
+                        cursor: isCheckbox ? undefined : (isDragging ? "grabbing" : "grab"),
+                        opacity: isDragging ? 0.4 : 1,
+                        // Blue left-edge marker indicates the drop slot.
+                        borderLeft: isDragOver ? `2px solid ${N}` : "2px solid transparent",
+                        // For draggable headers, extend the parent's hit area
+                        // 14 px into the inter-column gap so the GripVertical
+                        // icon sits INSIDE the parent's draggable surface.
+                        // Without this trick, the absolutely-positioned grip
+                        // would be visually in the gap but logically outside
+                        // any element's bounding box — clicks on it would
+                        // fall through to nothing and the drag wouldn't fire.
+                        // `marginLeft` pulls the parent visually left;
+                        // `paddingLeft` restores the inner content's x-
+                        // position so the label still aligns with the data
+                        // cells beneath it. Checkbox column is anchored at
+                        // its original position with only the standard 2 px
+                        // border compensation.
+                        marginLeft: isCheckbox ? -2 : -14,
+                        paddingLeft: isCheckbox ? 2 : 14,
+                        transition: "border-color 0.12s, opacity 0.12s",
+                        // Stretch to the grid cell's full vertical so the
+                        // drag target captures clicks anywhere on the header.
+                        alignSelf: "stretch",
+                        display: "flex",
+                        alignItems: "center",
+                        userSelect: "none",
+                      }}
+                    >
+                      {/* Drag-handle affordance.
+                          Positioned absolutely inside the parent's expanded
+                          padding area so it visually sits in the column-gap
+                          (no header-label shift) while remaining within the
+                          parent's bounding box — that means clicks on the
+                          grip itself initiate the drag on the parent, same
+                          as clicks on the label. No `pointer-events: none`
+                          because we *want* the grip to be hittable now. */}
+                      {!isCheckbox && (
+                        <GripVertical
+                          size={11}
+                          color={TT}
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            left: 3,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            opacity: 0.5,
+                          }}
+                        />
+                      )}
+                      {inner}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -893,27 +1065,40 @@ export function Submissions() {
               const MAX_PRODUCTS = 3;
               const visibleProducts = sub.products.slice(0, MAX_PRODUCTS);
               const overflowCount  = sub.products.length - MAX_PRODUCTS;
-              return (
-                <div
-                  key={sub.id}
-                  onClick={() => navigate(`/submission/${sub.subId}`)}
-                  className="grid px-5 py-2.5 cursor-pointer transition-colors hover:bg-[#F0F6FF] group"
-                  style={{
-                    gridTemplateColumns:`minmax(210px, 2.6fr) minmax(88px, 0.85fr) minmax(115px, 1fr) minmax(95px, 0.9fr) minmax(100px, 0.95fr) minmax(60px, 0.55fr) minmax(90px, 0.8fr) minmax(140px, 1.05fr) minmax(105px, 0.85fr)`,
-                    gap:"0 16px",
-                    alignItems:"center",
-                    borderBottom: isLast ? "none" : `1px solid ${BDL}`,
-                    background:"white",
-                  }}
-                >
-                  {/* Member */}
+              const rowSelected = selected.has(sub.id);
+
+              // Per-cell renderer — keyed by ColKey so the data row can be
+              // reshuffled by the user's drag-reorder of column headers
+              // without any branch in the row wrapper. Each branch returns
+              // the SAME JSX the row used to render inline; only the call
+              // site changed (we map colOrder instead of hard-coding order).
+              const renderCell = (cellKey: ColKey): React.ReactNode => {
+                switch (cellKey) {
+                  case "checkbox":
+                    return (
+                      <div onClick={(e) => e.stopPropagation()} className="flex items-center" style={{ minHeight: 20 }}>
+                    <button
+                      onClick={() => toggleSelect(sub.id)}
+                      aria-label={rowSelected ? `Deselect ${sub.subId}` : `Select ${sub.subId}`}
+                      aria-pressed={rowSelected}
+                      className="flex items-center justify-center"
+                      style={{
+                        width:15, height:15,
+                        background: rowSelected ? N : "white",
+                        border: `2px solid ${rowSelected ? N : BD}`,
+                        cursor: "pointer",
+                        transition: "all 0.13s",
+                      }}>
+                      {rowSelected && <Check size={9} color="white" strokeWidth={3}/>}
+                    </button>
+                      </div>
+                    );
+                  case "member":
+                    return (
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p style={{
-                        fontSize:"0.88rem", fontWeight:600, color:TD,
-                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                        lineHeight:1.3,
-                        minWidth: 0,
+                        fontSize:14, lineHeight:"20px", fontWeight:600, color:TD,
                       }} className="group-hover:underline group-hover:decoration-blue-600">
                         {sub.member}
                       </p>
@@ -923,8 +1108,7 @@ export function Submissions() {
                           title={`${sub.memberCount ?? 0} members in this group submission`}
                           style={{
                             color:"#7B2FBE",
-                            fontSize:"0.62rem", fontWeight:700,
-                            whiteSpace:"nowrap",
+                            fontSize:"0.72rem", fontWeight:700, lineHeight:1,
                           }}
                         >
                           <Users size={10}/>
@@ -932,147 +1116,37 @@ export function Submissions() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span style={{
-                        fontSize:"0.66rem", fontWeight:600, color:N,
+                        fontSize:"0.75rem", lineHeight:"18px", fontWeight:600, color:N,
                         fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
-                        whiteSpace:"nowrap",
                       }}>
                         {sub.subId}
                       </span>
-                      <span style={{ fontSize:"0.66rem", color:TT, fontWeight:400, fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                      <span style={{
+                        fontSize:"0.75rem", lineHeight:"18px", color:TT, fontWeight:400,
+                        fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
+                      }}>
                         · M-{sub.memberNumber}
                       </span>
                       <span style={{ width:2, height:2, borderRadius:9999, background:BD }}/>
-                      <span style={{ fontSize:"0.68rem", color:TT, fontWeight:500 }}>{sub.state}</span>
+                      <span style={{ fontSize:"0.75rem", lineHeight:"18px", color:TT, fontWeight:500 }}>{sub.state}</span>
                       <span style={{ width:2, height:2, borderRadius:9999, background:BD }}/>
                       <span style={{
-                        fontSize:"0.68rem", color:TT, fontWeight:400,
-                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                        fontSize:"0.75rem", lineHeight:"18px", color:TT, fontWeight:400,
                       }}>
                         {sub.broker}
                       </span>
                     </div>
                   </div>
-
-                  {/* Submission Type — plain colored text, no badge */}
-                  <div>
+                    );
+                  case "needByDate":
+                    return (
+                  <div className="flex flex-col items-start gap-1">
                     <span style={{
-                      fontSize:"0.72rem", fontWeight:600,
-                      color: sub.submissionType === "New Business" ? N : "#7B2FBE",
-                      whiteSpace:"nowrap",
+                      fontSize:14, lineHeight:"20px", color:TM, fontWeight:500,
+                      fontVariantNumeric:"tabular-nums",
                     }}>
-                      {sub.submissionType}
-                    </span>
-                  </div>
-
-                  {/* Products — plain mono text, dot-separated, capped at 3 + overflow */}
-                  <div className="flex items-center gap-1 min-w-0">
-                    <span style={{
-                      fontSize:"0.72rem", fontWeight:500, color:TM,
-                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                    }}>
-                      {visibleProducts.join(" · ")}
-                    </span>
-                    {overflowCount > 0 && (
-                      <span style={{
-                        fontSize:"0.66rem", fontWeight:500, color:TT,
-                        whiteSpace:"nowrap",
-                      }}>
-                        +{overflowCount}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Stage — dot+text for normal states; keep filled pill only for Declined */}
-                  <div>
-                    {sub.status === "Declined" ? (
-                      <span className="inline-flex items-center gap-1.5"
-                        style={{
-                          background:sc.bg, padding:"3px 8px", borderRadius:9999,
-                        }}>
-                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
-                        <span style={{ fontSize:"0.68rem", fontWeight:600, color:sc.text, whiteSpace:"nowrap" }}>
-                          {sub.status}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5" style={{ whiteSpace:"nowrap" }}>
-                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
-                        <span style={{ fontSize:"0.72rem", fontWeight:500, color:sc.text }}>
-                          {sub.status}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Underwriter — soft round avatar */}
-                  <div>
-                    {sub.assignedTo === "Unassigned" ? (
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="flex items-center justify-center shrink-0 rounded-full"
-                          style={{
-                            width:22, height:22,
-                            background:"#FFF3E0",
-                            border:"1px dashed #E07800",
-                            color:"#B45309",
-                            fontSize:"0.66rem", fontWeight:700,
-                            lineHeight:1,
-                          }}>
-                            ?
-                        </div>
-                        <span style={{
-                          fontSize:"0.74rem", color:"#B45309", fontWeight:600,
-                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                        }}>
-                          Unassigned
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="flex items-center justify-center shrink-0 rounded-full"
-                          style={{
-                            width:22, height:22,
-                            background:`${N}10`, color:N,
-                            fontSize:"0.6rem", fontWeight:700,
-                          }}>
-                          {sub.assignedTo.split(" ").map(n=>n[0]).join("")}
-                        </div>
-                        <span style={{
-                          fontSize:"0.74rem", color:TD, fontWeight:500,
-                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                        }}>
-                          {sub.assignedTo.split(" ")[0]}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Appetite */}
-                  <div>
-                    <span style={{
-                      fontSize:"0.82rem", fontWeight:700,
-                      color: sub.appetiteScore >= 80 ? "#15803D" :
-                             sub.appetiteScore >= 60 ? "#B45309" : "#B91C1C",
-                    }}>
-                      {sub.appetiteScore}%
-                    </span>
-                  </div>
-
-                  {/* Premium */}
-                  <div>
-                    <span style={{
-                      fontSize:"0.78rem", fontWeight:600, color:TD,
-                      fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap",
-                    }}>
-                      {fmt(sub.estimatedPremium)}
-                    </span>
-                  </div>
-
-                  {/* Need By Date — three-tier urgency pill:
-                      Critical (was blocked-aging) > High Priority > Aging. */}
-                  <div className="flex flex-col items-start gap-0.5">
-                    <span style={{ fontSize:"0.74rem", color:TM, whiteSpace:"nowrap", fontWeight:500 }}>
                       {sub.needByDate ? new Date(sub.needByDate).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—"}
                     </span>
                     {(isBlockedAging || isAging || isHighPriorityActive) && (
@@ -1096,14 +1170,154 @@ export function Submissions() {
                       </span>
                     )}
                   </div>
-
-                  {/* Effective Date */}
-                  <div className="flex items-center justify-between gap-1">
-                    <span style={{ fontSize:"0.74rem", color:TM, whiteSpace:"nowrap", fontWeight:500 }}>
+                    );
+                  case "effective":
+                    return (
+                  <div>
+                    <span style={{
+                      fontSize:14, lineHeight:"20px", color:TM, fontWeight:500,
+                      fontVariantNumeric:"tabular-nums",
+                    }}>
                       {sub.effective ? new Date(sub.effective).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"}) : "—"}
+                    </span>
+                  </div>
+                    );
+                  case "submissionType":
+                    return (
+                  <div>
+                    <span style={{
+                      fontSize:14, lineHeight:"20px", fontWeight:600,
+                      color: sub.submissionType === "New Business" ? N : "#7B2FBE",
+                    }}>
+                      {sub.submissionType}
+                    </span>
+                  </div>
+                    );
+                  case "products":
+                    return (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span style={{
+                      fontSize:14, lineHeight:"20px", fontWeight:500, color:TM,
+                    }}>
+                      {visibleProducts.join(" · ")}
+                    </span>
+                    {overflowCount > 0 && (
+                      <span style={{
+                        fontSize:"0.78rem", lineHeight:"20px", fontWeight:500, color:TT,
+                      }}>
+                        +{overflowCount}
+                      </span>
+                    )}
+                  </div>
+                    );
+                  case "stage":
+                    return (
+                  <div>
+                    {sub.status === "Declined" ? (
+                      <span className="inline-flex items-center gap-1.5"
+                        style={{
+                          background:sc.bg, padding:"3px 8px", borderRadius:9999,
+                        }}>
+                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
+                        <span style={{ fontSize:"0.78rem", lineHeight:"20px", fontWeight:600, color:sc.text }}>
+                          {sub.status}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="rounded-full" style={{ width:6, height:6, background:sc.dot }}/>
+                        <span style={{ fontSize:14, lineHeight:"20px", fontWeight:500, color:sc.text }}>
+                          {sub.status}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                    );
+                  case "underwriter":
+                    return (
+                  <div>
+                    {sub.assignedTo === "Unassigned" ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center shrink-0 rounded-full"
+                          style={{
+                            width:22, height:22,
+                            background:"#FFF3E0",
+                            border:"1px dashed #E07800",
+                            color:"#B45309",
+                            fontSize:"0.7rem", fontWeight:700,
+                            lineHeight:1,
+                          }}>
+                            ?
+                        </div>
+                        <span style={{
+                          fontSize:14, lineHeight:"20px", color:"#B45309", fontWeight:600,
+                        }}>
+                          Unassigned
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center shrink-0 rounded-full"
+                          style={{
+                            width:22, height:22,
+                            background:`${N}10`, color:N,
+                            fontSize:"0.62rem", fontWeight:700,
+                          }}>
+                          {sub.assignedTo.split(" ").map(n=>n[0]).join("")}
+                        </div>
+                        <span style={{
+                          fontSize:14, lineHeight:"20px", color:TD, fontWeight:500,
+                        }}>
+                          {sub.assignedTo.split(" ")[0]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                    );
+                  case "premium":
+                    return (
+                  <div>
+                    <span style={{
+                      fontSize:14, lineHeight:"20px", fontWeight:600, color:TD,
+                      fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap",
+                    }}>
+                      {fmt(sub.estimatedPremium)}
+                    </span>
+                  </div>
+                    );
+                  case "appetite":
+                    return (
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span style={{
+                      fontSize:15, lineHeight:"20px", fontWeight:700,
+                      color: sub.appetiteScore >= 80 ? "#15803D" :
+                             sub.appetiteScore >= 60 ? "#B45309" : "#B91C1C",
+                      fontVariantNumeric:"tabular-nums",
+                    }}>
+                      {sub.appetiteScore}%
                     </span>
                     <ChevronRight size={16} color={TT} className="shrink-0 transition-all group-hover:text-blue-600 group-hover:translate-x-0.5"/>
                   </div>
+                    );
+                }
+              };
+
+              return (
+                <div
+                  key={sub.id}
+                  onClick={() => navigate(`/submission/${sub.subId}`)}
+                  className="grid px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#F0F6FF] group"
+                  style={{
+                    gridTemplateColumns: gridTemplate,
+                    gap:"0 16px",
+                    alignItems:"start",
+                    borderBottom: isLast ? "none" : `1px solid ${BDL}`,
+                    background: rowSelected ? `${N}06` : "white",
+                  }}
+                >
+                  {colOrder.map(k => (
+                    <Fragment key={k}>{renderCell(k)}</Fragment>
+                  ))}
                 </div>
               );
             })}
@@ -1216,34 +1430,12 @@ export function Submissions() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={(data) => {
-          const nextId = String(submissions.length + 1);
-          const nextSubId = `SUB-${7847 + submissions.length - 18}`;
-          const today = new Date().toISOString().split("T")[0];
-          const newSub: Submission = {
-            id: nextId,
-            subId: nextSubId,
+          addSubmission({
             member: data.accountName,
-            memberNumber: String(1500 + submissions.length - 17).padStart(4, "0"),
-            broker: "Unassigned",
-            state: "—",
-            status: "New",
-            submissionType: "New Business",
-            kind: "Individual",
-            products: [],
-            assignedTo: "Unassigned",
-            team: "Team Alpha",
-            submitted: today,
             needByDate: data.effectiveDate,
             effective: data.effectiveDate,
             expiry: data.expirationDate,
-            estimatedPremium: 0,
-            enrollmentCount: 0,
-            appetiteScore: 0,
-            priority: "Medium",
-            daysInQueue: 0,
-            lastActivity: "Just now",
-          };
-          setSubmissions(prev => [newSub, ...prev]);
+          });
           setShowCreateModal(false);
         }}
       />

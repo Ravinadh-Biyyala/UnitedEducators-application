@@ -1907,7 +1907,11 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                 <div id="rating-option-editor"/>
                 {/* Sub-tab nav */}
                 <div className="flex flex-nowrap items-center gap-0" style={{ borderBottom: `1px solid ${BD}`, background: "white" }}>
-                  {(["policy", "endorsements", "schedules", "memberBenefits", "notifications", "premium"] as SubTab[]).map(tab => {
+                  {/* Premium summary hoisted up in the sub-tab order so it
+                      appears BEFORE Member Benefits + Notifications — gives
+                      underwriters the priced view of the option before they
+                      tweak the value-added attachments. */}
+                  {(["policy", "endorsements", "schedules", "premium", "memberBenefits", "notifications"] as SubTab[]).map(tab => {
                     const isAct = currentSubTab === tab;
                     const labels: Record<SubTab, { icon: React.ReactNode; text: string; count?: number }> = {
                       policy:         { icon: <Shield size={13} />,      text: "Coverage",            count: selectedItemCount },
@@ -2609,7 +2613,36 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   {/* ════ MEMBER BENEFITS ════ */}
                   {currentSubTab === "memberBenefits" && (
                     <div className="space-y-5">
-                      <div>
+                      {/* Account-level cascade banner — when the global
+                          `Member Benefits` toggle in AccountOverviewHeader is
+                          OFF, the whole list below is treated as inactive.
+                          The banner anchors the cause back to the header so
+                          underwriters don't think this product sub-form is
+                          broken. */}
+                      {workspace && !workspace.memberBenefitsChecked && (
+                        <div
+                          className="flex items-start gap-2 px-3 py-2"
+                          style={{
+                            background: "#FFFBEB", border: "1px solid #FDE68A",
+                            borderRadius: 6,
+                          }}
+                        >
+                          <AlertCircle size={13} color="#B45309" style={{ marginTop: 1 }} />
+                          <div style={{ fontSize: "0.72rem", color: "#92400E", lineHeight: 1.4 }}>
+                            <strong>Account-level Member Benefits are turned off.</strong> Toggle
+                            the global switch in the Account Overview header to re-enable benefits
+                            across every product on this submission.
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          opacity: workspace && !workspace.memberBenefitsChecked ? 0.55 : 1,
+                          pointerEvents: workspace && !workspace.memberBenefitsChecked ? "none" : "auto",
+                          transition: "opacity 0.18s",
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Member Benefits</div>
@@ -2649,7 +2682,33 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                   {/* ════ NOTIFICATIONS ════ */}
                   {currentSubTab === "notifications" && (
                     <div className="space-y-5">
-                      <div>
+                      {/* Same cascade banner pattern as Member Benefits — when
+                          the global Notifications toggle is OFF, this product
+                          sub-form is inactive and the banner explains why. */}
+                      {workspace && !workspace.notificationsEnabled && (
+                        <div
+                          className="flex items-start gap-2 px-3 py-2"
+                          style={{
+                            background: "#FFFBEB", border: "1px solid #FDE68A",
+                            borderRadius: 6,
+                          }}
+                        >
+                          <AlertCircle size={13} color="#B45309" style={{ marginTop: 1 }} />
+                          <div style={{ fontSize: "0.72rem", color: "#92400E", lineHeight: 1.4 }}>
+                            <strong>Account-level Notifications are turned off.</strong> Toggle
+                            the global switch in the Account Overview header to re-enable
+                            notifications across every product on this submission.
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          opacity: workspace && !workspace.notificationsEnabled ? 0.55 : 1,
+                          pointerEvents: workspace && !workspace.notificationsEnabled ? "none" : "auto",
+                          transition: "opacity 0.18s",
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <div style={{ fontSize: "0.62rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.12em" }}>Notifications</div>
@@ -2930,9 +2989,18 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
         const libEnds  = ENDORSEMENTS_LIBRARY[pid] ?? [];
         const alreadyAddedIds = new Set(opt.addedEndorsements.map(e => e.id));
         const available = libEnds.filter(e => !alreadyAddedIds.has(e.id));
+        // Dual-search: test the query against both the endorsement id
+        // (e.g. "ell-lib4") AND the human-readable name/label, plus the
+        // existing description for free-text discoverability. Underwriters
+        // who remember the code can paste it; underwriters who only know
+        // the name still find the form.
         const q = endorsementsLibraryQuery.trim().toLowerCase();
         const visible = q
-          ? available.filter(e => e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q))
+          ? available.filter(e =>
+              e.id.toLowerCase().includes(q) ||
+              e.label.toLowerCase().includes(q) ||
+              e.desc.toLowerCase().includes(q)
+            )
           : available;
         const closeLibrary = () => { setShowEndorsementsLibrary(false); setEndorsementsLibraryQuery(""); };
 
@@ -2965,7 +3033,7 @@ export function RatingTab({ selectedProductIds }: RatingTabProps) {
                     <input
                       autoFocus
                       type="text"
-                      placeholder="Search endorsements by name or description…"
+                      placeholder="Search endorsements by ID, name, or description…"
                       value={endorsementsLibraryQuery}
                       onChange={e => setEndorsementsLibraryQuery(e.target.value)}
                       className="w-full pl-9 pr-9 py-2 outline-none"

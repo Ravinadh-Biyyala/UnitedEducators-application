@@ -341,8 +341,8 @@ function StatusPill({ status }: { status: ValidationStatus }) {
   return (
     <span className="inline-flex items-center gap-1" style={{
       background: m.bg, color: m.color, border: `1px solid ${m.border}`,
-      padding: "2px 8px", borderRadius: 999,
-      fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.04em",
+      padding: "3px 10px", borderRadius: 999,
+      fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em",
       textTransform: "uppercase",
     }}>
       {m.icon} {m.label}
@@ -355,8 +355,8 @@ function DecisionPill({ decision }: { decision: Decision }) {
   return (
     <span className="inline-flex items-center gap-1" style={{
       background: m.bg, color: m.color, border: `1px solid ${m.border}`,
-      padding: "2px 8px", borderRadius: 999,
-      fontSize: "0.6rem", fontWeight: 800, letterSpacing: "0.04em",
+      padding: "3px 10px", borderRadius: 999,
+      fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.04em",
       textTransform: "uppercase",
     }}>
       {m.label}
@@ -498,23 +498,23 @@ function ReviewList({
         background: "white",
         border: `1px solid ${BDL}`,
         borderRadius: 8,
-        padding: "12px 14px",
+        padding: "16px 18px",
         boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
       }}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <span style={{
-              width: 34, height: 34, borderRadius: 8,
+              width: 40, height: 40, borderRadius: 8,
               background: `${N}12`, color: N,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
             }}>
-              <ClipboardCheck size={18}/>
+              <ClipboardCheck size={20}/>
             </span>
             <div>
-              <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: TD, lineHeight: 1.15, letterSpacing: "-0.01em" }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: TD, lineHeight: 1.2, letterSpacing: "-0.01em" }}>
                 Underwriting Review Checklist
               </h2>
-              <p style={{ fontSize: "0.72rem", color: TT, marginTop: 3 }}>
+              <p style={{ fontSize: "0.88rem", color: TT, marginTop: 4, lineHeight: 1.4 }}>
                 6 dimensions · validated against submitted documents
               </p>
             </div>
@@ -574,8 +574,8 @@ function SummaryChip({ label, n, tone }: { label: string; n: number; tone: "good
   return (
     <span className="inline-flex items-center gap-1.5" style={{
       background: bg, color, borderRadius: 999,
-      padding: "3px 9px",
-      fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.04em",
+      padding: "4px 11px",
+      fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.04em",
       textTransform: "uppercase",
     }}>
       <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 900 }}>{n}</span> {label}
@@ -605,25 +605,25 @@ function ChecklistRow({
       className="cursor-pointer transition-colors hover:bg-slate-50"
       style={{
         borderBottom: isLast ? "none" : `1px solid ${BDL}`,
-        padding: "14px 16px",
+        padding: "18px 20px",
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",
-        gap: 14,
+        gap: 16,
         alignItems: "center",
       }}>
       {/* Left: index + icon */}
       <div className="flex items-center gap-3">
         <span style={{
-          width: 24, height: 24, borderRadius: 6,
+          width: 28, height: 28, borderRadius: 6,
           background: "#F0F3F8", color: TM,
-          fontSize: "0.7rem", fontWeight: 800,
+          fontSize: "0.82rem", fontWeight: 800,
           display: "inline-flex", alignItems: "center", justifyContent: "center",
           fontVariantNumeric: "tabular-nums",
         }}>
           {String(idx).padStart(2, "0")}
         </span>
         <span style={{
-          width: 32, height: 32, borderRadius: 7,
+          width: 36, height: 36, borderRadius: 7,
           background: `${N}10`, color: N,
           display: "inline-flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
@@ -634,19 +634,19 @@ function ChecklistRow({
 
       {/* Middle: title + meta */}
       <div style={{ minWidth: 0 }}>
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span style={{ fontSize: "0.86rem", fontWeight: 700, color: TD }}>
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+          <span style={{ fontSize: "1rem", fontWeight: 700, color: TD, lineHeight: 1.3 }}>
             {item.title}
           </span>
           <StatusPill status={item.status}/>
           <DecisionPill decision={decision}/>
         </div>
-        <p style={{ fontSize: "0.72rem", color: TM, lineHeight: 1.4, marginBottom: 6 }}>
+        <p style={{ fontSize: "0.88rem", color: TM, lineHeight: 1.5, marginBottom: 8 }}>
           {item.short}
         </p>
-        <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: "0.65rem", color: TT }}>
-          <span className="inline-flex items-center gap-1">
-            <FileText size={10}/>
+        <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: "0.78rem", color: TT }}>
+          <span className="inline-flex items-center gap-1.5">
+            <FileText size={12}/>
             <strong style={{ color: TM, fontWeight: 700 }}>{docsReceived}/{docsTotal}</strong> docs received
           </span>
           <span>·</span>
@@ -671,10 +671,10 @@ function ChecklistRow({
           className="flex items-center gap-1 transition-all"
           style={{
             background: N, color: "white", border: "none",
-            padding: "6px 11px", borderRadius: 6, cursor: "pointer",
-            fontSize: "0.7rem", fontWeight: 700, fontFamily: font,
+            padding: "8px 14px", borderRadius: 6, cursor: "pointer",
+            fontSize: "0.82rem", fontWeight: 700, fontFamily: font,
           }}>
-          Analytics <ChevronRight size={11}/>
+          Analytics <ChevronRight size={13}/>
         </button>
       </div>
     </div>
@@ -689,18 +689,18 @@ function ActionButton({
   onClick: () => void;
 }) {
   const cfg = tone === "approve"
-    ? { color: OK,        bg: "#E8F5EC", border: "#86EFAC", icon: <ThumbsUp size={11}/>, label: "Approve" }
-    : { color: "#7B2FBE", bg: "#F3E8FF", border: "#D8B4FE", icon: <Flag     size={11}/>, label: "Refer"   };
+    ? { color: OK,        bg: "#E8F5EC", border: "#86EFAC", icon: <ThumbsUp size={13}/>, label: "Approve" }
+    : { color: "#7B2FBE", bg: "#F3E8FF", border: "#D8B4FE", icon: <Flag     size={13}/>, label: "Refer"   };
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1 transition-all"
+      className="flex items-center gap-1.5 transition-all"
       style={{
         background: active ? cfg.bg : "white",
         color: active ? cfg.color : TM,
         border: `1px solid ${active ? cfg.border : BDL}`,
-        padding: "5px 10px", borderRadius: 6, cursor: "pointer",
-        fontSize: "0.66rem", fontWeight: 700, fontFamily: font,
+        padding: "7px 12px", borderRadius: 6, cursor: "pointer",
+        fontSize: "0.82rem", fontWeight: 700, fontFamily: font,
       }}>
       {cfg.icon} {cfg.label}
     </button>

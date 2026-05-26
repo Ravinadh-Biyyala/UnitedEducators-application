@@ -50,6 +50,17 @@ interface SubmissionWorkspaceValue {
   activeReviewId: string | null;
   setActiveReviewId: (id: string | null) => void;
 
+  // ── Account-level cascade ───────────────────────────────────────────────
+  // Lifted out of RatingTab's product sub-forms so the toggle in the
+  // AccountOverviewHeader applies globally across every product configured
+  // under this submission. memberBenefitsChecked initializes `true`
+  // (representing the ~99% baseline). Mutating either value here cascades
+  // into every product's Member Benefits / Notifications sub-tab.
+  memberBenefitsChecked: boolean;
+  setMemberBenefitsChecked: (v: boolean) => void;
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (v: boolean) => void;
+
   threads: CorrespondenceThread[];
   setThreads: React.Dispatch<React.SetStateAction<CorrespondenceThread[]>>;
 
@@ -90,6 +101,9 @@ export function SubmissionWorkspaceProvider({
 }) {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
+  // Account-level cascade — see SubmissionWorkspaceValue for rationale.
+  const [memberBenefitsChecked, setMemberBenefitsChecked] = useState<boolean>(true);
+  const [notificationsEnabled,  setNotificationsEnabled]  = useState<boolean>(true);
   const [threads, setThreads] = useState<CorrespondenceThread[]>(initialThreads);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const nextTaskId = useRef(initialTasks.length + 1);
@@ -154,6 +168,10 @@ export function SubmissionWorkspaceProvider({
         setActiveTab,
         activeReviewId,
         setActiveReviewId,
+        memberBenefitsChecked,
+        setMemberBenefitsChecked,
+        notificationsEnabled,
+        setNotificationsEnabled,
         threads,
         setThreads,
         tasks,

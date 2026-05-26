@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail, Search, Paperclip, Star, RefreshCw,
@@ -8,12 +8,14 @@ import {
   Download, Eye, MoreHorizontal, Inbox as InboxIcon,
   Send, Archive, Trash2, Filter,
   Plus, Loader2, Check, ExternalLink,
-  Bell, CornerUpLeft,
+  Bell, CornerUpLeft, FileEdit, ShieldAlert,
 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { PageRegister } from "../components/companion/PageRegister";
 import { newId, now } from "../components/companion/CompanionContext";
 import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
+import { useSubmissionsList } from "../context/SubmissionsListContext";
+import { useNotifications } from "../context/NotificationsContext";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const N    = "#0123D4";
@@ -47,9 +49,58 @@ interface Email {
     needByDate?: string;
   };
   potentialDuplicates?: { id: string; name: string; match: number; reason: string; status: string }[];
+  /** Compliance / sanctions list hit on the broker or institution. Drives the
+   *  "Account is flagged" validation gate during auto-create. */
+  accountFlagged?: { reason: string };
+}
+
+// ── Application-form detection ────────────────────────────────────────────────
+// "Mandatory doc" trigger for auto-create. An attachment counts as an
+// application form if its filename contains "acord" / "application" / "_app"
+// (case-insensitive). Centralized so both the email-open auto-create and the
+// AI Action button stay aligned on what counts.
+//
+// NB: a plain `.includes()` is intentional — `\b` word boundaries don't fire
+// between `_` and a letter (both are word chars), so something like
+// `Riverside_USD_ACORD_App.pdf` would slip past a `\bacord\b` test.
+function isApplicationForm(att: Attachment): boolean {
+  if (att.type !== "pdf" && att.type !== "docx") return false;
+  const n = att.name.toLowerCase();
+  return n.includes("acord")
+      || n.includes("application")
+      || /(^|[^a-z])app(\.|$|_)/.test(n);
+}
+function hasApplicationForm(email: Email): boolean {
+  return email.attachments.some(isApplicationForm);
 }
 
 const MOCK_EMAILS: Email[] = [
+  // Sample demo for the *clean* auto-create path: complete ACORD app, no
+  // bound duplicates on file, account is not flagged → submission lands as
+  // status "New" and the AI toolbar offers a one-click View Submission CTA.
+  {
+    id: "e0",
+    from: { name: "Daniel Park", company: "Marsh McLennan Education", email: "d.park@marsh.com", initials: "DP", color: "#1A7A4A" },
+    to: "sarah.mitchell@ue.org",
+    subject: "New Submission — Crestview Academy (MA)",
+    preview: "Please find attached the completed ACORD application for Crestview Academy, a private K-12 in Massachusetts looking for EPL and GL effective August 1, 2026.",
+    body: `Hi Sarah,\n\nAttached is the completed ACORD application for Crestview Academy — a small private K-12 school in Newton, MA. They're a new account for the UE program.\n\nAccount snapshot:\n• Institution: Crestview Academy\n• Location: Newton, MA\n• Enrollment: 1,850 students (PreK–12)\n• Desired effective date: August 1, 2026\n• Coverages requested: EPL ($1M/$3M), GL ($1M/$3M)\n• Expiring premium: $172,500 (Travelers)\n\nClean account — no claims in the last 5 years, no prior carrier non-renewals. They're shopping primarily on service and program fit.\n\nLet me know if anything else is needed to start the review.\n\nThanks,\nDaniel`,
+    date: "2026-04-28T10:00:00",
+    unread: true, flagged: false, folder: "inbox",
+    tags: ["broker", "new-submission"],
+    attachments: [
+      { name: "Crestview_Academy_ACORD_Application.pdf", size: "1.6 MB", type: "pdf" },
+      { name: "Crestview_Loss_Runs_5yr.pdf",             size: "420 KB", type: "pdf" },
+    ],
+    extracted: {
+      institutionName: "Crestview Academy",
+      state: "MA", enrollment: 1850,
+      coverageLines: ["Employment Practices Liability", "General Liability"],
+      effectiveDate: "August 1, 2026", needByDate: "July 10, 2026", broker: "Marsh McLennan Education",
+      annualPremiumEstimate: "$185,000", institutionType: "Private K-12",
+    },
+    potentialDuplicates: [],
+  },
   {
     id: "e1",
     from: { name: "Marcus Webb", company: "Gallagher Education", email: "m.webb@gallagher.com", initials: "MW", color: "#7B2FBE" },
@@ -102,6 +153,7 @@ const MOCK_EMAILS: Email[] = [
     potentialDuplicates: [
       { id: "SUB-7788", name: "Horizon Academy — Austin Campus", match: 68, reason: "Similar name, same state", status: "Declined" },
     ],
+    accountFlagged: { reason: "Prior EPL claim in 2023 — account on watchlist pending HR review" },
   },
   {
     id: "e3",
@@ -209,6 +261,17 @@ function isReply(subject: string) {
 
 type AIPanel = "none" | "create" | "parse" | "duplicates";
 
+// ── Auto-create types ─────────────────────────────────────────────────────────
+// Per-email outcome of the auto-create pass, surfaced in a banner above the
+// email body. Cleared per email, so opening another email runs its own pass.
+interface AutoCreateOutcome {
+  subId: string;
+  status: "New" | "Draft";          // "Draft" === landed in review pile
+  issues: string[];                 // validation messages (empty on clean path)
+  submissionType: "New Business" | "Cross-Sell";
+  member: string;
+}
+
 // ── Main Inbox page ────────────────────────────────────────────────────────────
 export function Inbox() {
   const navigate = useNavigate();
@@ -219,6 +282,17 @@ export function Inbox() {
   const [aiLoading, setAiLoading]     = useState<AIPanel>("none");
   const [aiDone, setAiDone]           = useState<Set<AIPanel>>(new Set());
   const [emails, setEmails]           = useState(MOCK_EMAILS);
+
+  // Shared submission store + notification stream — the targets of the
+  // auto-create side effect.
+  const { addSubmission } = useSubmissionsList();
+  const { pushNotification } = useNotifications();
+
+  // Keep track of which emails already triggered auto-create so re-opening
+  // the same thread doesn't spawn duplicate submissions, and so the outcome
+  // banner persists for the user to see.
+  const autoCreated = useRef<Map<string, AutoCreateOutcome>>(new Map());
+  const [autoOutcome, setAutoOutcome] = useState<AutoCreateOutcome | null>(null);
 
   const filtered = useMemo(() =>
     emails.filter(e =>
@@ -232,7 +306,93 @@ export function Inbox() {
 
   const unreadCount = emails.filter(e => e.folder === "inbox" && e.unread).length;
 
-  // Mark as read when opened
+  // ── Auto-create on open ──────────────────────────────────────────────────
+  // Runs intake validation, then creates a submission record regardless of
+  // whether it passed. Passing → status "New". Failing → status "Draft" + a
+  // "needs review" notification. Memoized per email id via the autoCreated
+  // ref so re-opening the same thread never produces a duplicate record.
+  const runAutoCreate = (email: Email): AutoCreateOutcome | null => {
+    if (!hasApplicationForm(email)) return null;
+    if (!email.extracted) return null;
+    if (autoCreated.current.has(email.id)) return autoCreated.current.get(email.id)!;
+
+    const ex = email.extracted;
+    const issues: string[] = [];
+
+    // Validation 1: "Is this a new business" — answered by checking whether a
+    // Bound duplicate already exists on the account. Bound dup ⇒ existing
+    // policyholder, so this is a cross-sell, not new business.
+    const boundDup = email.potentialDuplicates?.find(d => d.status === "Bound");
+    const isNewBusiness = !boundDup;
+    if (!isNewBusiness) {
+      issues.push(`Account already on file as ${boundDup!.id} (${boundDup!.status}) — review as Cross-Sell instead of New Business.`);
+    }
+
+    // Validation 2: "Account is flagged" — set by compliance / sanctions seed.
+    if (email.accountFlagged) {
+      issues.push(`Account flagged: ${email.accountFlagged.reason}.`);
+    }
+
+    const status: "New" | "Draft" = issues.length === 0 ? "New" : "Draft";
+    const submissionType: "New Business" | "Cross-Sell" = isNewBusiness ? "New Business" : "Cross-Sell";
+
+    // Coerce extracted dates into ISO so the Submissions table's date filters
+    // and sorts behave the same as on the seeded entries.
+    const toISO = (s?: string) => {
+      if (!s) return "";
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
+    };
+
+    const created = addSubmission({
+      member: ex.institutionName,
+      broker: ex.broker,
+      state: ex.state.slice(0, 2),
+      status,
+      submissionType,
+      kind: "Individual",
+      products: ex.coverageLines,
+      assignedTo: "Sarah Mitchell",
+      team: "Team Alpha",
+      needByDate: toISO(ex.needByDate),
+      effective: toISO(ex.effectiveDate),
+      estimatedPremium: ex.annualPremiumEstimate
+        ? Number(ex.annualPremiumEstimate.replace(/[^0-9.]/g, "")) || 0
+        : 0,
+      enrollmentCount: ex.enrollment,
+      priority: status === "Draft" ? "High" : "Medium",
+      lastActivity: "Auto-created from inbox",
+      draftReason: status === "Draft" ? "Failed intake validation" : undefined,
+      draftIssues: status === "Draft" ? issues : undefined,
+      sourceEmailId: email.id,
+    });
+
+    pushNotification({
+      category: "Submission",
+      severity: status === "Draft" ? "warn" : "success",
+      title: status === "Draft"
+        ? `Needs review: ${created.subId} saved as draft`
+        : `Auto-created: ${created.subId}`,
+      body: status === "Draft"
+        ? `Auto-created from ${email.from.company} email but landed in the draft pile — ${issues.join(" ")}`
+        : `Submission for ${ex.institutionName} created from the application form attached to ${email.from.name}'s email.`,
+      actor: "Inbox Auto-Create",
+      actorInitials: "AI",
+      submission: created.subId,
+    });
+
+    const outcome: AutoCreateOutcome = {
+      subId: created.subId,
+      status,
+      issues,
+      submissionType,
+      member: ex.institutionName,
+    };
+    autoCreated.current.set(email.id, outcome);
+    return outcome;
+  };
+
+  // Mark as read when opened + run auto-create pass
   const openEmail = (email: Email) => {
     setSelected(email);
     setActivePanel("none");
@@ -240,7 +400,15 @@ export function Inbox() {
     if (email.unread) {
       setEmails(prev => prev.map(e => e.id === email.id ? { ...e, unread: false } : e));
     }
+    setAutoOutcome(runAutoCreate(email));
   };
+
+  // First-render auto-create pass for the initially-selected email — keeps
+  // the banner consistent with the open-on-click behaviour.
+  useEffect(() => {
+    setAutoOutcome(runAutoCreate(selected));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Toggle flag
   const toggleFlag = (id: string, e: React.MouseEvent) => {
@@ -611,6 +779,43 @@ export function Inbox() {
               </div>
             )}
 
+            {/* Auto-create outcome — visible whenever the application form on
+                this email already triggered a submission record. Green for the
+                clean path, amber for the "saved as Draft, needs review" path. */}
+            {autoOutcome && (
+              <AutoCreateBanner
+                outcome={autoOutcome}
+                onView={() => {
+                  if (autoOutcome.status === "Draft") {
+                    navigate("/submissions/new", {
+                      state: {
+                        freshFromInbox: true,
+                        prefill: selected.extracted
+                          ? {
+                              ...selected.extracted,
+                              submissionType: autoOutcome.submissionType,
+                              crossSellMatch: selected.potentialDuplicates?.find(d => d.status === "Bound") ?? null,
+                            }
+                          : null,
+                        sourceEmail: {
+                          subject: selected.subject,
+                          fromName: selected.from.name,
+                          fromCompany: selected.from.company,
+                          attachments: selected.attachments,
+                        },
+                        autoCreateDraft: {
+                          subId: autoOutcome.subId,
+                          issues: autoOutcome.issues,
+                        },
+                      },
+                    });
+                  } else {
+                    navigate(`/submission/${autoOutcome.subId}`);
+                  }
+                }}
+              />
+            )}
+
             {/* Compact attachment row — chip-style with truncation, low chrome */}
             {selected.attachments.length > 0 && (
               <div style={{
@@ -661,18 +866,62 @@ export function Inbox() {
               </span>
             </div>
 
-            {/* Create Submission */}
-            <AIActionButton
-              icon={<Plus size={13} />}
-              label="Create Submission"
-              color={N}
-              active={activePanel === "create"}
-              loading={aiLoading === "create"}
-              done={aiDone.has("create")}
-              disabled={!selected.extracted}
-              onClick={() => triggerAI("create")}
-              tooltip={!selected.extracted ? "No structured data extractable from this email" : undefined}
-            />
+            {/* Create / Open Submission — once auto-create has run for this
+                email, the button collapses the "AI panel" path entirely and
+                routes the user straight to either the submission detail page
+                (clean path) or the New-Submission form with the failed-
+                validation issues prefilled into the warnings banner (draft path). */}
+            {autoOutcome ? (
+              <AIActionButton
+                icon={autoOutcome.status === "Draft" ? <FileEdit size={13} /> : <ExternalLink size={13} />}
+                label={autoOutcome.status === "Draft" ? "Review Draft" : "View Submission"}
+                color={autoOutcome.status === "Draft" ? "#B45309" : N}
+                active={false}
+                loading={false}
+                done={true}
+                disabled={false}
+                onClick={() => {
+                  if (autoOutcome.status === "Draft") {
+                    navigate("/submissions/new", {
+                      state: {
+                        freshFromInbox: true,
+                        prefill: selected.extracted
+                          ? {
+                              ...selected.extracted,
+                              submissionType: autoOutcome.submissionType,
+                              crossSellMatch: selected.potentialDuplicates?.find(d => d.status === "Bound") ?? null,
+                            }
+                          : null,
+                        sourceEmail: {
+                          subject: selected.subject,
+                          fromName: selected.from.name,
+                          fromCompany: selected.from.company,
+                          attachments: selected.attachments,
+                        },
+                        autoCreateDraft: {
+                          subId: autoOutcome.subId,
+                          issues: autoOutcome.issues,
+                        },
+                      },
+                    });
+                  } else {
+                    navigate(`/submission/${autoOutcome.subId}`);
+                  }
+                }}
+              />
+            ) : (
+              <AIActionButton
+                icon={<Plus size={13} />}
+                label="Create Submission"
+                color={N}
+                active={activePanel === "create"}
+                loading={aiLoading === "create"}
+                done={aiDone.has("create")}
+                disabled={!selected.extracted}
+                onClick={() => triggerAI("create")}
+                tooltip={!selected.extracted ? "No structured data extractable from this email" : undefined}
+              />
+            )}
 
             {/* Parse Attachments */}
             <AIActionButton
@@ -753,6 +1002,78 @@ export function Inbox() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+// ── Auto-Create outcome banner ────────────────────────────────────────────────
+// Shown in the email viewer when the application-form attachment on this
+// email already triggered an auto-create. Two tones:
+//   • clean   — green "Submission auto-created" with the SUB-#### link
+//   • draft   — amber "Saved as Draft — needs review" + the validation issues
+function AutoCreateBanner({
+  outcome, onView,
+}: { outcome: AutoCreateOutcome; onView: () => void }) {
+  const isDraft = outcome.status === "Draft";
+  const accent = isDraft ? "#B45309" : "#1A7A4A";
+  const bg     = isDraft ? "#FEF3C7" : "#E8F5EC";
+  const Icon   = isDraft ? ShieldAlert : CheckCircle;
+  const title  = isDraft
+    ? `Auto-saved as Draft — ${outcome.subId} needs review`
+    : `Submission auto-created — ${outcome.subId}`;
+  const sub = isDraft
+    ? `Application form detected, but validation flagged ${outcome.issues.length} issue${outcome.issues.length === 1 ? "" : "s"}. Submission is in the draft pile until an underwriter reviews it.`
+    : `Application form detected on this email. ${outcome.member} created as ${outcome.submissionType}.`;
+
+  return (
+    <div style={{
+      marginTop: 10,
+      background: bg,
+      borderLeft: `3px solid ${accent}`,
+      borderRadius: 8,
+      padding: "10px 12px",
+      display: "flex", alignItems: "flex-start", gap: 10,
+    }}>
+      <div style={{
+        width: 24, height: 24, flexShrink: 0,
+        background: "white", borderRadius: 6,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon size={13} color={accent} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "0.74rem", fontWeight: 800, color: accent, marginBottom: 2 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: "0.66rem", color: TM, lineHeight: 1.45 }}>
+          {sub}
+        </div>
+        {isDraft && outcome.issues.length > 0 && (
+          <ul style={{
+            margin: "6px 0 0 0", paddingLeft: 16,
+            fontSize: "0.64rem", color: TM, lineHeight: 1.5,
+          }}>
+            {outcome.issues.map((iss, i) => (
+              <li key={i}>{iss}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <button
+        onClick={onView}
+        style={{
+          flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "5px 10px",
+          background: "white", color: accent,
+          border: `1px solid ${accent}40`,
+          cursor: "pointer", borderRadius: 6,
+          fontSize: "0.66rem", fontWeight: 700, fontFamily: font,
+        }}
+      >
+        {isDraft ? <FileEdit size={11} /> : <ExternalLink size={11} />}
+        {isDraft ? "Review draft" : "View submission"}
+      </button>
+    </div>
   );
 }
 

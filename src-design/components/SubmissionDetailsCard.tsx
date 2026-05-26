@@ -6,7 +6,6 @@ import {
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const N    = "#0123D4";
-const BD   = "#C4CDD8";
 const BDL  = "#DCE3EC";
 const TH   = "#F0F3F8";
 const TD   = "#1A2530";
@@ -36,14 +35,14 @@ function CopyButton({ value, hoverReveal = true }: { value: string; hoverReveal?
       aria-label={copied ? `Copied ${value}` : `Copy ${value}`}
       className={`inline-flex items-center justify-center transition-opacity ${hoverReveal ? "opacity-0 group-hover:opacity-100" : ""}`}
       style={{
-        width:18, height:18, marginLeft:6, borderRadius:6,
+        width:22, height:22, marginLeft:6, borderRadius:6,
         background: copied ? "#E8F5EC" : "transparent",
         border:"none", cursor:"pointer", flexShrink:0,
       }}
     >
       {copied
-        ? <Check size={10} color={OK} strokeWidth={3}/>
-        : <Copy size={10} color={TT}/>}
+        ? <Check size={12} color={OK} strokeWidth={3}/>
+        : <Copy size={12} color={TT}/>}
     </button>
   );
 }
@@ -59,14 +58,22 @@ function DetailRow({
 }) {
   return (
     <div
-      className="group flex items-center justify-between gap-3 px-4 py-2 transition-colors hover:bg-slate-50"
-      style={{ borderBottom: last ? "none" : `1px solid ${BDL}` }}
+      className="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
+      // Fixed row height — without this, an avatar-bearing value (24px tall)
+      // makes a DetailRow taller than a plain-text sibling, which means the
+      // horizontal hairlines drift between adjacent SectionCard columns
+      // (e.g. "Effective" on the left vs "Underwriter" on the right) so the
+      // grid stops looking like one consistent table.
+      style={{
+        borderBottom: last ? "none" : `1px solid ${BDL}`,
+        minHeight: 56,
+      }}
     >
-      <span style={{ fontSize:"0.72rem", color:TT, whiteSpace:"nowrap" }}>
+      <span style={{ fontSize:"0.86rem", color:TT, whiteSpace:"nowrap" }}>
         {label}
       </span>
       <div className="flex items-center min-w-0 justify-end"
-        style={{ fontSize:"0.80rem", fontWeight:600, color:TD, textAlign:"right" }}>
+        style={{ fontSize:"0.94rem", fontWeight:600, color:TD, textAlign:"right" }}>
         <span className="truncate">{value}</span>
         {copyValue && <CopyButton value={copyValue}/>}
       </div>
@@ -82,10 +89,10 @@ function Avatar({ name, color = `${N}15`, textColor = N }: {
   return (
     <span className="inline-flex items-center justify-center"
       style={{
-        width:20, height:20, borderRadius:"50%",
+        width:24, height:24, borderRadius:"50%",
         background:color, color:textColor,
-        fontSize:"0.58rem", fontWeight:800,
-        marginRight:6, flexShrink:0,
+        fontSize:"0.7rem", fontWeight:800,
+        marginRight:8, flexShrink:0,
       }}>
       {initials}
     </span>
@@ -99,10 +106,10 @@ function StatusPill({ label, dotColor, bg, text }: {
   return (
     <span className="inline-flex items-center gap-1.5"
       style={{
-        background:bg, padding:"2px 8px", borderRadius:9999,
-        fontSize:"0.7rem", fontWeight:700, color:text,
+        background:bg, padding:"3px 10px", borderRadius:9999,
+        fontSize:"0.82rem", fontWeight:700, color:text,
       }}>
-      <span style={{ width:6, height:6, borderRadius:"50%", background:dotColor }}/>
+      <span style={{ width:7, height:7, borderRadius:"50%", background:dotColor }}/>
       {label}
     </span>
   );
@@ -112,7 +119,7 @@ function StatusPill({ label, dotColor, bg, text }: {
 function MiniBar({ pct, color = N }: { pct: number; color?: string }) {
   return (
     <div style={{
-      width:64, height:4, background:BDL, borderRadius:9999, overflow:"hidden",
+      width:80, height:5, background:BDL, borderRadius:9999, overflow:"hidden",
     }}>
       <div style={{
         width:`${Math.max(0, Math.min(100, pct))}%`, height:"100%",
@@ -127,8 +134,8 @@ function MiniBar({ pct, color = N }: { pct: number; color?: string }) {
 function Tag({ children, color, bg }: { children: React.ReactNode; color: string; bg: string }) {
   return (
     <span style={{
-      fontSize:"0.6rem", fontWeight:800, color, background:bg,
-      padding:"1px 6px", borderRadius:2, letterSpacing:"0.03em",
+      fontSize:"0.72rem", fontWeight:800, color, background:bg,
+      padding:"2px 8px", borderRadius:3, letterSpacing:"0.03em",
       textTransform:"uppercase",
     }}>
       {children}
@@ -147,18 +154,22 @@ function SectionCard({
 }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2.5"
-        style={{ borderBottom:`1px solid ${BDL}`, background:"#FAFBFD" }}>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-3"
+        // Locked header height keeps all SectionCard headers in the same
+        // grid row at the same height — even when one title is "MEMBER"
+        // and its neighbour is "ROUTING & ASSIGNMENT".
+        style={{ borderBottom:`1px solid ${BDL}`, background:"#FAFBFD", minHeight: 52 }}>
+        <div className="flex items-center gap-2 min-w-0">
           {healthDot && (
-            <span className="rounded-full" style={{
-              width:6, height:6, background:healthDot,
+            <span className="rounded-full shrink-0" style={{
+              width:8, height:8, background:healthDot,
               boxShadow:`0 0 0 3px ${healthDot}22`,
             }}/>
           )}
           <span style={{
-            fontSize:"0.62rem", fontWeight:800, color:TT,
+            fontSize:"0.78rem", fontWeight:800, color:TT,
             textTransform:"uppercase", letterSpacing:"0.1em",
+            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
           }}>
             {title}
           </span>
@@ -168,7 +179,7 @@ function SectionCard({
             aria-label={action.label}
             className="inline-flex items-center justify-center transition-colors hover:bg-slate-200"
             style={{
-              width:22, height:22, borderRadius:6,
+              width:26, height:26, borderRadius:6,
               background:"transparent", border:"none", cursor:"pointer", color:TT,
             }}>
             {action.icon}
@@ -190,13 +201,13 @@ function HeroStat({
   color?: string;
 }) {
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5"
+    <div className="inline-flex items-center gap-2 px-4 py-2"
       style={{ background:"white", border:`1px solid ${BDL}`, borderRadius:9999 }}>
-      <span style={{ fontSize:"0.62rem", color:TT, fontWeight:700,
+      <span style={{ fontSize:"0.74rem", color:TT, fontWeight:700,
         textTransform:"uppercase", letterSpacing:"0.06em" }}>
         {label}
       </span>
-      <span style={{ fontSize:"0.82rem", fontWeight:800, color }}>{value}</span>
+      <span style={{ fontSize:"0.96rem", fontWeight:800, color }}>{value}</span>
       {sub}
     </div>
   );
@@ -214,20 +225,20 @@ export function SubmissionDetailsCard() {
       fontFamily:font,
     }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-5 py-3 flex-wrap"
+      <div className="flex items-center justify-between gap-3 px-5 py-4 flex-wrap"
         style={{ borderBottom:`1px solid ${BDL}`, background:"#FAFBFD" }}>
         <div className="flex items-center gap-2 group">
           <span className="inline-flex items-center justify-center"
-            style={{ width: 24, height: 24, borderRadius: 6, background: `${N}12`, color: N }}>
-            <FileText size={13}/>
+            style={{ width: 30, height: 30, borderRadius: 7, background: `${N}12`, color: N }}>
+            <FileText size={16}/>
           </span>
-          <h3 style={{ fontSize:"0.86rem", fontWeight:700, color:TD, letterSpacing:"-0.005em" }}>
+          <h3 style={{ fontSize:"1.05rem", fontWeight:700, color:TD, letterSpacing:"-0.005em" }}>
             Submission Details
           </h3>
           <span style={{
-            fontSize:"0.70rem", color:N, fontWeight:700,
+            fontSize:"0.84rem", color:N, fontWeight:700,
             fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",
-            background:`${N}10`, padding:"2px 7px", borderRadius:9999,
+            background:`${N}10`, padding:"3px 10px", borderRadius:9999,
             marginLeft: 4,
           }}>
             SUB-10428
@@ -240,7 +251,7 @@ export function SubmissionDetailsCard() {
             label="Need-by"
             value="12d"
             color={BAD}
-            sub={<Clock size={12} color={BAD}/>}
+            sub={<Clock size={14} color={BAD}/>}
           />
           <HeroStat
             label="Approvals"
@@ -254,22 +265,22 @@ export function SubmissionDetailsCard() {
             sub={<Tag color={OK} bg="#E8F5EC">In appetite</Tag>}
           />
           <button
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 transition-colors hover:brightness-95"
+            className="inline-flex items-center gap-1.5 px-4 py-2 transition-colors hover:brightness-95"
             style={{
               background:N, color:"white", borderRadius:6,
-              fontSize:"0.74rem", fontWeight:700, border:"none", cursor:"pointer",
+              fontSize:"0.88rem", fontWeight:700, border:"none", cursor:"pointer",
             }}>
-            <ExternalLink size={12}/>
+            <ExternalLink size={14}/>
             Edit Submission
           </button>
         </div>
       </div>
 
       {/* ── Row 1 ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3" style={{ borderBottom:`1px solid ${BD}` }}>
+      <div className="grid grid-cols-1 md:grid-cols-3" style={{ borderBottom:`1px solid ${BDL}` }}>
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Identification" healthDot={OK}
-            action={{ icon:<MoreHorizontal size={14}/>, label:"Identification options" }}>
+            action={{ icon:<MoreHorizontal size={16}/>, label:"Identification options" }}>
             <DetailRow label="Submission ID" copyValue="SUB-10428"
               value={<span style={{ color:N, fontWeight:700 }}>SUB-10428</span>}/>
             <DetailRow label="Type" value="Renewal"/>
@@ -281,7 +292,7 @@ export function SubmissionDetailsCard() {
 
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Dates" healthDot={WARN}
-            action={{ icon:<Calendar size={13}/>, label:"Open calendar" }}>
+            action={{ icon:<Calendar size={15}/>, label:"Open calendar" }}>
             <DetailRow label="Submitted" value="Apr 14, 2026"/>
             <DetailRow label="Effective" value="Jun 1, 2026"/>
             <DetailRow label="Expiration" value="Jun 1, 2027"/>
@@ -292,7 +303,7 @@ export function SubmissionDetailsCard() {
 
         <div>
           <SectionCard title="Routing & Assignment" healthDot={WARN}
-            action={{ icon:<MoreHorizontal size={14}/>, label:"Routing options" }}>
+            action={{ icon:<MoreHorizontal size={16}/>, label:"Routing options" }}>
             <DetailRow label="Stage"
               value={<StatusPill label="Needs review" dotColor={WARN} bg="#FEF3C7" text="#92400E"/>}/>
             <DetailRow label="Underwriter"
@@ -306,10 +317,10 @@ export function SubmissionDetailsCard() {
       </div>
 
       {/* ── Row 2 ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3" style={{ borderBottom:`1px solid ${BD}` }}>
+      <div className="grid grid-cols-1 md:grid-cols-3" style={{ borderBottom:`1px solid ${BDL}` }}>
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Premium" healthDot={OK}
-            action={{ icon:<TrendingUp size={13}/>, label:"Premium history" }}>
+            action={{ icon:<TrendingUp size={15}/>, label:"Premium history" }}>
             <DetailRow label="Expiring" value="$132,400"/>
             <DetailRow label="Quoted"
               value={
@@ -322,7 +333,7 @@ export function SubmissionDetailsCard() {
             <DetailRow last label="Indicated change"
               value={
                 <span className="inline-flex items-center gap-1">
-                  <TrendingUp size={11} color={OK}/>
+                  <TrendingUp size={13} color={OK}/>
                   <span style={{ color:OK, fontWeight:700 }}>+7.8%</span>
                 </span>
               }/>
@@ -331,7 +342,7 @@ export function SubmissionDetailsCard() {
 
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Decision & Authority" healthDot={WARN}
-            action={{ icon:<MoreHorizontal size={14}/>, label:"Authority options" }}>
+            action={{ icon:<MoreHorizontal size={16}/>, label:"Authority options" }}>
             <DetailRow label="Approvals Open"
               value={
                 <span className="inline-flex items-center gap-2">
@@ -355,32 +366,32 @@ export function SubmissionDetailsCard() {
 
         <div>
           <SectionCard title="Compliance & Documents" healthDot={BAD}
-            action={{ icon:<FileText size={13}/>, label:"View documents" }}>
+            action={{ icon:<FileText size={15}/>, label:"View documents" }}>
             <DetailRow label="Application"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Check size={12} color={OK} strokeWidth={3}/>
+                  <Check size={14} color={OK} strokeWidth={3}/>
                   <span style={{ color:OK, fontWeight:700 }}>On file</span>
                 </span>
               }/>
             <DetailRow label="Loss runs"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Check size={12} color={OK} strokeWidth={3}/>
+                  <Check size={14} color={OK} strokeWidth={3}/>
                   <span style={{ color:OK, fontWeight:700 }}>5-yr validated</span>
                 </span>
               }/>
             <DetailRow label="Financials"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Check size={12} color={OK} strokeWidth={3}/>
+                  <Check size={14} color={OK} strokeWidth={3}/>
                   <span style={{ color:OK, fontWeight:700 }}>On file</span>
                 </span>
               }/>
             <DetailRow last label="Supplemental Application"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Check size={12} color={OK} strokeWidth={3}/>
+                  <Check size={14} color={OK} strokeWidth={3}/>
                   <span style={{ color:OK, fontWeight:700 }}>On file</span>
                 </span>
               }/>
@@ -392,11 +403,11 @@ export function SubmissionDetailsCard() {
       <div className="grid grid-cols-1 md:grid-cols-3">
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Member"
-            action={{ icon:<ExternalLink size={12}/>, label:"Open member profile" }}>
+            action={{ icon:<ExternalLink size={14}/>, label:"Open member profile" }}>
             <DetailRow label="Name"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Award size={12} color={N}/>
+                  <Award size={14} color={N}/>
                   <span style={{ fontWeight:700 }}>Brookfield Day School</span>
                 </span>
               }/>
@@ -409,11 +420,11 @@ export function SubmissionDetailsCard() {
 
         <div style={{ borderRight:`1px solid ${BDL}` }}>
           <SectionCard title="Brokerage"
-            action={{ icon:<ExternalLink size={12}/>, label:"Open broker profile" }}>
+            action={{ icon:<ExternalLink size={14}/>, label:"Open broker profile" }}>
             <DetailRow label="Name"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  <Building2 size={12} color={N}/>
+                  <Building2 size={14} color={N}/>
                   <span style={{ fontWeight:700 }}>Marsh McLennan</span>
                 </span>
               }/>
@@ -426,7 +437,7 @@ export function SubmissionDetailsCard() {
 
         <div>
           <SectionCard title="Broker Contact"
-            action={{ icon:<Mail size={12}/>, label:"Compose email", href:"mailto:t.owens@mma.com" }}>
+            action={{ icon:<Mail size={14}/>, label:"Compose email", href:"mailto:t.owens@mma.com" }}>
             <DetailRow label="Producer"
               value={
                 <span className="inline-flex items-center">
@@ -442,7 +453,7 @@ export function SubmissionDetailsCard() {
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center gap-1.5 hover:underline"
                   style={{ color:N, fontWeight:600 }}>
-                  <Mail size={11}/>
+                  <Mail size={13}/>
                   t.owens@mma.com
                 </a>
               }/>
@@ -452,7 +463,7 @@ export function SubmissionDetailsCard() {
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center gap-1.5 hover:underline"
                   style={{ color:TD, fontWeight:600 }}>
-                  <Phone size={11}/>
+                  <Phone size={13}/>
                   (203) 555-1142
                 </a>
               }/>

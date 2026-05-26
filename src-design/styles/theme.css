@@ -1,5 +1,11 @@
 :root {
-  --font-size: 16px;
+  /* Global root font-size — the single lever for scaling every `rem`-based
+     size in the application. Tuned to 17px (+6.25% over the web default of
+     16px). Higher than the original 16px for readability, but lower than
+     the 18px we tried — the data-density screens (Submissions grid, broker
+     contacts table) read more cleanly at this setting without losing the
+     readability gain over the original. */
+  --font-size: 17px;
 
   /* ─── Typography scale ─────────────────────────────────────────────────
      Defined per design-system feedback. Every text element on a workbench

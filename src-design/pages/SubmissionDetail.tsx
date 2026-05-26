@@ -11,7 +11,7 @@ import {
   ShieldCheck, UserCheck, Briefcase, Globe, Lock, Car,
   Building2, Shield, ThumbsUp, ListChecks,
   TrendingUp, Activity, Flag, Calendar, User, Check,
-  ChevronRight,
+  ChevronRight, Gift, Bell,
 } from "lucide-react";
 import { OverviewTab }     from "../components/tabs/OverviewTab";
 import { MemberBrokerTab } from "../components/tabs/MemberBrokerTab";
@@ -26,7 +26,10 @@ import { UnderwritingReviewTab } from "../components/tabs/UnderwritingReviewTab"
 import { GroupMembersTab } from "../components/tabs/GroupMembersTab";
 import { AppShell }        from "../components/AppShell";
 import type { RoleId }     from "../components/AppShell";
+import { AccountOverviewHeader, CompactToggle } from "../components/AccountOverviewHeader";
+import type { AccountOverviewData } from "../components/AccountOverviewHeader";
 import { SubmissionWorkspaceProvider, useSubmissionWorkspace } from "../context/SubmissionWorkspaceContext";
+import { useSubmissionsList } from "../context/SubmissionsListContext";
 import { PageRegister }    from "../components/companion/PageRegister";
 import { newId, now }      from "../components/companion/CompanionContext";
 import type { Suggestion, CompanionMsg } from "../components/companion/CompanionContext";
@@ -52,8 +55,13 @@ const PRODUCT_DISPLAY: Record<string, { abbr: string; icon: ReactNode; color: st
   student: { abbr: "SA",    icon: <Users      size={11}/>, color: "#7B2FBE"  },
 };
 
-/* ── Submission data (single source of truth for header) ─────────────────── */
-const SUBMISSION = {
+/* ── Default submission data (template for the existing Brookfield demo).
+   At runtime, SubmissionDetailInner looks up the URL :id in the shared
+   SubmissionsListContext — if it finds an auto-created record (a fresh
+   submission from the Inbox flow on a new account), it overrides this
+   template with the record's identity / dates / broker / status so the
+   header reflects the new account instead of the seeded one. */
+const DEFAULT_SUBMISSION = {
   id:              "SUB-7829",
   institutionName: "Brookfield Day School",
   memberNumber:    "473",
@@ -82,6 +90,12 @@ const SUBMISSION = {
   underwriter:     { name: "Maya Khanna",   title: "Sr. UW · Northeast" },
   uwSpecialist:    { name: "Devon Carter",  title: "Assistant UW"       },
   productLines:    ["cgl", "ell", "sbl", "ipl"],
+  // ── Account-overview fields (drive the global AccountOverviewHeader) ──
+  continuousCoverage: true,
+  coverageGap:        undefined as string | undefined,
+  institutionType:    "Private K-12",
+  hasFootball:        true,
+  isBoarding:         true,
 };
 
 /* ── Group submission registry ────────────────────────────────────────────
@@ -116,13 +130,13 @@ const GROUP_MEMBER_LOSS: Record<string, { name: string; memberType: string; prod
  *    The Submission Detail companion uses this so the chips/responses are
  *    "page-aware" — e.g. on Rating you get rate-band questions, on Loss you
  *    get claim/severity questions, etc. */
-function buildTabPack(tab: string, S: typeof SUBMISSION, subId: string) {
+function buildTabPack(tab: string, S: typeof DEFAULT_SUBMISSION, subId: string) {
   const TAB_LABELS: Record<string, string> = {
     overview: "Details", member: "Member & Broker", members: "Group Members",
-    documents: "Documents", correspondence: "Correspondence",
+    documents: "Documents", correspondence: "Email History",
     audit: "Audit Trail", review: "Underwriting Review", risk: "Risk", loss: "Loss History",
-    rating: "Underwriting", notes: "Notes", tasks: "Tasks", approvals: "Approvals",
-    conditions: "Conditions",
+    rating: "Terms & Conditions", notes: "Notes", tasks: "Tasks", approvals: "Approvals",
+    conditions: "Subjectivities & Contingencies",
   };
   const tabLabel = TAB_LABELS[tab] ?? "Submission";
 
@@ -413,20 +427,20 @@ function groupForStage(stage: string) {
 
 type TabGroup = "overview" | "analysis" | "workflow";
 const TABS: { id: string; label: string; icon: ReactNode; group: TabGroup }[] = [
-  {id:"review",        label:"Review",             icon:<ClipboardCheck size={13}/>,  group:"overview"},
-  {id:"overview",      label:"Details",            icon:<LayoutDashboard size={13}/>, group:"overview"},
-  {id:"member",        label:"Member & Brokerage", icon:<Users size={13}/>,           group:"overview"},
-  {id:"members",       label:"Group Members",      icon:<Users size={13}/>,           group:"overview"},
-  {id:"risk",          label:"Risk & Exposure",    icon:<ShieldAlert size={13}/>,     group:"analysis"},
-  {id:"loss",          label:"Loss History",       icon:<TrendingDown size={13}/>,    group:"analysis"},
-  {id:"conditions",    label:"Conditions",         icon:<ListChecks size={13}/>,      group:"analysis"},
-  {id:"rating",        label:"Underwriting",       icon:<Calculator size={13}/>,      group:"analysis"},
-  {id:"documents",     label:"Documents",          icon:<FolderOpen size={13}/>,      group:"workflow"},
-  {id:"correspondence",label:"Correspondence",     icon:<Mail size={13}/>,            group:"workflow"},
-  {id:"notes",         label:"Notes",              icon:<MessageSquare size={13}/>,   group:"workflow"},
-  {id:"tasks",         label:"Tasks",              icon:<CheckSquare size={13}/>,     group:"workflow"},
-  {id:"approvals",     label:"Approvals",          icon:<ThumbsUp size={13}/>,        group:"workflow"},
-  {id:"audit",         label:"Audit Trail",        icon:<Clock size={13}/>,           group:"workflow"},
+  {id:"review",        label:"Review",             icon:<ClipboardCheck size={15}/>,  group:"overview"},
+  {id:"overview",      label:"Details",            icon:<LayoutDashboard size={15}/>, group:"overview"},
+  {id:"member",        label:"Member & Brokerage", icon:<Users size={15}/>,           group:"overview"},
+  {id:"members",       label:"Group Members",      icon:<Users size={15}/>,           group:"overview"},
+  {id:"risk",          label:"Risk & Exposure",    icon:<ShieldAlert size={15}/>,     group:"analysis"},
+  {id:"loss",          label:"Loss History",       icon:<TrendingDown size={15}/>,    group:"analysis"},
+  {id:"conditions",    label:"Subjectivities & Contingencies", icon:<ListChecks size={15}/>, group:"analysis"},
+  {id:"rating",        label:"Terms & Conditions", icon:<Calculator size={15}/>,      group:"analysis"},
+  {id:"documents",     label:"Documents",          icon:<FolderOpen size={15}/>,      group:"workflow"},
+  {id:"correspondence",label:"Email History",      icon:<Mail size={15}/>,            group:"workflow"},
+  {id:"notes",         label:"Notes",              icon:<MessageSquare size={15}/>,   group:"workflow"},
+  {id:"tasks",         label:"Tasks",              icon:<CheckSquare size={15}/>,     group:"workflow"},
+  {id:"approvals",     label:"Approvals",          icon:<ThumbsUp size={15}/>,        group:"workflow"},
+  {id:"audit",         label:"Audit Trail",        icon:<Clock size={15}/>,           group:"workflow"},
 ];
 
 /* ── StatCell: icon tile + uppercase micro-label · value · subtitle ──────── */
@@ -618,19 +632,106 @@ function SubmissionDetailInner() {
   const { id: subIdFromUrl } = useParams<{ id: string }>();
   const location  = useLocation();
   const navState  = (location.state ?? {}) as { freshFromInbox?: boolean; institutionName?: string };
-  const subIdResolved = subIdFromUrl ?? SUBMISSION.id;
+  const subIdResolved = subIdFromUrl ?? DEFAULT_SUBMISSION.id;
   const groupInfo = GROUP_SUBMISSIONS[subIdResolved];
   const isGroup   = !!groupInfo;
   const groupMemberLoss = isGroup ? (GROUP_MEMBER_LOSS[subIdResolved] ?? []) : [];
+
+  // ── Auto-created submission lookup ──────────────────────────────────────
+  // When the user lands here via /submission/SUB-#### for a record that was
+  // just auto-created from the Inbox (no prior history, brand-new account),
+  // we override the Brookfield-themed defaults with the record's identity so
+  // the header reads as a fresh New Business submission instead.
+  const { submissions } = useSubmissionsList();
+  const record = submissions.find(s => s.subId === subIdResolved);
+  const isFreshAutoCreate = !!record && record.lastActivity === "Auto-created from inbox";
+
+  // Compute the effective SUBMISSION for this render. Either:
+  //  • the original DEFAULT_SUBMISSION (for seeded / non-auto-create ids), or
+  //  • a merge of DEFAULT_SUBMISSION shape with the freshly-created record's
+  //    identity, broker, dates, and product lines — and explicit empty-state
+  //    placeholders for any "policy history" fields that don't yet exist.
+  const SUBMISSION = useMemo(() => {
+    if (!record || !isFreshAutoCreate) return DEFAULT_SUBMISSION;
+    const fmtDate = (iso: string) => {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      return isNaN(d.getTime())
+        ? iso
+        : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+    const daysUntil = (iso: string): string => {
+      if (!iso) return "—";
+      const target = new Date(iso).getTime();
+      if (isNaN(target)) return "—";
+      const diff = Math.ceil((target - Date.now()) / 86400000);
+      if (diff < 0) return `${-diff} days overdue`;
+      return `${diff} days`;
+    };
+    return {
+      ...DEFAULT_SUBMISSION,
+      id:                 record.subId,
+      institutionName:    record.member,
+      memberNumber:       record.memberNumber,
+      institutionNum:     `ACC-${record.memberNumber}`,
+      memberSince:        new Date().getFullYear().toString(),
+      memberType:         "New Account · Private K-12",
+      enrollment:         record.enrollmentCount > 0
+        ? `${record.enrollmentCount.toLocaleString()} students`
+        : "Enrollment pending",
+      location:           record.state || "—",
+      submittedDate:      fmtDate(record.submitted),
+      brokerageRef:       record.broker,
+      brokerageName:      record.broker,
+      needByDate:         fmtDate(record.needByDate),
+      needByUrgency:      daysUntil(record.needByDate),
+      effectiveDate:      fmtDate(record.effective),
+      expiryDate:         fmtDate(record.expiry),
+      // Brand-new account → no policy history yet. Use explicit empty-state
+      // copy rather than zeros so the underwriter doesn't read "$0" as data.
+      expiringPremium:    "—",
+      expiringNote:       "New account · no prior policy",
+      quotedPremium:      "—",
+      quotedNote:         "Awaiting quote",
+      boundPremium:       "—",
+      boundNote:          "Not yet bound",
+      lossRatio:          "—",
+      lossRatioNote:      "No prior loss history",
+      brokerage:          record.broker,
+      brokerContact:      "Pending assignment",
+      underwriter:        { name: record.assignedTo, title: "Assigned UW" },
+      uwSpecialist:       { name: "Pending", title: "To be assigned" },
+      productLines:       record.products.length
+        ? record.products.map(p => p.toLowerCase())
+        : DEFAULT_SUBMISSION.productLines,
+      continuousCoverage: false,
+      coverageGap:        undefined,
+      institutionType:    "New Account",
+      hasFootball:        false,
+      isBoarding:         false,
+    };
+  }, [record, isFreshAutoCreate]);
+
   const displayInstitutionName = navState.freshFromInbox && navState.institutionName
     ? navState.institutionName
     : (groupInfo?.groupName ?? SUBMISSION.institutionName);
   const { user }  = useAuth();
-  // "review" is the default landing tab.
-  const [activeTab, setActiveTab] = useState("review");
+  // "review" is the default landing tab. For a brand-new auto-created record,
+  // route the user to Overview instead — there's nothing to review yet.
+  const [activeTab, setActiveTab] = useState(isFreshAutoCreate ? "overview" : "review");
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [stage, setStage] = useState("Review In Progress");
-  const { threads, registerTabChangeHandler, setActiveTab: setWorkspaceActiveTab } = useSubmissionWorkspace();
+  // Stage starts at "Information Gathering" for a fresh auto-create —
+  // signals "we have the submission, but underwriting hasn't started".
+  const [stage, setStage] = useState(isFreshAutoCreate ? "Information Gathering" : "Review In Progress");
+  const {
+    threads,
+    registerTabChangeHandler,
+    setActiveTab: setWorkspaceActiveTab,
+    memberBenefitsChecked,
+    setMemberBenefitsChecked,
+    notificationsEnabled,
+    setNotificationsEnabled,
+  } = useSubmissionWorkspace();
 
   // Mirror local activeTab into the workspace context (chatbot reads it).
   useEffect(() => {
@@ -828,89 +929,66 @@ ${SUBMISSION.underwriter.title} · United Educators`;
           </div>
         </div>
 
-        {/* ── HERO ───────────────────────────────────────────────────────── */}
-        <div style={{background:"white", borderBottom:`1px solid ${BDL}`}}>
-          {/* gold accent bar */}
-          <div style={{height:4, background:`linear-gradient(90deg,${G} 0%,#A8841C 100%)`}}/>
+        {/* ── ACCOUNT OVERVIEW HEADER ───────────────────────────────────────
+            Unified header: identity (institution name + SUB chip + M chip
+            + group pill), sub-identity metadata, risk-continuity tracker,
+            segmentation badges, account-wide cascade toggles, and a gold
+            seam at the bottom — all in one panel. The stage dropdown is
+            owned here (stage state lives in this component) and injected
+            as `stageSlot`. */}
+        <AccountOverviewHeader
+          data={{
+            institutionName:    displayInstitutionName,
+            subId:              subIdFromUrl ?? SUBMISSION.id,
+            memberNumber:       SUBMISSION.memberNumber,
+            isGroup,
+            groupMemberCount:   groupInfo?.memberCount,
+            enrollment:         SUBMISSION.enrollment,
+            location:           SUBMISSION.location,
+            memberSince:        SUBMISSION.memberSince,
+            continuousCoverage: SUBMISSION.continuousCoverage,
+            coverageGap:        SUBMISSION.coverageGap,
+            institutionType:    SUBMISSION.institutionType,
+            hasFootball:        SUBMISSION.hasFootball,
+            isBoarding:         SUBMISSION.isBoarding,
+          } satisfies AccountOverviewData}
+          stageSlot={<StageDropdown value={stage} onChange={setStage} />}
+        />
 
-          {/* ── Single summary card (edge-to-edge, matches prior grid spacing) ── */}
+        {/* ── SUBMISSION DETAILS (collapsible KPI snapshot) ───────────────
+            The duplicate identity row + gold accent that used to live in
+            the old "hero" wrapper are now consolidated into the
+            AccountOverviewHeader above — this region is now just the
+            collapsible details panel with the KPI snapshot. */}
+        <div style={{background:"white", borderBottom:`1px solid ${BDL}`}}>
+
+          {/* ── Collapsible details card ─────────────────────────────
+              No top border here — the AccountOverviewHeader above ends in
+              a gold seam, so a second 1px line would feel like a double
+              separator. The "Show/Hide Submission Details" toggle directly
+              below is the natural top edge of this region. */}
           <div
             style={{
               position: "relative",
               background: "white",
-              borderTop: `1px solid ${BDL}`,
             }}
           >
 
-              {/* ── Header row ────────────────────────────────────────── */}
-              <div className="flex items-center gap-3 px-3 sm:px-5 py-3 flex-wrap">
+              {/* Identity row + stage dropdown now live in
+                  <AccountOverviewHeader/> above. The collapsible details
+                  toggle below leads straight into the KPI snapshot. */}
 
-                {/* Identity block */}
-                <div className="flex-1 min-w-0 flex items-center gap-2.5 flex-wrap">
-                  <h1 style={{ color:"#1A2530", fontSize:"1.15rem", fontWeight:800, lineHeight:1.2 }}>
-                    {displayInstitutionName}
-                  </h1>
-                  {/* Submission ID chip — same style used elsewhere */}
-                  <span
-                    style={{
-                      background:`${G}18`, color:"#8A5C00", border:`1px solid ${G}55`,
-                      fontSize:"0.68rem", fontWeight:800, letterSpacing:"0.10em",
-                      padding:"2px 10px", borderRadius:6,
-                      textTransform:"uppercase", whiteSpace:"nowrap",
-                    }}
-                  >
-                    {subIdFromUrl ?? SUBMISSION.id}
-                  </span>
-                  {/* Member number chip — same style used elsewhere */}
-                  <span
-                    style={{
-                      background:`${N}10`, color:"#1A2530", border:`1px solid ${N}25`,
-                      fontSize:"0.72rem", fontWeight:700, padding:"2px 8px",
-                      borderRadius:6, whiteSpace:"nowrap",
-                    }}
-                  >
-                    M {SUBMISSION.memberNumber}
-                  </span>
-                  {/* Group pill — only on group submissions */}
-                  {isGroup && (
-                    <span
-                      className="inline-flex items-center gap-1.5"
-                      style={{
-                        background:"#7B2FBE15", color:"#7B2FBE",
-                        border:"1px solid #7B2FBE40",
-                        fontSize:"0.66rem", fontWeight:800,
-                        letterSpacing:"0.08em", textTransform:"uppercase",
-                        padding:"2px 9px", borderRadius:6, whiteSpace:"nowrap",
-                      }}
-                      title={`Group submission · ${groupInfo!.memberCount} members`}
-                    >
-                      <Users size={11}/>
-                      Group · {groupInfo!.memberCount}
-                    </span>
-                  )}
-                  {/* Muted single-line metadata */}
-                  <span
-                    style={{
-                      color:TM, fontSize:"0.80rem", marginLeft:4,
-                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                      minWidth:0,
-                    }}
-                  >
-                    {SUBMISSION.memberType} · {SUBMISSION.enrollment} · {SUBMISSION.location} · since {SUBMISSION.memberSince}
-                  </span>
-                </div>
-
-                {/* Status dropdown — replaces the Bind Quote button */}
-                <div className="shrink-0" style={{ minWidth: 240 }}>
-                  <StageDropdown value={stage} onChange={setStage} />
-                </div>
-              </div>
-
-              {/* Solid divider */}
-              <div style={{ height:1, background:BDL }}/>
-
-              {/* ── Single shared collapse / expand toggle ─────────────── */}
-              <div className="flex items-center justify-between px-4 py-2"
+              {/* ── Utility strip ───────────────────────────────────────
+                  Single horizontal row that consolidates what used to be
+                  three rows of chrome:
+                    • Show/Hide Submission Details (left)
+                    • Account-wide cascade toggles (middle, after a thin
+                      vertical divider so they read as a separate group)
+                    • Field count (right)
+                  Keeping these on one line tightens the page rhythm and
+                  removes the dedicated cascade band that previously sat
+                  inside AccountOverviewHeader. */}
+              <div className="flex items-center gap-3 flex-wrap px-4 py-2"
                 style={{ background: "#FAFBFD", borderBottom: `1px solid ${BDL}` }}>
                 <button
                   onClick={() => setDetailsOpen(v => !v)}
@@ -933,7 +1011,27 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                     {detailsOpen ? "Hide" : "Show"} Submission Details
                   </span>
                 </button>
-                <span style={{
+
+                {/* Thin vertical divider — visually groups the cascade
+                    toggles as a separate cluster from the collapse toggle. */}
+                <span aria-hidden style={{ width: 1, height: 14, background: BDL }} />
+
+                <CompactToggle
+                  icon={<Gift size={13} />}
+                  label="Member Benefits"
+                  value={memberBenefitsChecked}
+                  onToggle={() => setMemberBenefitsChecked(!memberBenefitsChecked)}
+                  title="Cascades to every product on this submission"
+                />
+                <CompactToggle
+                  icon={<Bell size={13} />}
+                  label="Notifications"
+                  value={notificationsEnabled}
+                  onToggle={() => setNotificationsEnabled(!notificationsEnabled)}
+                  title="Cascades to every product on this submission"
+                />
+
+                <span className="ml-auto" style={{
                   fontSize: "0.6rem", fontWeight: 600, color: TT,
                 }}>
                   10 fields
@@ -1034,17 +1132,17 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                           {/* Effective Date */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center shrink-0"
-                              style={{ width: 30, height: 30, borderRadius: 7, background: "#F0F3F8", color: TT }}>
-                              <Calendar size={14}/>
+                              style={{ width: 36, height: 36, borderRadius: 8, background: "#F0F3F8", color: TT }}>
+                              <Calendar size={16}/>
                             </span>
                             <div className="flex flex-col min-w-0">
-                              <span style={{ fontSize: "0.55rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                                 Effective Date
                               </span>
-                              <span style={{ fontSize: "0.92rem", fontWeight: 700, color: "#1A2530", fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                              <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1A2530", fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
                                 {SUBMISSION.effectiveDate}
                               </span>
-                              <span style={{ fontSize: "0.6rem", fontWeight: 600, color: TT, marginTop: 1 }}>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 600, color: TT, marginTop: 2 }}>
                                 Policy start
                               </span>
                             </div>
@@ -1053,17 +1151,17 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                           {/* Expiration Date */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center shrink-0"
-                              style={{ width: 30, height: 30, borderRadius: 7, background: "#F0F3F8", color: TT }}>
-                              <Calendar size={14}/>
+                              style={{ width: 36, height: 36, borderRadius: 8, background: "#F0F3F8", color: TT }}>
+                              <Calendar size={16}/>
                             </span>
                             <div className="flex flex-col min-w-0">
-                              <span style={{ fontSize: "0.55rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                                 Expiration Date
                               </span>
-                              <span style={{ fontSize: "0.92rem", fontWeight: 700, color: "#1A2530", fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                              <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1A2530", fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
                                 {SUBMISSION.expiryDate}
                               </span>
-                              <span style={{ fontSize: "0.6rem", fontWeight: 600, color: TT, marginTop: 1 }}>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 600, color: TT, marginTop: 2 }}>
                                 Auto-renews
                               </span>
                             </div>
@@ -1072,21 +1170,21 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                           {/* Need-By Date */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center shrink-0"
-                              style={{ width: 30, height: 30, borderRadius: 7, background: "#FEE2E2", color: DANGER }}>
-                              <Flag size={14}/>
+                              style={{ width: 36, height: 36, borderRadius: 8, background: "#FEE2E2", color: DANGER }}>
+                              <Flag size={16}/>
                             </span>
                             <div className="flex flex-col min-w-0">
-                              <span style={{ fontSize: "0.55rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                                 Need-By Date
                               </span>
-                              <span style={{ fontSize: "0.92rem", fontWeight: 700, color: DANGER, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                              <span style={{ fontSize: "1.05rem", fontWeight: 700, color: DANGER, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
                                 {SUBMISSION.needByDate}
                               </span>
-                              <span className="inline-block mt-0.5"
+                              <span className="inline-block mt-1"
                                 style={{
-                                  fontSize: "0.55rem", fontWeight: 800, color: DANGER,
+                                  fontSize: "0.68rem", fontWeight: 800, color: DANGER,
                                   background: "#FEE2E2", border: `1px solid ${DANGER}40`,
-                                  padding: "1px 6px", borderRadius: 9,
+                                  padding: "2px 8px", borderRadius: 9999,
                                   textTransform: "uppercase", letterSpacing: "0.06em",
                                   alignSelf: "flex-start",
                                 }}>
@@ -1098,17 +1196,17 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                           {/* Brokerage */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center shrink-0"
-                              style={{ width: 30, height: 30, borderRadius: 7, background: `${N}12`, color: N }}>
-                              <Shield size={14}/>
+                              style={{ width: 36, height: 36, borderRadius: 8, background: `${N}12`, color: N }}>
+                              <Shield size={16}/>
                             </span>
                             <div className="flex flex-col min-w-0">
-                              <span style={{ fontSize: "0.55rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                                 Brokerage
                               </span>
-                              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <span style={{ fontSize: "0.96rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {SUBMISSION.brokerage}
                               </span>
-                              <span style={{ fontSize: "0.6rem", fontWeight: 600, color: TT, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 600, color: TT, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {SUBMISSION.brokerContact}
                               </span>
                             </div>
@@ -1122,20 +1220,20 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                             <div key={p.label} className="flex items-center gap-3 min-w-0">
                               <span className="inline-flex items-center justify-center shrink-0"
                                 style={{
-                                  width: 30, height: 30, borderRadius: "50%",
+                                  width: 36, height: 36, borderRadius: "50%",
                                   background: `${N}15`, color: N,
-                                  fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.03em",
+                                  fontSize: "0.74rem", fontWeight: 800, letterSpacing: "0.03em",
                                 }}>
                                 {initials(p.person.name)}
                               </span>
                               <div className="flex flex-col min-w-0">
-                                <span style={{ fontSize: "0.55rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: TT, textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {p.label}
                                 </span>
-                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <span style={{ fontSize: "0.96rem", fontWeight: 700, color: "#1A2530", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {p.person.name}
                                 </span>
-                                <span style={{ fontSize: "0.6rem", fontWeight: 600, color: TT, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <span style={{ fontSize: "0.74rem", fontWeight: 600, color: TT, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {p.person.title}
                                 </span>
                               </div>
@@ -1203,7 +1301,7 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                     borderRadius: 6,
                     cursor: "pointer",
                     fontFamily: font,
-                    padding: "7px 12px",
+                    padding: "9px 14px",
                     flex: "0 0 auto",
                     minWidth: 0,
                     boxShadow: isActive ? `0 1px 3px ${N}33` : "none",
@@ -1211,7 +1309,7 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                   }}>
                   <span className="inline-flex items-center justify-center shrink-0"
                     style={{
-                      width: 18, height: 18, borderRadius: 4,
+                      width: 22, height: 22, borderRadius: 5,
                       background: isActive ? "rgba(255,255,255,0.2)" : "#F0F3F8",
                       color: isActive ? "white" : TM,
                       transition: "background 0.2s ease",
@@ -1219,7 +1317,7 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                     {t.icon}
                   </span>
                   <span style={{
-                    fontSize: "0.72rem",
+                    fontSize: "0.84rem",
                     fontWeight: isActive ? 700 : 500,
                     color: isActive ? "white" : "#1A2530",
                     lineHeight: 1.2,
@@ -1229,10 +1327,10 @@ ${SUBMISSION.underwriter.title} · United Educators`;
                   </span>
                   {showBadge && (
                     <span style={{
-                      fontSize: "0.52rem", fontWeight: 800, color: "white",
+                      fontSize: "0.62rem", fontWeight: 800, color: "white",
                       background: "#B45309",
-                      padding: "1px 5px", borderRadius: 9,
-                      minWidth: 14, textAlign: "center",
+                      padding: "2px 7px", borderRadius: 9999,
+                      minWidth: 18, textAlign: "center",
                     }}>
                       {unreadCount}
                     </span>

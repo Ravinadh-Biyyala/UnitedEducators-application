@@ -1654,6 +1654,10 @@ export function NewSubmissionPage() {
   const [prefillSource,   setPrefillSource]   = useState<string | null>(null);
   const [prefillDismissed, setPrefillDismissed] = useState(false);
   const prefillAppliedRef = useRef(false);
+  /* When the user lands here from an auto-created draft (Inbox flow failed
+   * intake validation), we keep the sub-id so the banner can name the record
+   * and explain why we routed back to the form. */
+  const [autoDraftSubId, setAutoDraftSubId] = useState<string | null>(null);
 
   // Cancel / preview modals
   const [previewOpen, setPreviewOpen]             = useState(false);
@@ -1682,12 +1686,23 @@ export function NewSubmissionPage() {
   // the underwriter sees exactly what still needs human input.
   useEffect(() => {
     if (prefillAppliedRef.current) return;
-    const state = location.state as { prefill?: InboxPrefill; sourceEmail?: { fromName: string; fromCompany: string; subject: string } } | null;
+    const state = location.state as {
+      prefill?: InboxPrefill;
+      sourceEmail?: { fromName: string; fromCompany: string; subject: string };
+      autoCreateDraft?: { subId: string; issues: string[] };
+    } | null;
     const prefill = state?.prefill;
     if (!prefill) return;
     prefillAppliedRef.current = true;
 
-    const warnings: string[] = [];
+    // When the Inbox auto-create flow routed back here because it landed in
+    // the draft pile, surface the validation issues at the top of the
+    // warnings banner so the underwriter sees exactly what blocked it.
+    const draftIssues = state?.autoCreateDraft?.issues ?? [];
+    if (state?.autoCreateDraft) {
+      setAutoDraftSubId(state.autoCreateDraft.subId);
+    }
+    const warnings: string[] = [...draftIssues];
     const updates: Partial<FormState> = {};
 
     // Submission Type — honor the inbox classification (Cross-Sell if the
@@ -2271,9 +2286,11 @@ export function NewSubmissionPage() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.80rem", fontWeight: 800, color: prefillWarnings.length > 0 ? "#8A5C00" : "#1A5C30" }}>
-                          {prefillWarnings.length > 0
-                            ? "Form pre-filled from Inbox — some fields need your attention"
-                            : "Form pre-filled from Inbox"}
+                          {autoDraftSubId
+                            ? `${autoDraftSubId} saved as Draft — resolve the items below before submitting`
+                            : prefillWarnings.length > 0
+                              ? "Form pre-filled from Inbox — some fields need your attention"
+                              : "Form pre-filled from Inbox"}
                         </div>
                         {prefillSource && (
                           <div style={{ fontSize: "0.68rem", color: TM, marginTop: 2 }}>

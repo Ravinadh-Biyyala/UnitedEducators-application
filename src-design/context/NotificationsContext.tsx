@@ -40,6 +40,12 @@ interface NotificationsContextValue {
   actionableUnreadCount: number;
   markRead: (id: string) => void;
   markAllRead: () => void;
+  /** Append a new notification at the top of the list. Caller may omit the id
+   *  (auto-generated), timestamp ("Just now"), minutesAgo (0) and read (false). */
+  pushNotification: (
+    n: Omit<Notification, "id" | "timestamp" | "minutesAgo" | "read"> &
+       Partial<Pick<Notification, "id" | "timestamp" | "minutesAgo" | "read">>
+  ) => Notification;
 }
 
 const SEED: Notification[] = [
@@ -73,6 +79,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n)),
       markAllRead: () =>
         setNotifications(prev => prev.map(n => ({ ...n, read: true }))),
+      pushNotification: (n) => {
+        const record: Notification = {
+          id: n.id ?? `n${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          timestamp: n.timestamp ?? "Just now",
+          minutesAgo: n.minutesAgo ?? 0,
+          read: n.read ?? false,
+          category: n.category,
+          severity: n.severity,
+          title: n.title,
+          body: n.body,
+          actor: n.actor,
+          actorInitials: n.actorInitials,
+          submission: n.submission,
+        };
+        setNotifications(prev => [record, ...prev]);
+        return record;
+      },
     };
   }, [notifications]);
 
